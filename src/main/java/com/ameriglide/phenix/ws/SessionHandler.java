@@ -1,0 +1,52 @@
+package com.ameriglide.phenix.ws;
+
+import jakarta.websocket.MessageHandler;
+import jakarta.websocket.Session;
+import net.inetalliance.types.json.Json;
+import net.inetalliance.types.json.JsonMap;
+
+import java.util.concurrent.ConcurrentHashMap;
+
+import static com.ameriglide.phenix.ws.Events.send;
+import static net.inetalliance.util.shell.Shell.log;
+
+public class SessionHandler
+    implements MessageHandler.Whole<String> {
+
+  private static final ConcurrentHashMap<String, JsonMessageHandler> handlers = new ConcurrentHashMap<>();
+  private final Session session;
+
+  public SessionHandler(final Session session) {
+    this.session = session;
+    handlers.forEach((type, handler) -> send(session, type, handler.onConnect(session)));
+  }
+
+  public static void init() {
+    Events.init();
+    handlers.put("hud", new HudHandler());
+    handlers.put("status", new StatusHandler());
+    handlers.put("reminder", new ReminderHandler());
+    handlers.put("ping", new PingHandler());
+
+  }
+
+  public static void destroy() {
+    handlers.values().forEach(JsonMessageHandler::destroy);
+    Events.destroy();
+  }
+
+  private static JsonMessageHandler getHandler(final String type) {
+    return handlers.computeIfAbsent(type, key -> (session, msg) -> {
+      log.warning("received message of unknown type %s: %s", key, Json.pretty(msg));
+      return null;
+    });
+  }
+
+  @Override
+  public void onMessage(final String message) {
+    final JsonMap msg = JsonMap.parse(message);
+    final String type = msg.get("type");
+    send(session, type, getHandler(type).onMessage(session, msg.getMap("msg")));
+
+  }
+}

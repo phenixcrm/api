@@ -61,7 +61,7 @@ public class Auth extends HttpServlet {
     return Info.$(Agent.class).toJson($(a));
   }
 
-  public static boolean isTeamleader(final HttpServletRequest req) {
+  public static boolean isTeamLeader(final HttpServletRequest req) {
     var agent =  getAgent(req);
     if(agent.isSuperUser()) {
       return true;

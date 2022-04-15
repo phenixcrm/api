@@ -229,7 +229,7 @@ public class CallModel
     final boolean simulated = request.getParameter("simulated") != null;
     final boolean todo = request.getParameter("todo") != null;
     final Agent agent = Auth.getAgent(request);
-    if (simulated && !Auth.isTeamleader(request)){
+    if (simulated && !Auth.isTeamLeader(request)){
       throw new ForbiddenException("%s tried to access call simulator",
           agent.getLastNameFirstInitial());
     }
@@ -295,7 +295,7 @@ public class CallModel
     if (Funky.isTrue(data.getBoolean("simulated"))) {
 
       final Agent manager = Auth.getAgent(request);
-      if (!Auth.isTeamleader(request)) {
+      if (!Auth.isTeamLeader(request)) {
         throw new ForbiddenException("%s tried to create a simulated call",
             manager.getLastNameFirstInitial());
       }

@@ -1,5 +1,6 @@
 package com.ameriglide.phenix.ws;
 
+import com.ameriglide.phenix.TaskRouter;
 import jakarta.websocket.MessageHandler;
 import jakarta.websocket.Session;
 import net.inetalliance.types.json.Json;
@@ -21,10 +22,9 @@ public class SessionHandler
     handlers.forEach((type, handler) -> send(session, type, handler.onConnect(session)));
   }
 
-  public static void init() {
+  public static void init(final TaskRouter router) {
     Events.init();
-    handlers.put("hud", new HudHandler());
-    handlers.put("status", new StatusHandler());
+    handlers.put("status", new StatusHandler(router));
     handlers.put("reminder", new ReminderHandler());
     handlers.put("ping", new PingHandler());
 

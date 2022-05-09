@@ -7,16 +7,11 @@ import com.ameriglide.phenix.common.Source;
 import com.ameriglide.phenix.exception.BadRequestException;
 import com.ameriglide.phenix.exception.NotFoundException;
 import com.ameriglide.phenix.exception.PhenixServletException;
-import jakarta.servlet.ServletConfig;
-import jakarta.servlet.ServletContext;
 import jakarta.servlet.ServletException;
-import jakarta.servlet.ServletRequest;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import net.inetalliance.funky.ClassFun;
-import net.inetalliance.funky.Funky;
-import net.inetalliance.funky.StringFun;
 import net.inetalliance.log.Log;
 import net.inetalliance.potion.Locator;
 import net.inetalliance.types.json.Formatter;
@@ -30,11 +25,10 @@ import java.net.Inet4Address;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
-import java.util.function.Supplier;
 
 import static jakarta.servlet.http.HttpServletResponse.SC_NOT_FOUND;
+import static java.util.Collections.emptyList;
 import static net.inetalliance.funky.StringFun.isEmpty;
 import static net.inetalliance.funky.StringFun.isNotEmpty;
 import static net.inetalliance.types.www.ContentType.JSON;
@@ -43,21 +37,17 @@ public class PhenixServlet
   extends HttpServlet {
 
   public static final String contentType = JSON.toString();
-
-  public static final Supplier<Boolean> dev = Funky
-    .runOnce(() -> System.getProperty("dev") != null);
-
-  private static transient final Log log = Log.getInstance(PhenixServlet.class);
+  private static final Log log = Log.getInstance(PhenixServlet.class);
 
   protected static <T> List<T> getParameterValues(final HttpServletRequest request,
                                                   final Class<T> type,
                                                   final String name) {
-    final String[] values = request.getParameterValues(name);
+    final var values = request.getParameterValues(name);
     if (values == null || values.length == 0) {
-      return Collections.emptyList();
+      return emptyList();
     }
-    final List<T> list = new ArrayList<>(values.length);
-    for (String value : values) {
+    final var list = new ArrayList<T>(values.length);
+    for (var value : values) {
       if (isNotEmpty(value)) {
         try {
           list.add(ClassFun.convert(type, value));
@@ -70,9 +60,8 @@ public class PhenixServlet
     return list;
   }
 
-  public static int getParameter(final HttpServletRequest request, final String name,
-                                 final int defaultValue) {
-    final String raw = request.getParameter(name);
+  public static int getParameter(final HttpServletRequest request, final String name, final int defaultValue) {
+    var raw = request.getParameter(name);
     try {
       return isEmpty(raw) ? defaultValue : Integer.parseInt(raw);
     } catch (NumberFormatException e) {
@@ -80,67 +69,20 @@ public class PhenixServlet
     }
   }
 
-  public static boolean getParameter(final HttpServletRequest request, final String name,
-                                     final boolean defaultValue) {
-    final String raw = request.getParameter(name);
+  public static boolean getParameter(final HttpServletRequest request, final String name, final boolean defaultValue) {
+    var raw = request.getParameter(name);
     return isEmpty(raw) ? defaultValue : Boolean.parseBoolean(raw);
   }
 
-  public static <E extends Enum<E>> E getParameter(final HttpServletRequest request,
-                                                   final Class<E> type,
+  public static <E extends Enum<E>> E getParameter(final HttpServletRequest request, final Class<E> type,
                                                    final String name) {
     return getParameter(request, type, name, null);
   }
 
-  public static <E extends Enum<E>> E getParameter(final HttpServletRequest request,
-                                                   final Class<E> type,
+  public static <E extends Enum<E>> E getParameter(final HttpServletRequest request, final Class<E> type,
                                                    final String name, final E defaultValue) {
-    final String parameter = request.getParameter(name);
+    var parameter = request.getParameter(name);
     return isEmpty(parameter) ? defaultValue : Enum.valueOf(type, parameter.toUpperCase());
-  }
-
-  public static void redirect(final HttpServletResponse response, final String location) {
-    response.setStatus(HttpServletResponse.SC_FOUND);
-    response.setHeader("Location", location);
-  }
-
-  public static String getInitParameter(final ServletConfig config, final String key) {
-    if (dev.get()) {
-      final String value = config.getInitParameter(String.format("dev-%s", key));
-      if (isNotEmpty(value)) {
-        return value;
-      }
-    }
-    return config.getInitParameter(key);
-  }
-
-  public static String getContextParameter(final ServletConfig config, final String key) {
-    return getContextParameter(config.getServletContext(), key);
-  }
-
-  public static String getContextParameter(final ServletContext context, final String key) {
-    if (dev.get()) {
-      final String value = context.getInitParameter(String.format("dev-%s", key));
-      if (isNotEmpty(value)) {
-        return value;
-      }
-    }
-    return context.getInitParameter(key);
-  }
-
-  /**
-   * Secures a third party url if the request is secure
-   *
-   * @param url     the url to secure
-   * @param request the request
-   * @return a secure version of the url, if and only if the original request was secure
-   */
-  public static String secureIf(final String url, final ServletRequest request) {
-    return isSsl((HttpServletRequest) request) ? StringFun.secureUrl(url) : url;
-  }
-
-  public static boolean isSsl(final HttpServletRequest request) {
-    return request.isSecure() || request.getHeader("X-Secure") != null;
   }
 
   protected static void respond(final HttpServletResponse response, final Json json)

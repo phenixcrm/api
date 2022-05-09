@@ -2,14 +2,14 @@ package com.ameriglide.phenix;
 
 import com.ameriglide.phenix.ws.Events;
 import com.ameriglide.phenix.ws.SessionHandler;
-import jakarta.servlet.ServletContext;
+import io.github.cdimascio.dotenv.Dotenv;
 import jakarta.servlet.ServletContextEvent;
 import jakarta.servlet.ServletContextListener;
 import jakarta.servlet.annotation.WebListener;
 import net.inetalliance.funky.Funky;
-import net.inetalliance.funky.StringFun;
 import net.inetalliance.log.Log;
 import net.inetalliance.potion.Locator;
+import net.inetalliance.potion.cache.RedisObjectCache;
 import net.inetalliance.potion.validation.NoLoopsValidator;
 import net.inetalliance.potion.validation.UniqueValidator;
 import net.inetalliance.sql.Db;
@@ -36,15 +36,17 @@ public class Startup implements ServletContextListener {
     return dev.get();
   }
 
+  public static TaskRouter router;
 	@Override
   public void contextInitialized(ServletContextEvent sce) {
+    var env = Dotenv.load();
     log.info("Le phénix s'est levé");
     Validator.register(NoLoops.class, new NoLoopsValidator());
     var context = sce.getServletContext();
     var path = context.getContextPath();
     this.development = System.getProperty("dev") != null;
     log.info("Starting up %s for %s", path +"/", development ? "development" : "production");
-    final String dbParam = getContextParameter(context, "db");
+    var dbParam = env.get("db");
     try {
       final Db db = new Db(new URI(dbParam));
       Class.forName(db.vendor.getDriver());
@@ -57,13 +59,18 @@ public class Startup implements ServletContextListener {
       System.exit(1);
     }
     Validator.register(Unique.class, new UniqueValidator());
-    SessionHandler.init();
+    Startup.router = new TaskRouter();
+    SessionHandler.init(router);
     Events.handler = SessionHandler::new;
+
   }
 
   @Override
   public void contextDestroyed(ServletContextEvent sce) {
+    router.shutdown();
+    router = null;
     Locator.detach();
+    RedisObjectCache.shutdown();
     log.info("Deregistering JDBC drivers");
     list(DriverManager.getDrivers()).forEach(d -> {
       try {
@@ -74,15 +81,7 @@ public class Startup implements ServletContextListener {
     });
   }
 
-  private String getContextParameter(final ServletContext context, final String key) {
-    if(development) {
-      var dev = context.getInitParameter("dev-" + key);
-      if(StringFun.isNotEmpty(dev)) {
-        return dev;
-      }
-    }
-    return context.getInitParameter(key);
-  }
 
-  private static final transient Log log = Log.getInstance(Startup.class);
+
+  private static final Log log = Log.getInstance(Startup.class);
 }

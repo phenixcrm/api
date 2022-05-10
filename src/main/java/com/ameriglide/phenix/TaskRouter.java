@@ -1,8 +1,10 @@
 package com.ameriglide.phenix;
 
+import com.ameriglide.phenix.common.Agent;
 import com.ameriglide.phenix.common.Ticket;
 import com.ameriglide.phenix.tasks.CreateWorkers;
 import com.ameriglide.phenix.tasks.CredentialWorkers;
+import com.ameriglide.phenix.tasks.PruneCredentials;
 import com.ameriglide.phenix.tasks.PruneWorkers;
 import com.ameriglide.phenix.util.Security;
 import com.twilio.Twilio;
@@ -11,6 +13,9 @@ import com.twilio.rest.api.v2010.account.sip.CredentialList;
 import com.twilio.rest.api.v2010.account.sip.CredentialListFetcher;
 import com.twilio.rest.api.v2010.account.sip.Domain;
 import com.twilio.rest.api.v2010.account.sip.DomainFetcher;
+import com.twilio.rest.api.v2010.account.sip.credentiallist.Credential;
+import com.twilio.rest.api.v2010.account.sip.credentiallist.CredentialDeleter;
+import com.twilio.rest.api.v2010.account.sip.credentiallist.CredentialReader;
 import com.twilio.rest.taskrouter.v1.Workspace;
 import com.twilio.rest.taskrouter.v1.WorkspaceFetcher;
 import com.twilio.rest.taskrouter.v1.workspace.*;
@@ -26,17 +31,17 @@ import static java.util.concurrent.TimeUnit.MINUTES;
 import static java.util.stream.StreamSupport.stream;
 
 public class TaskRouter {
-  public final Workspace workspace;
-  public final TwilioRestClient rest;
+  private final Workspace workspace;
+  private final TwilioRestClient rest;
   public final Activity offline;
   public final Activity available;
   public final Activity unavailable;
   public final Map<String,Activity> bySid;
 
-  public final Domain sip;
+  private final Domain sip;
 
   private final ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
-  public final CredentialList sipCredentialList;
+  private final CredentialList sipCredentialList;
 
   public TaskRouter() {
     var env = Dotenv.load();
@@ -53,9 +58,10 @@ public class TaskRouter {
     bySid.put(available.getSid(),available);
     bySid.put(unavailable.getSid(),unavailable);
     executor.scheduleWithFixedDelay(new CreateWorkers(this),0,5, MINUTES);
-    executor.scheduleWithFixedDelay(new PruneWorkers(this),0,15, MINUTES);
-    executor.scheduleWithFixedDelay(new CredentialWorkers(sipCredentialList.getSid(), new Security(env.get("key"))),
-      0,15, MINUTES);
+    executor.scheduleWithFixedDelay(new PruneWorkers(this),1,15, MINUTES);
+    executor.scheduleWithFixedDelay(new CredentialWorkers(sipCredentialList.getSid(),
+        new Security(env.get("key"))), 2,15, MINUTES);
+    executor.scheduleWithFixedDelay(new PruneCredentials(this),3,15,MINUTES);
   }
   private Activity findActivity(final String name) {
     return stream(new ActivityReader(workspace.getSid())
@@ -71,12 +77,27 @@ public class TaskRouter {
   public Stream<Worker> getWorkers() {
     return stream(new WorkerReader(workspace.getSid()).read(rest).spliterator(),true);
   }
+  public Stream<Credential> getCredentials() {
+    return stream(new CredentialReader(sipCredentialList.getSid()).read(rest).spliterator(),true);
+  }
 
   public void shutdown() {
     executor.shutdown();
   }
 
   public Worker setActivity(Ticket ticket, Activity newActivity) {
-    return new WorkerUpdater(workspace.getSid(),ticket.sid()).setActivitySid(newActivity.getSid()).update();
+    return new WorkerUpdater(workspace.getSid(),ticket.sid()).setActivitySid(newActivity.getSid()).update(rest);
+  }
+
+  public boolean delete(Worker w) {
+    return new WorkerDeleter(workspace.getSid(),w.getSid()).delete(rest);
+  }
+
+  public boolean deleteCredential(String credentialSid) {
+    return new CredentialDeleter(workspace.getSid(),sipCredentialList.getSid(),credentialSid).delete(rest);
+  }
+
+  public Worker createWorker(Agent a) {
+    return Worker.creator(workspace.getSid(), a.getFullName()).create(rest);
   }
 }

@@ -2,8 +2,6 @@ package com.ameriglide.phenix.tasks;
 
 import com.ameriglide.phenix.TaskRouter;
 import com.ameriglide.phenix.common.Agent;
-import com.twilio.rest.api.v2010.account.sip.credentiallist.CredentialDeleter;
-import com.twilio.rest.taskrouter.v1.workspace.WorkerDeleter;
 import net.inetalliance.log.Log;
 import net.inetalliance.potion.Locator;
 
@@ -13,22 +11,34 @@ public record PruneWorkers(TaskRouter router) implements Runnable {
   @Override
   public void run() {
     try {
-      router.getWorkers().forEach(w-> {
+      router.getWorkers().forEach(w -> {
         var a = Locator.$1(Agent.withTwilioSid(w.getSid()));
-        if(a != null && !a.isActive()) {
-          new WorkerDeleter(router.workspace.getSid(),w.getSid()).delete();
-          if(isNotEmpty(a.getCredentialSid())) {
-           new CredentialDeleter(router.sipCredentialList.getSid(),a.getCredentialSid()).delete();
+        if (a != null && !a.isActive()) {
+          if (router.delete(w)) {
+            var credentialSid = a.getCredentialSid();
+            if (isNotEmpty(credentialSid)) {
+              if (router.deleteCredential(credentialSid)) {
+                Locator.update(a, "PruneWorkers", copy -> {
+                  copy.setCredentialSid(null);
+                });
+              } else {
+                log.warning("Could not remove credential: %s", credentialSid);
+              }
+            }
+            Locator.update(a, "PruneWorkers", copy -> {
+              copy.setTwilioSid(null);
+              log.info("PruneWorkers %s -%s", a.getEmail(), w.getSid());
+            });
+          } else {
+            log.warning("Unable to remove worker: %s", w.getSid());
           }
-          Locator.update(a,"PruneWorkers",copy -> {
-            copy.setTwilioSid(null);
-            log.info("PruneWorkers %s -%s", a.getEmail(),w.getSid());
-          });
         }
       });
-    } catch(Throwable t) {
+
+    } catch (Throwable t) {
       log.error(t);
     }
   }
+
   private static final Log log = Log.getInstance(PruneWorkers.class);
 }

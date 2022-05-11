@@ -58,7 +58,7 @@ public class Auth extends HttpServlet {
     if (a == null) {
       throw new IllegalStateException();
     }
-    return Info.$(Agent.class).toJson($(a));
+    return  Info.$(Agent.class).toJson($(a)).$("sipSecret", Startup.router.getSipSecret(a));
   }
 
   public static boolean isTeamLeader(final HttpServletRequest req) {

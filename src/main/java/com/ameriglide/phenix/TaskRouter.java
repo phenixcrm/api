@@ -36,33 +36,37 @@ public class TaskRouter {
   public final Activity offline;
   public final Activity available;
   public final Activity unavailable;
-  public final Map<String,Activity> bySid;
+  public final Map<String, Activity> bySid;
 
   private final Domain sip;
 
   private final ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
   private final CredentialList sipCredentialList;
+  private final Security security;
 
   public TaskRouter() {
     var env = Dotenv.load();
-    Twilio.init(env.get("twilioAccountSid"),env.get("twilioAuthToken"));
+    Twilio.init(env.get("twilioAccountSid"), env.get("twilioAuthToken"));
     rest = Twilio.getRestClient();
-    sip = new DomainFetcher(rest.getAccountSid(),env.get("twilioDomainSid")).fetch(rest);
+    sip = new DomainFetcher(rest.getAccountSid(), env.get("twilioDomainSid")).fetch(rest);
     workspace = new WorkspaceFetcher(env.get("twilioWorkspaceSid")).fetch(rest);
     sipCredentialList = new CredentialListFetcher(env.get("twilioCredentialListSid")).fetch(rest);
     offline = findActivity("Offline");
     available = findActivity("Available");
     unavailable = findActivity("Unavailable");
     bySid = new HashMap<>();
-    bySid.put(offline.getSid(),offline);
-    bySid.put(available.getSid(),available);
-    bySid.put(unavailable.getSid(),unavailable);
-    executor.scheduleWithFixedDelay(new CreateWorkers(this),0,5, MINUTES);
-    executor.scheduleWithFixedDelay(new PruneWorkers(this),1,15, MINUTES);
+    bySid.put(offline.getSid(), offline);
+    bySid.put(available.getSid(), available);
+    bySid.put(unavailable.getSid(), unavailable);
+    executor.scheduleWithFixedDelay(new CreateWorkers(this), 0, 5, MINUTES);
+    executor.scheduleWithFixedDelay(new PruneWorkers(this), 0, 15, MINUTES);
+    this.security = new Security(env.get("key"));
     executor.scheduleWithFixedDelay(new CredentialWorkers(sipCredentialList.getSid(),
-        new Security(env.get("key"))), 2,15, MINUTES);
-    executor.scheduleWithFixedDelay(new PruneCredentials(this),3,15,MINUTES);
+      security), 0, 15, MINUTES);
+
+    executor.scheduleWithFixedDelay(new PruneCredentials(this), 0, 15, MINUTES);
   }
+
   private Activity findActivity(final String name) {
     return stream(new ActivityReader(workspace.getSid())
       .setFriendlyName(name)
@@ -71,14 +75,15 @@ public class TaskRouter {
   }
 
   public Stream<Activity> getActivities() {
-    return stream(new ActivityReader(workspace.getSid()).read(rest).spliterator(),false);
+    return stream(new ActivityReader(workspace.getSid()).read(rest).spliterator(), false);
   }
 
   public Stream<Worker> getWorkers() {
-    return stream(new WorkerReader(workspace.getSid()).read(rest).spliterator(),true);
+    return stream(new WorkerReader(workspace.getSid()).read(rest).spliterator(), true);
   }
+
   public Stream<Credential> getCredentials() {
-    return stream(new CredentialReader(sipCredentialList.getSid()).read(rest).spliterator(),true);
+    return stream(new CredentialReader(sipCredentialList.getSid()).read(rest).spliterator(), true);
   }
 
   public void shutdown() {
@@ -86,18 +91,23 @@ public class TaskRouter {
   }
 
   public Worker setActivity(Ticket ticket, Activity newActivity) {
-    return new WorkerUpdater(workspace.getSid(),ticket.sid()).setActivitySid(newActivity.getSid()).update(rest);
+    return new WorkerUpdater(workspace.getSid(), ticket.sid()).setActivitySid(newActivity.getSid()).update(rest);
   }
 
   public boolean delete(Worker w) {
-    return new WorkerDeleter(workspace.getSid(),w.getSid()).delete(rest);
+    return new WorkerDeleter(workspace.getSid(), w.getSid()).delete(rest);
   }
 
   public boolean deleteCredential(String credentialSid) {
-    return new CredentialDeleter(workspace.getSid(),sipCredentialList.getSid(),credentialSid).delete(rest);
+    return new CredentialDeleter(sipCredentialList.getSid(), credentialSid).delete(rest);
   }
 
   public Worker createWorker(Agent a) {
     return Worker.creator(workspace.getSid(), a.getFullName()).create(rest);
+  }
+
+  public String getSipSecret(Agent a) {
+    var bytes = a.getSipSecret();
+    return bytes == null ? null : security.decrypt(bytes);
   }
 }

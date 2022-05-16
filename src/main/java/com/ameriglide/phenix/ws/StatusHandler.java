@@ -30,7 +30,6 @@ public class StatusHandler extends PhenixServlet
     }
   }
 
-
   @Override
   public JsonMap onMessage(final Session session, final JsonMap map) {
     var ticket = Events.getTicket(session);
@@ -51,22 +50,22 @@ public class StatusHandler extends PhenixServlet
         var w = router.setActivity(ticket,newActivity);
         state.put("activity",w.getActivitySid());
       }
+      default -> throw new IllegalArgumentException();
     }
-    return status;
+    return state;
 
   }
 
   @Override
   public JsonMap onConnect(final Session session) {
-    return status;
+    var ticket = Events.getTicket(session);
+    return status.getMap(ticket.sid());
   }
 
   @Override
   public void destroy() {
     status.clear();
-  }
-
-  private enum Action {
+  } private enum Action {
     PAUSE,
     FORWARD
   }

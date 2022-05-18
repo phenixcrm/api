@@ -33,6 +33,9 @@ public class StatusHandler extends PhenixServlet
   @Override
   public JsonMap onMessage(final Session session, final JsonMap map) {
     var ticket = Events.getTicket(session);
+    if(ticket == null) {
+      return null;
+    }
     var state = status.getMap(ticket.sid());
     switch(Action.valueOf(map.get("action").toUpperCase())) {
       case PAUSE -> {
@@ -59,7 +62,7 @@ public class StatusHandler extends PhenixServlet
   @Override
   public JsonMap onConnect(final Session session) {
     var ticket = Events.getTicket(session);
-    return status.getMap(ticket.sid());
+    return ticket == null ? null : status.getMap(ticket.sid());
   }
 
   @Override

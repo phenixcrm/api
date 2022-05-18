@@ -2,17 +2,15 @@ package com.ameriglide.phenix;
 
 import com.ameriglide.phenix.common.Agent;
 import com.ameriglide.phenix.common.Ticket;
-import com.ameriglide.phenix.tasks.CreateWorkers;
-import com.ameriglide.phenix.tasks.CredentialWorkers;
-import com.ameriglide.phenix.tasks.PruneCredentials;
-import com.ameriglide.phenix.tasks.PruneWorkers;
+import com.ameriglide.phenix.common.VerifiedCallerId;
+import com.ameriglide.phenix.tasks.*;
 import com.ameriglide.phenix.util.Security;
 import com.twilio.Twilio;
 import com.twilio.http.TwilioRestClient;
+import com.twilio.rest.api.v2010.account.IncomingPhoneNumberReader;
+import com.twilio.rest.api.v2010.account.OutgoingCallerIdReader;
 import com.twilio.rest.api.v2010.account.sip.CredentialList;
 import com.twilio.rest.api.v2010.account.sip.CredentialListFetcher;
-import com.twilio.rest.api.v2010.account.sip.Domain;
-import com.twilio.rest.api.v2010.account.sip.DomainFetcher;
 import com.twilio.rest.api.v2010.account.sip.credentiallist.Credential;
 import com.twilio.rest.api.v2010.account.sip.credentiallist.CredentialDeleter;
 import com.twilio.rest.api.v2010.account.sip.credentiallist.CredentialReader;
@@ -38,8 +36,6 @@ public class TaskRouter {
   public final Activity unavailable;
   public final Map<String, Activity> bySid;
 
-  private final Domain sip;
-
   private final ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
   private final CredentialList sipCredentialList;
   private final Security security;
@@ -48,7 +44,6 @@ public class TaskRouter {
     var env = Dotenv.load();
     Twilio.init(env.get("twilioAccountSid"), env.get("twilioAuthToken"));
     rest = Twilio.getRestClient();
-    sip = new DomainFetcher(rest.getAccountSid(), env.get("twilioDomainSid")).fetch(rest);
     workspace = new WorkspaceFetcher(env.get("twilioWorkspaceSid")).fetch(rest);
     sipCredentialList = new CredentialListFetcher(env.get("twilioCredentialListSid")).fetch(rest);
     offline = findActivity("Offline");
@@ -63,8 +58,9 @@ public class TaskRouter {
     this.security = new Security(env.get("key"));
     executor.scheduleWithFixedDelay(new CredentialWorkers(sipCredentialList.getSid(),
       security), 0, 15, MINUTES);
-
     executor.scheduleWithFixedDelay(new PruneCredentials(this), 0, 15, MINUTES);
+    executor.scheduleWithFixedDelay(new CreateVerifiedCallerIds(this),0, 5,MINUTES);
+    executor.scheduleWithFixedDelay(new PruneVerifiedCallerIds(this),2, 5,MINUTES);
   }
 
   private Activity findActivity(final String name) {
@@ -84,6 +80,14 @@ public class TaskRouter {
 
   public Stream<Credential> getCredentials() {
     return stream(new CredentialReader(sipCredentialList.getSid()).read(rest).spliterator(), true);
+  }
+
+  public Stream<VerifiedCallerId> getVerifiedCallerIds() {
+    return Stream.concat(
+      stream(new OutgoingCallerIdReader().read(rest).spliterator(),true)
+        .map(oCid -> new VerifiedCallerId(oCid.getSid(),oCid.getFriendlyName(),oCid.getPhoneNumber().getEndpoint())),
+      stream(new IncomingPhoneNumberReader().read(rest).spliterator(),true)
+        .map(iPn -> new VerifiedCallerId(iPn.getSid(),iPn.getFriendlyName(),iPn.getPhoneNumber().getEndpoint())));
   }
 
   public void shutdown() {

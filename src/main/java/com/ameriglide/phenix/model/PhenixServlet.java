@@ -7,6 +7,7 @@ import com.ameriglide.phenix.common.Source;
 import com.ameriglide.phenix.exception.BadRequestException;
 import com.ameriglide.phenix.exception.NotFoundException;
 import com.ameriglide.phenix.exception.PhenixServletException;
+import com.twilio.twiml.TwiML;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
@@ -94,6 +95,18 @@ public class PhenixServlet
       response.setContentType(contentType);
       try (final PrintWriter writer = response.getWriter()) {
         json.format(new Formatter(writer));
+        writer.flush();
+      }
+    }
+  }
+
+  protected static void respond(final HttpServletResponse response, final TwiML twiml) throws IOException {
+    if(twiml == null) {
+      response.setStatus(SC_NOT_FOUND);
+    } else {
+      response.setContentType("text/xml");
+      try(var writer = response.getWriter()) {
+        writer.write(twiml.toXml());
         writer.flush();
       }
     }

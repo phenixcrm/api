@@ -1,6 +1,7 @@
 package com.ameriglide.phenix.api;
 
 import com.ameriglide.phenix.common.Agent;
+import com.ameriglide.phenix.common.VerifiedCallerId;
 import com.ameriglide.phenix.model.PhenixServlet;
 import com.twilio.twiml.VoiceResponse;
 import com.twilio.twiml.voice.Dial;
@@ -23,10 +24,11 @@ public class VoiceCall extends PhenixServlet {
     var caller = getSipUser(request.getParameter("Caller"));
     var agent = Locator.$1(Agent.withSipUser(caller));
     log.info("%s dialed %s", agent.getFullName(), called);
+    var vCid = Locator.$1(VerifiedCallerId.isDefault);
     respond(response, new VoiceResponse.Builder()
       .dial(new Dial.Builder()
         .number(called)
-        .callerId("18007901635")
+        .callerId(vCid.getPhoneNumber())
         .build())
       .build());
   }

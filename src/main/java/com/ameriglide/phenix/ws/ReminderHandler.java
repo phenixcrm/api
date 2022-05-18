@@ -22,7 +22,6 @@ import java.util.concurrent.locks.ReentrantLock;
 
 import static com.ameriglide.phenix.common.Opportunity.needsReminding;
 import static java.util.concurrent.TimeUnit.MINUTES;
-import static java.util.stream.Collectors.toSet;
 import static net.inetalliance.funky.Funky.of;
 import static net.inetalliance.funky.StringFun.isNotEmpty;
 import static net.inetalliance.potion.Locator.forEach;
@@ -30,9 +29,9 @@ import static net.inetalliance.potion.Locator.forEach;
 public class ReminderHandler
     implements JsonMessageHandler, Runnable {
 
-  private static final transient Log log = Log.getInstance(ReminderHandler.class);
+  private static final Log log = Log.getInstance(ReminderHandler.class);
   public static ReminderHandler $;
-  private final Map<Ticket, JsonList> msgs;
+  private final Map<Integer, JsonList> msgs;
   private final Lock lock;
   private final ScheduledExecutorService scheduler = Executors
       .newSingleThreadScheduledExecutor((r)->{
@@ -69,13 +68,15 @@ public class ReminderHandler
   }
 
   private void broadcast(Ticket ticket) {
-    lock.lock();
-    try {
-      msgs.remove(ticket);
-      forEach(needsReminding(15, MINUTES).and(Opportunity.withAgent(ticket.agent())), this::add);
-      Events.broadcast("reminder", ticket, msgs.get(ticket));
-    } finally {
-      lock.unlock();
+    if(ticket != null) {
+      lock.lock();
+      try {
+        msgs.remove(ticket.id());
+        forEach(needsReminding(15, MINUTES).and(Opportunity.withAgent(ticket.agent())), this::add);
+        Events.broadcast("reminder", ticket.id(), msgs.get(ticket.id()));
+      } finally {
+        lock.unlock();
+      }
     }
   }
 
@@ -92,7 +93,7 @@ public class ReminderHandler
             (shipping.getPhone())))) {
       dial.add(label("Billing", billing.getPhone()));
     }
-    msgs.get(Integer.toString(o.getAssignedTo().id))
+    msgs.get(o.getAssignedTo().id)
         .add(new JsonMap().$("id", o.id)
             .$("reminder", o.getReminder())
             .$("heat", o.getHeat())
@@ -110,14 +111,14 @@ public class ReminderHandler
 
   @Override
   public void run() {
-    final Set<Ticket> agents = Events.getActiveAgents();
+    final Set<Integer> agents = Events.getActiveAgents();
     lock.lock();
     msgs.clear();
     try {
       if (!agents.isEmpty()) {
         forEach(needsReminding(15, MINUTES).and(
-          Opportunity.withAgentIdIn(agents.stream().map(Ticket::id).collect(toSet()))), this::add);
-        for (Map.Entry<Ticket, JsonList> entry : msgs.entrySet()) {
+          Opportunity.withAgentIdIn(agents)), this::add);
+        for (Map.Entry<Integer, JsonList> entry : msgs.entrySet()) {
           final JsonList value = entry.getValue();
           if (!value.isEmpty()) {
             Events.broadcast("reminder", entry.getKey(), value);

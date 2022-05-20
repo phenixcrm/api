@@ -1,20 +1,61 @@
 package com.ameriglide.phenix.api;
 
+import com.ameriglide.phenix.common.Call;
+import com.ameriglide.phenix.common.Segment;
 import com.ameriglide.phenix.model.PhenixServlet;
+import com.ameriglide.phenix.types.Resolution;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import net.inetalliance.log.Log;
+import net.inetalliance.potion.Locator;
+
+import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
+
+import static java.lang.String.join;
+import static net.inetalliance.potion.Locator.create;
+import static net.inetalliance.potion.Locator.update;
 
 @WebServlet("/twilio/voice/status")
 public class VoiceStatus extends PhenixServlet {
   @Override
-  protected void post(HttpServletRequest request, HttpServletResponse response) throws Exception {
-    request.getParameterMap().forEach((k, v) -> log.info("%s: %s", k, String.join(", ", v)));
-    try (var reader = request.getReader()) {
-      String line;
-      while((line = reader.readLine())!= null) {
-        log.info(line);
+  protected void get(HttpServletRequest request, HttpServletResponse response) throws Exception {
+    var s = new StringBuilder("/twilio/voice/status:");
+    request.getParameterMap().forEach((k, v) -> s.append("%n%s: %s".formatted(k, join(", ", v))));
+    log.info(s);
+    var callSid = request.getParameter("CallSid");
+    var call = Locator.$(new Call(callSid));
+    if(call == null) {
+      log.warning("status update on call that isn't present: %s", callSid);
+    } else {
+      switch (request.getParameter("CallbackSource")) {
+        case "call-progress-events" -> {
+          switch (request.getParameter("CallStatus")) {
+            case "completed" -> {
+              var segment = new Segment(call,Integer.parseInt(request.getParameter("SequenceNumber")));
+              if(segment.sequenceNumber == 0) {
+                segment.setCreated(call.getCreated());
+              } else {
+                var previousSegment = Locator.$(new Segment(call,segment.sequenceNumber-1));
+                if(previousSegment == null) {
+                  log.warning("Previous segment not found for %s:%d",call.key,segment.sequenceNumber);
+                  segment.setCreated(call.getCreated());
+                } else {
+                  segment.setCreated(previousSegment.getEnded());
+                }
+              }
+              segment.setEnded(LocalDateTime.now());
+              create("VoiceStatus",segment);
+              update(call, "VoiceStatus", copy -> {
+                copy.setResolution(Resolution.ANSWERED);
+                copy.setDuration(ChronoUnit.SECONDS.between(call.getCreated(),segment.getEnded()));
+              });
+
+
+            }
+          }
+        }
       }
     }
   }

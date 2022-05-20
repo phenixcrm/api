@@ -75,18 +75,18 @@ public class TaskRouter {
   }
 
   public Stream<Worker> getWorkers() {
-    return stream(new WorkerReader(workspace.getSid()).read(rest).spliterator(), true);
+    return stream(new WorkerReader(workspace.getSid()).read(rest).spliterator(), false);
   }
 
   public Stream<Credential> getCredentials() {
-    return stream(new CredentialReader(sipCredentialList.getSid()).read(rest).spliterator(), true);
+    return stream(new CredentialReader(sipCredentialList.getSid()).read(rest).spliterator(), false);
   }
 
   public Stream<VerifiedCallerId> getVerifiedCallerIds() {
     return Stream.concat(
-      stream(new OutgoingCallerIdReader().read(rest).spliterator(),true)
+      stream(new OutgoingCallerIdReader().read(rest).spliterator(),false)
         .map(oCid -> new VerifiedCallerId(oCid.getSid(),oCid.getFriendlyName(),oCid.getPhoneNumber().getEndpoint())),
-      stream(new IncomingPhoneNumberReader().read(rest).spliterator(),true)
+      stream(new IncomingPhoneNumberReader().read(rest).spliterator(),false)
         .map(iPn -> new VerifiedCallerId(iPn.getSid(),iPn.getFriendlyName(),iPn.getPhoneNumber().getEndpoint())));
   }
 

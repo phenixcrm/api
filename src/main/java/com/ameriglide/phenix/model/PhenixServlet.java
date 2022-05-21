@@ -5,6 +5,7 @@ import com.ameriglide.phenix.common.Business;
 import com.ameriglide.phenix.common.ProductLine;
 import com.ameriglide.phenix.common.Source;
 import com.ameriglide.phenix.exception.BadRequestException;
+import com.ameriglide.phenix.exception.MethodNotAllowedException;
 import com.ameriglide.phenix.exception.NotFoundException;
 import com.ameriglide.phenix.exception.PhenixServletException;
 import com.twilio.twiml.TwiML;
@@ -111,6 +112,10 @@ public class PhenixServlet
       }
     }
   }
+  void unsupported(HttpServletRequest request) {
+    log.warning("%s: %s not supported)",request.getRequestURI(),request.getMethod());
+    throw new MethodNotAllowedException();
+  }
 
   @Override
   protected final void doGet(final HttpServletRequest request, final HttpServletResponse response)
@@ -127,8 +132,9 @@ public class PhenixServlet
 
   protected void get(final HttpServletRequest request, final HttpServletResponse response)
     throws Exception {
-    super.doGet(request, response);
+    unsupported(request);
   }
+
 
   private void addErrorBody(final HttpServletResponse response, final PhenixServletException e)
     throws IOException {
@@ -156,7 +162,7 @@ public class PhenixServlet
 
   protected void post(final HttpServletRequest request, final HttpServletResponse response)
     throws Exception {
-    super.doPost(request, response);
+    unsupported(request);
   }
 
   @Override
@@ -188,12 +194,12 @@ public class PhenixServlet
 
   protected void delete(final HttpServletRequest request, final HttpServletResponse response)
     throws Exception {
-    super.doDelete(request, response);
+    unsupported(request);
   }
 
   protected void put(final HttpServletRequest request, final HttpServletResponse response)
     throws Exception {
-    super.doPut(request, response);
+    unsupported(request);
   }
 
   public Inet4Address getIpAddress(final HttpServletRequest request) {

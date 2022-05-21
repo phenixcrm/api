@@ -336,7 +336,7 @@ public class CallModel
       call.setCreated(now);
       call.setAgent(agent);
       Locator.create("call-sim", call);
-      final Segment segment = new Segment(call, call.key);
+      final Segment segment = new Segment(call, 0);
       segment.setAgent(agent);
       segment.setCreated(now);
       segment.setAnswered(now);

@@ -7,8 +7,11 @@ import com.ameriglide.phenix.common.VerifiedCallerId;
 import com.ameriglide.phenix.model.PhenixServlet;
 import com.ameriglide.phenix.types.CallerId;
 import com.ameriglide.phenix.types.Resolution;
+import com.twilio.http.HttpMethod;
 import com.twilio.twiml.VoiceResponse;
+import com.twilio.twiml.voice.Client;
 import com.twilio.twiml.voice.Dial;
+import com.twilio.twiml.voice.Number;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -17,6 +20,7 @@ import net.inetalliance.log.Log;
 import net.inetalliance.potion.Locator;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
@@ -31,6 +35,7 @@ public class VoiceCall extends PhenixServlet {
   private static final Predicate<String> isAgent = Pattern.compile("[A-Za-z.]*").asMatchPredicate();
 
   private static final Function<String,Agent> lookup = Funky.memoize(32,(user) -> $1(Agent.withSipUser(user)));
+  private static final List<Client.Event> clientSubscriptions = List.of(Client.Event.ANSWERED, Client.Event.RINGING);
 
   record Party(String endpoint, boolean isAgent) {
     Agent agent() {
@@ -64,12 +69,23 @@ public class VoiceCall extends PhenixServlet {
       if(called.isAgent) {
         call.setDirection(INTERNAL);
         call.setCallerId(called.callerId());
+        respond(response, new VoiceResponse.Builder()
+          .dial(new Dial.Builder()
+            .timeout(30)
+            .number(called.endpoint)
+            .callerId(caller.callerId().toString())
+            .build())
+          .build());
       } else {
         call.setDirection(OUTBOUND);
         var vCid = $1(VerifiedCallerId.isDefault);
         respond(response, new VoiceResponse.Builder()
           .dial(new Dial.Builder()
-            .number(called.endpoint())
+            .number(new Number.Builder(called.endpoint)
+              .statusCallbackMethod(HttpMethod.GET)
+              .statusCallbackEvents(List.of(Number.Event.ANSWERED,Number.Event.COMPLETED))
+              .statusCallback("/twilio/voice/status")
+              .build())
             .callerId(vCid.getPhoneNumber())
             .build())
           .build());

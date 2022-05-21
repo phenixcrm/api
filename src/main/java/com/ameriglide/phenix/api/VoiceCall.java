@@ -44,6 +44,7 @@ public class VoiceCall extends PhenixServlet {
         var agent = agent();
         return new CallerId(agent.getFullName(),agent.getSipUser());
       }
+      return new CallerId(null,endpoint);
     }
   }
 

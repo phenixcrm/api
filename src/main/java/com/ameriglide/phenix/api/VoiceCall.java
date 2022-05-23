@@ -79,6 +79,7 @@ public class VoiceCall extends PhenixServlet {
       } else {
         call.setDirection(OUTBOUND);
         var vCid = $1(VerifiedCallerId.isDefault);
+        call.setCallerId(called.callerId());
         respond(response, new VoiceResponse.Builder()
           .dial(new Dial.Builder()
             .number(new Number.Builder(called.endpoint)

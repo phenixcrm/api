@@ -265,7 +265,7 @@ public class CallModel
                         final HttpServletResponse response,
                         final Call call, final JsonMap data)
       throws IOException {
-    if (call.key.startsWith("sim-") && data.getEnum("resolution", Resolution.class) == ANSWERED) {
+    if (call.sid.startsWith("sim-") && data.getEnum("resolution", Resolution.class) == ANSWERED) {
 
       final Segment segment = call.getActiveSegment();
       Locator.update(segment, "call-sim", copy -> {
@@ -336,7 +336,7 @@ public class CallModel
       call.setCreated(now);
       call.setAgent(agent);
       Locator.create("call-sim", call);
-      final Segment segment = new Segment(call, 0);
+      final Segment segment = new Segment(call, "0");
       segment.setAgent(agent);
       segment.setCreated(now);
       segment.setAnswered(now);

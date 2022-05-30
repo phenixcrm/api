@@ -69,7 +69,7 @@ public abstract class TwiMLServlet extends PhenixServlet {
       .append(line);
     request.getParameterMap().forEach((k, v) -> s.append("%n%s: %s".formatted(k, String.join(", ", v))));
     try (var reader = request.getReader()) {
-      var data = new StringBuilder("%nRequest Body:\n");
+      var data = new StringBuilder("\nRequest Body:\n");
       String line;
       while ((line = reader.readLine()) != null) {
         data.append(line);

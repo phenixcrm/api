@@ -11,7 +11,7 @@ import net.inetalliance.types.struct.pagination.PaginatedCollection;
 import java.util.Collection;
 import java.util.Set;
 
-import static com.ameriglide.phenix.model.PhenixServlet.getParameter;
+import static com.ameriglide.phenix.PhenixServlet.getParameter;
 import static java.util.stream.Collectors.toList;
 
 public interface Listable<T> {

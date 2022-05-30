@@ -1,7 +1,7 @@
 package com.ameriglide.phenix.api;
 
 import com.ameriglide.phenix.Startup;
-import com.ameriglide.phenix.model.PhenixServlet;
+import com.ameriglide.phenix.PhenixServlet;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;

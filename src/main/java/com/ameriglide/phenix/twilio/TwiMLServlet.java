@@ -17,17 +17,26 @@ import java.util.regex.Pattern;
 
 import static jakarta.servlet.http.HttpServletResponse.SC_NOT_FOUND;
 import static jakarta.servlet.http.HttpServletResponse.SC_NO_CONTENT;
+import static java.lang.System.out;
 import static net.inetalliance.potion.Locator.$1;
 
 public abstract class TwiMLServlet extends PhenixServlet {
   protected void log(final String format, Object... args) {
     if(format != null) {
-      System.out.printf("%s\t%s\t%n%s%n",
+      out.printf("%s\t%s\t%n%s%n",
         Chalk.on("TwiML").bgRed().cyan().bold(),
-        Chalk.on(getClass().getSimpleName()).white().bold(),
+        Chalk.on(getClass().getSimpleName()).green().bold(),
         format.formatted(args));
     }
-
+  }
+  protected void error(final Throwable t) {
+    if(t != null) {
+      out.printf("%s\t%s\t%n%s%n",
+        Chalk.on("TwiML").bgRed().cyan().bold(),
+        Chalk.on(getClass().getSimpleName()).red().bold(),
+        t.getClass().getSimpleName());
+        t.printStackTrace(out);
+    }
   }
   protected static void respond(final HttpServletResponse response, final TwiML twiml) throws IOException {
     if (twiml == null) {

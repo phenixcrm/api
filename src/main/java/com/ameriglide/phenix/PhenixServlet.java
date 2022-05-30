@@ -1,4 +1,4 @@
-package com.ameriglide.phenix.model;
+package com.ameriglide.phenix;
 
 import com.ameriglide.phenix.common.Agent;
 import com.ameriglide.phenix.common.Business;
@@ -8,7 +8,6 @@ import com.ameriglide.phenix.exception.BadRequestException;
 import com.ameriglide.phenix.exception.MethodNotAllowedException;
 import com.ameriglide.phenix.exception.NotFoundException;
 import com.ameriglide.phenix.exception.PhenixServletException;
-import com.twilio.twiml.TwiML;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
@@ -101,17 +100,7 @@ public class PhenixServlet
     }
   }
 
-  protected static void respond(final HttpServletResponse response, final TwiML twiml) throws IOException {
-    if(twiml == null) {
-      response.setStatus(SC_NOT_FOUND);
-    } else {
-      response.setContentType("text/xml");
-      try(var writer = response.getWriter()) {
-        writer.write(twiml.toXml());
-        writer.flush();
-      }
-    }
-  }
+
   void unsupported(HttpServletRequest request) {
     log.warning("%s: %s not supported)",request.getRequestURI(),request.getMethod());
     throw new MethodNotAllowedException();

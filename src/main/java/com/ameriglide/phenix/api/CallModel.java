@@ -8,7 +8,7 @@ import com.ameriglide.phenix.exception.NotFoundException;
 import com.ameriglide.phenix.exception.UnauthorizedException;
 import com.ameriglide.phenix.model.Key;
 import com.ameriglide.phenix.model.ListableModel;
-import com.ameriglide.phenix.model.PhenixServlet;
+import com.ameriglide.phenix.PhenixServlet;
 import com.ameriglide.phenix.model.Range;
 import com.ameriglide.phenix.types.CallerId;
 import com.ameriglide.phenix.types.Resolution;
@@ -267,8 +267,8 @@ public class CallModel
       throws IOException {
     if (call.sid.startsWith("sim-") && data.getEnum("resolution", Resolution.class) == ANSWERED) {
 
-      final Segment segment = call.getActiveSegment();
-      Locator.update(segment, "call-sim", copy -> {
+      final Leg leg = call.getActiveSegment();
+      Locator.update(leg, "call-sim", copy -> {
         copy.setEnded(LocalDateTime.now());
       });
       Locator.update(call, "call-sim", arg -> {
@@ -336,11 +336,11 @@ public class CallModel
       call.setCreated(now);
       call.setAgent(agent);
       Locator.create("call-sim", call);
-      final Segment segment = new Segment(call, "0");
-      segment.setAgent(agent);
-      segment.setCreated(now);
-      segment.setAnswered(now);
-      Locator.create("call-sim", segment);
+      final Leg leg = new Leg(call, "0");
+      leg.setAgent(agent);
+      leg.setCreated(now);
+      leg.setAnswered(now);
+      Locator.create("call-sim", leg);
       return JsonMap.singletonMap("success", true);
     }
     throw new UnsupportedOperationException();
@@ -403,7 +403,7 @@ public class CallModel
           .$("lastName", split.length == 2 ? split[1] : split[0]));
       map.$("contacts", contactMatches);
     }
-    map.$("segments", (JsonList) $$(Segment.withCall(call).and(Segment.isAnswered)).stream()
+    map.$("segments", (JsonList) $$(Leg.withCall(call).and(Leg.isAnswered)).stream()
         .map(segment -> {
           final JsonMap j = new JsonMap();
           final Agent agent = segment.getAgent();

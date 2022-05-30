@@ -6,7 +6,6 @@ import com.twilio.http.HttpMethod;
 import com.twilio.twiml.TwiML;
 import com.twilio.twiml.VoiceResponse;
 import com.twilio.twiml.voice.Record;
-import com.twilio.twiml.voice.Say;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -24,11 +23,9 @@ import static net.inetalliance.potion.Locator.update;
 public class Voicemail extends TwiMLServlet {
   @Override
   protected TwiML getResponse(HttpServletRequest request, HttpServletResponse response) {
-    log("%s entered voicemail", request.getParameter("CallSid"));
+    info("%s entered voicemail", request.getParameter("CallSid"));
     return new VoiceResponse.Builder()
-      .say(new Say.Builder("The party you are trying to reach is not available. Please leave a message")
-        .voice(Say.Voice.POLLY_AMY_NEURAL)
-        .build())
+      .say(speak("The party you are trying to reach is not available. Please leave a message"))
       .record(new Record.Builder()
         .playBeep(true)
         .method(HttpMethod.POST)
@@ -65,10 +62,10 @@ public class Voicemail extends TwiMLServlet {
           of(request.getParameter("TranscriptionText"))
             .filter(StringFun::isNotEmpty)
             .ifPresent(copy::setTranscription);
-          log("%s voicemail recorded%s", copy.sid, isNotEmpty(copy.getTranscription()) ? " transcribed" : "");
+          info("%s voicemail recorded%s", copy.sid, isNotEmpty(copy.getTranscription()) ? " transcribed" : "");
         });
       } else {
-        log("%s voicemail changed status to %s", call.sid, request.getParameter("CallStatus"));
+        info("%s voicemail changed status to %s", call.sid, request.getParameter("CallStatus"));
       }
     } catch (Throwable t) {
       error(t);

@@ -5,23 +5,41 @@ import com.ameriglide.phenix.common.Agent;
 import com.ameriglide.phenix.types.CallerId;
 import com.github.tomaslanger.chalk.Chalk;
 import com.twilio.twiml.TwiML;
+import com.twilio.twiml.VoiceResponse;
+import com.twilio.twiml.voice.Hangup;
+import com.twilio.twiml.voice.Pause;
+import com.twilio.twiml.voice.Redirect;
+import com.twilio.twiml.voice.Say;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import net.inetalliance.funky.Funky;
-import net.inetalliance.log.Log;
 
 import java.io.IOException;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
 
+import static com.twilio.http.HttpMethod.GET;
 import static jakarta.servlet.http.HttpServletResponse.SC_NOT_FOUND;
 import static jakarta.servlet.http.HttpServletResponse.SC_NO_CONTENT;
 import static java.lang.System.out;
 import static net.inetalliance.potion.Locator.$1;
 
 public abstract class TwiMLServlet extends PhenixServlet {
-  protected void log(final String format, Object... args) {
+  public static final Pause pause = new Pause.Builder().length(1).build();
+  protected static final Hangup hangup = new Hangup.Builder().build();
+  protected static final VoiceResponse toVoicemail = new VoiceResponse.Builder()
+    .redirect(new Redirect.Builder("/twilio/voicemail")
+      .method(GET)
+      .build())
+    .build();
+  protected Say speak(String msg) {
+    return new Say.Builder(msg)
+      .voice(Say.Voice.POLLY_SALLI_NEURAL)
+      .build();
+
+  }
+  protected void info(final String format, Object... args) {
     if(format != null) {
       out.printf("%s\t%s\t%n%s%n",
         Chalk.on("TwiML").bgRed().cyan().bold(),
@@ -54,14 +72,14 @@ public abstract class TwiMLServlet extends PhenixServlet {
   private static final String line = "\n----------------------------------";
 
   @Override
-  protected void get(HttpServletRequest request, HttpServletResponse response) throws Exception {
+  protected final void get(HttpServletRequest request, HttpServletResponse response) throws Exception {
     var s = new StringBuilder(bar)
       .append("\nGET ")
       .append(request.getRequestURI())
       .append(line);
     request.getParameterMap().forEach((k, v) -> s.append("%n%s: %s".formatted(k, String.join(", ", v))));
     s.append(line);
-    log(s.toString());
+    info(s.toString());
     var twiml = getResponse(request, response);
     if (twiml == null) {
       response.sendError(SC_NO_CONTENT);
@@ -86,7 +104,7 @@ public abstract class TwiMLServlet extends PhenixServlet {
       s.append(data);
     }
     s.append(line);
-    log.info(s);
+    info(s.toString());
     respond(response, postResponse(request, response));
   }
 
@@ -95,9 +113,7 @@ public abstract class TwiMLServlet extends PhenixServlet {
   }
 
   protected abstract TwiML getResponse(HttpServletRequest request, HttpServletResponse response) throws Exception;
-
-  private static final Log log = Log.getInstance(TwiMLServlet.class);
-  private static Predicate<String> e164 = Pattern.compile("^\\+[1-9]\\d{1,14}$").asMatchPredicate();
+  private static final Predicate<String> e164 = Pattern.compile("^\\+[1-9]\\d{1,14}$").asMatchPredicate();
 
   protected static Party asParty(String sipUri) {
     var matcher = sip.matcher(sipUri);
@@ -110,7 +126,7 @@ public abstract class TwiMLServlet extends PhenixServlet {
     throw new IllegalArgumentException();
   }
 
-  private static final Pattern sip = Pattern.compile("sip:([A-Za-z\\d.]*)@([a-z]*).sip.twilio.com");
+  private static final Pattern sip = Pattern.compile("^sip:([A-Za-z\\d.]*)@([a-z]*).sip.twilio.com(;.*)?$");
   private static final Predicate<String> isAgent = Pattern.compile("[A-Za-z.]*").asMatchPredicate();
 
   private static final Function<String, Agent> lookup = Funky.memoize(32, (user) -> $1(Agent.withSipUser(user)));
@@ -131,6 +147,14 @@ public abstract class TwiMLServlet extends PhenixServlet {
       return new CallerId(null, endpoint);
     }
 
+    public String spoken() {
+      if(isAgent()) {
+        var a = agent();
+        return a == null ? endpoint : agent().getFullName();
+      } else {
+        return endpoint;
+      }
+    }
   }
 
 }

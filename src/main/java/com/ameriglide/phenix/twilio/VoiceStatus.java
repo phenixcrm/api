@@ -3,7 +3,6 @@ package com.ameriglide.phenix.twilio;
 import com.ameriglide.phenix.common.Call;
 import com.ameriglide.phenix.common.Leg;
 import com.ameriglide.phenix.exception.NotFoundException;
-import com.ameriglide.phenix.types.CallDirection;
 import com.twilio.twiml.TwiML;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServletRequest;
@@ -18,7 +17,6 @@ import static com.ameriglide.phenix.types.Resolution.DROPPED;
 import static java.time.LocalDateTime.now;
 import static net.inetalliance.funky.Funky.of;
 import static net.inetalliance.potion.Locator.*;
-import static net.inetalliance.potion.Locator.update;
 
 @WebServlet("/twilio/voice/status")
 public class VoiceStatus extends TwiMLServlet {
@@ -41,19 +39,23 @@ public class VoiceStatus extends TwiMLServlet {
     } else {
       // we have an update on a leg
       var call = Locator.$(new Call(request.getParameter("ParentCallSid")));
-      var segmentSid = request.getParameter("CallSid");
-      var segment = of($(new Leg(call, segmentSid)))
+      var legSid = request.getParameter("CallSid");
+      var segment = of($(new Leg(call, legSid)))
         .orElseGet(() -> {
-          var seg = new Leg(call, segmentSid);
-          seg.setCreated(now());
-          if (call.getDirection() == CallDirection.OUTBOUND) {
-            if ("outbound-dial".equals(request.getParameter("Direction"))) {
-              seg.setAgent(call.getAgent());
-              seg.setCallerId(asParty(request.getParameter("Called")).callerId());
+          var leg = new Leg(call, legSid);
+          leg.setCreated(now());
+          switch(call.getDirection()) {
+            case OUTBOUND -> {
+              if ("outbound-dial".equals(request.getParameter("Direction"))) {
+                leg.setAgent(call.getAgent());
+                leg.setCallerId(asParty(request.getParameter("Called")).callerId());
+              }
             }
+            case INTERNAL -> leg.setAgent(asParty(request.getParameter("To")).agent());
+
           }
-          create("VoiceStatus", seg);
-          return seg;
+          create("VoiceStatus", leg);
+          return leg;
         });
 
       update(call, "VoiceStatus", callCopy -> {
@@ -71,21 +73,21 @@ public class VoiceStatus extends TwiMLServlet {
           if (leg.isAnswered()) {
             callCopy.setTalkTime(of(call.getTalkTime()).orElse(0L) + leg.getTalkTime());
             callCopy.setResolution(ANSWERED);
-            log("%s was answered",call.sid);
+            info("%s was answered",call.sid);
           }
         });
         if (call.getResolution() == null) {
           callCopy.setResolution(DROPPED);
-          log("%s was dropped",call.sid);
+          info("%s was dropped",call.sid);
         }
         callCopy.setDuration(ChronoUnit.SECONDS.between(call.getCreated(), leg.getEnded()));
       }
       case "in-progress", "answered" -> update(leg, "VoiceStatus", segmentCopy -> {
         segmentCopy.setAnswered(now());
-        log("%s was answered",call.sid);
+        info("%s was answered",call.sid);
       });
       default -> {
-        log("%s had state %s", call.sid, request.getParameter("CallStatus"));
+        info("%s had state %s", call.sid, request.getParameter("CallStatus"));
         callCopy.setResolution(DROPPED);
       }
     }

@@ -63,7 +63,7 @@ public class VoiceCall extends TwiMLServlet {
       if (caller.isAgent()) {
         call.setAgent(caller.agent());
         if (called.isAgent()) {
-          log("%s is a new internal call %s->%s", callSid, caller, called);
+          info("%s is a new internal call %s->%s", callSid, caller, called);
           call.setDirection(INTERNAL);
           return new VoiceResponse.Builder()
             .dial(new Dial.Builder()
@@ -75,12 +75,12 @@ public class VoiceCall extends TwiMLServlet {
               .build())
             .build();
         } else {
-          log("%s is a new outbound call %s->%s", callSid, caller, called);
+          info("%s is a new outbound call %s->%s", callSid, caller, called);
           call.setDirection(OUTBOUND);
           var vCid = $1(VerifiedCallerId.isDefault);
           call.setCallerId(called.callerId());
           call.setContact($1(Contact.withPhoneNumber(called.endpoint())));
-          log("Outbound %s -> %s", caller.agent().getFullName(), called);
+          info("Outbound %s -> %s", caller.agent().getFullName(), called);
           return new VoiceResponse.Builder()
             .dial(new Dial.Builder()
               .number(buildNumber(called))
@@ -90,16 +90,14 @@ public class VoiceCall extends TwiMLServlet {
         }
       } else {
         // INBOUND or IVR/QUEUE call
-        log("%s is a new inbound call %s->%s", callSid, caller, called);
+        info("%s is a new inbound call %s->%s", callSid, caller, called);
         return new VoiceResponse.Builder()
           .gather(new Gather.Builder()
             .action("/twilio/menu/show")
             .numDigits(1)
             .timeout(19)
             .build())
-          .say(new Say.Builder("Thank you for calling AmeriGlide, your headquarters for Home Safety.")
-            .voice(Say.Voice.POLLY_EMMA_NEURAL)
-            .build())
+          .say(speak("Thank you for calling AmeriGlide, your headquarters for Home Safety."))
           .pause(new Pause.Builder().length(1).build())
           .say(new Say.Builder().build())
           .build();

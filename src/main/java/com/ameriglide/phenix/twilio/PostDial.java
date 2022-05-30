@@ -2,31 +2,35 @@ package com.ameriglide.phenix.twilio;
 
 import com.twilio.twiml.TwiML;
 import com.twilio.twiml.VoiceResponse;
-import com.twilio.twiml.voice.Redirect;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import net.inetalliance.log.Log;
-
-import static com.twilio.http.HttpMethod.GET;
 
 @WebServlet("/twilio/voice/postDial")
 public class PostDial extends TwiMLServlet {
-  private static final VoiceResponse toVoicemail = new VoiceResponse.Builder()
-    .redirect(new Redirect.Builder("/twilio/voicemail")
-      .method(GET)
-      .build())
-    .build();
+
 
   @Override
-  protected TwiML getResponse(HttpServletRequest request, HttpServletResponse response) throws Exception {
+  protected TwiML getResponse(HttpServletRequest request, HttpServletResponse response) {
+    var called = asParty(request.getParameter("To"));
     if ("no-answer".equals(request.getParameter("DialCallStatus"))) {
-      log.info("Redirecting %s to voicemail", request.getParameter("CallSid"));
-      return toVoicemail;
+      if (called.isAgent()) {
+        var agent = called.agent();
+        if (agent == null) {
+          return new VoiceResponse.Builder()
+            .say(speak("The party you have dialed, " + called.spoken() + ", does not exist"))
+            .pause(pause)
+            .hangup(hangup)
+            .build();
+
+        } else {
+          info("Redirecting %s to the voicemail of %s", request.getParameter("CallSid"), agent.getFullName());
+          return toVoicemail;
+        }
+      }
     }
     return null;
 
   }
 
-  private static final Log log = Log.getInstance(PostDial.class);
 }

@@ -3,7 +3,7 @@ package com.ameriglide.phenix.api;
 import com.ameriglide.phenix.common.Call;
 import com.ameriglide.phenix.common.Contact;
 import com.ameriglide.phenix.common.Opportunity;
-import com.ameriglide.phenix.common.Segment;
+import com.ameriglide.phenix.common.Leg;
 import com.ameriglide.phenix.exception.MethodNotAllowedException;
 import com.ameriglide.phenix.model.Key;
 import com.ameriglide.phenix.model.Model;
@@ -77,7 +77,7 @@ public class CallHistoryModel
       }
       final JsonList talkList = new JsonList();
       callMap.put("talkTime", talkList);
-      forEach(Segment.withCall(call).orderBy("created", ASCENDING), segment -> {
+      forEach(Leg.withCall(call).orderBy("created", ASCENDING), segment -> {
         final JsonMap talkMap = new JsonMap();
         if (segment.getAgent() != null) {
           talkMap.put("agent", segment.getAgent().getLastNameFirstInitial());

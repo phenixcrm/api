@@ -57,6 +57,7 @@ public class VoiceCall extends TwiMLServlet {
     var called = asParty(request,"Called");
     var caller = asParty(request,"Caller");
     var call = new Call(callSid);
+    caller.setCNAM(call);
     call.setResolution(Resolution.ACTIVE);
     call.setCreated(LocalDateTime.now());
     try {
@@ -78,7 +79,6 @@ public class VoiceCall extends TwiMLServlet {
           info("%s is a new outbound call %s->%s", callSid, caller, called);
           call.setDirection(OUTBOUND);
           var vCid = $1(VerifiedCallerId.isDefault);
-          caller.setCNAM(call);
           call.setContact($1(Contact.withPhoneNumber(called.endpoint())));
           info("Outbound %s -> %s", caller.agent().getFullName(), called);
           return new VoiceResponse.Builder()
@@ -94,7 +94,6 @@ public class VoiceCall extends TwiMLServlet {
         var vCid = Locator.$1(VerifiedCallerId.withPhoneNumber(called.endpoint()));
         if(vCid != null && vCid.isDirect()) {
           call.setDirection(INBOUND);
-          caller.setCNAM(call);
           call.setContact($1(Contact.withPhoneNumber(caller.endpoint())));
           info("Inbound %s -> %s", caller.endpoint(), vCid.getDirect().getFullName());
           return new VoiceResponse.Builder()
@@ -103,11 +102,11 @@ public class VoiceCall extends TwiMLServlet {
               .method(HttpMethod.GET)
               .answerOnBridge(true)
               .timeout(15)
-              .callerId(caller.callerId().toString())
               .sip(buildSip(asParty(vCid.getDirect())))
               .build())
             .build();
         } else {
+          call.setDirection(QUEUE);
           return new VoiceResponse.Builder()
             .gather(new Gather.Builder()
               .action("/twilio/menu/show")

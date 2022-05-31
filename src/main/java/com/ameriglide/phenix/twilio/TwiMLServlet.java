@@ -15,6 +15,7 @@ import com.twilio.twiml.voice.Say;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import net.inetalliance.funky.Funky;
+import net.inetalliance.funky.StringFun;
 import net.inetalliance.types.geopolitical.Country;
 import net.inetalliance.types.geopolitical.us.State;
 
@@ -168,7 +169,7 @@ public abstract class TwiMLServlet extends PhenixServlet {
         var agent = agent();
         return new CallerId(agent.getFullName(), agent.getSipUser());
       }
-      return new CallerId(null, endpoint);
+      return new CallerId(name, endpoint);
     }
 
     public String spoken() {
@@ -194,6 +195,17 @@ public abstract class TwiMLServlet extends PhenixServlet {
       }
       cnam.setZip(zip);
 
+    }
+
+    public String sipCid() {
+      if(StringFun.isEmpty(name)) {
+        return endpoint;
+      }
+      var split = name.split("[,]",2);
+      if(split.length == 2) {
+        return split[1].trim()+"_"+split[0].trim();
+      }
+      return split[0].trim();
     }
   }
 

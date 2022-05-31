@@ -86,8 +86,14 @@ public class VoiceStatus extends TwiMLServlet {
         segmentCopy.setAnswered(now());
         info("%s was answered",call.sid);
       });
+      case "no-answer", "busy", "failed" -> update(leg, "VoiceStatus", legCopy -> {
+        legCopy.setEnded(now());
+        callCopy.setDuration(ChronoUnit.SECONDS.between(call.getCreated(), legCopy.getEnded()));
+        callCopy.setResolution(DROPPED);
+      });
       default -> {
         info("%s had state %s", call.sid, request.getParameter("CallStatus"));
+        callCopy.setDuration(ChronoUnit.SECONDS.between(call.getCreated(), leg.getEnded()));
         callCopy.setResolution(DROPPED);
       }
     }

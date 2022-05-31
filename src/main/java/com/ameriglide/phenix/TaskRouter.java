@@ -21,6 +21,7 @@ import com.twilio.rest.taskrouter.v1.WorkspaceFetcher;
 import com.twilio.rest.taskrouter.v1.workspace.*;
 import io.github.cdimascio.dotenv.Dotenv;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.Executors;
@@ -43,6 +44,8 @@ public class TaskRouter {
   private final CredentialList sipCredentialList;
   private final Security security;
 
+  public final Map<String,Boolean> byAgent;
+
   public TaskRouter() {
     var env = Dotenv.load();
     Twilio.init(env.get("twilioAccountSid"), env.get("twilioAuthToken"));
@@ -57,6 +60,8 @@ public class TaskRouter {
     bySid.put(offline.getSid(), offline);
     bySid.put(available.getSid(), available);
     bySid.put(unavailable.getSid(), unavailable);
+    byAgent = Collections.synchronizedMap(new HashMap<>());
+    executor.scheduleWithFixedDelay(new SyncWorkerStatus(this),0,1,MINUTES);
     executor.scheduleWithFixedDelay(new CreateWorkers(this), 0, 5, MINUTES);
     executor.scheduleWithFixedDelay(new PruneWorkers(this), 0, 15, MINUTES);
     this.security = new Security(env.get("key"));

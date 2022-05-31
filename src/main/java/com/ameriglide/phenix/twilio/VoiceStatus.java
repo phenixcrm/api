@@ -45,13 +45,16 @@ public class VoiceStatus extends TwiMLServlet {
           var leg = new Leg(call, legSid);
           leg.setCreated(now());
           switch(call.getDirection()) {
+            case INBOUND -> {
+
+            }
             case OUTBOUND -> {
               if ("outbound-dial".equals(request.getParameter("Direction"))) {
                 leg.setAgent(call.getAgent());
-                leg.setCallerId(asParty(request.getParameter("Called")).callerId());
+                asParty(request,"Called").setCNAM(leg);
               }
             }
-            case INTERNAL -> leg.setAgent(asParty(request.getParameter("To")).agent());
+            case INTERNAL -> leg.setAgent(asParty(request, "To").agent());
 
           }
           create("VoiceStatus", leg);

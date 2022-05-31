@@ -55,13 +55,10 @@ public class ContactModel
             throw new NotFoundException("Could not find call %s", callId);
         }
         final Query<Contact> q;
-        final String cid =
-                call.getCallerId() == null || isEmpty(call.getCallerId().getNumber()) ? null
-                        : call.getCallerId().getNumber();
         if (call.getContact() != null) {
             q = Contact.withId(Contact.class, call.getContact().id);
-        } else if (cid != null && cid.length() >= 10) {
-            q = Contact.withPhoneNumber(call.getCallerId().getNumber());
+        } else if (call.hasPhone()) {
+            q = Contact.withPhoneNumber(call.getPhone());
         } else {
             q = Query.none(Contact.class);
         }

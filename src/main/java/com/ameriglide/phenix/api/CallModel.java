@@ -1,6 +1,7 @@
 package com.ameriglide.phenix.api;
 
 import com.ameriglide.phenix.Auth;
+import com.ameriglide.phenix.PhenixServlet;
 import com.ameriglide.phenix.common.*;
 import com.ameriglide.phenix.exception.BadRequestException;
 import com.ameriglide.phenix.exception.ForbiddenException;
@@ -8,9 +9,7 @@ import com.ameriglide.phenix.exception.NotFoundException;
 import com.ameriglide.phenix.exception.UnauthorizedException;
 import com.ameriglide.phenix.model.Key;
 import com.ameriglide.phenix.model.ListableModel;
-import com.ameriglide.phenix.PhenixServlet;
 import com.ameriglide.phenix.model.Range;
-import com.ameriglide.phenix.types.CallerId;
 import com.ameriglide.phenix.types.Resolution;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServletRequest;
@@ -19,16 +18,15 @@ import net.inetalliance.funky.Funky;
 import net.inetalliance.potion.Locator;
 import net.inetalliance.potion.info.Info;
 import net.inetalliance.potion.query.Query;
+import net.inetalliance.types.geopolitical.Country;
+import net.inetalliance.types.geopolitical.us.State;
 import net.inetalliance.types.json.Json;
 import net.inetalliance.types.json.JsonList;
 import net.inetalliance.types.json.JsonMap;
 
 import java.io.IOException;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
-import java.util.Random;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -52,114 +50,6 @@ public class CallModel
     extends ListableModel<Call> {
 
   private static final Pattern space = compile(" ");
-  private static final Random random;
-  private static final List<CallerId> callerIds;
-
-  static {
-    random = new Random();
-    callerIds = new ArrayList<>(200);
-    callerIds.add(new CallerId("Benson Dorothy", "9852438557"));
-    callerIds.add(new CallerId("Sheffield Kenneth", "8592137216"));
-    callerIds.add(new CallerId("Park James", "5053921238"));
-    callerIds.add(new CallerId("Flores Grady", "4192146698"));
-    callerIds.add(new CallerId("Gates William", "2016290937"));
-    callerIds.add(new CallerId("Martin Thomas", "5039196168"));
-    callerIds.add(new CallerId("Hess Helen", "5093430048"));
-    callerIds.add(new CallerId("Foley Paul", "3176048196"));
-    callerIds.add(new CallerId("Lee Sheldon", "5085968844"));
-    callerIds.add(new CallerId("Ball Michael", "5016256071"));
-    callerIds.add(new CallerId("Ferrer Joseph", "8082627559"));
-    callerIds.add(new CallerId("Oney Dorothy", "8473869279"));
-    callerIds.add(new CallerId("Mares Michael", "8189061861"));
-    callerIds.add(new CallerId("Clark Samantha", "2074719126"));
-    callerIds.add(new CallerId("Chou Michael", "5672168653"));
-    callerIds.add(new CallerId("Barlow Robert", "8086471452"));
-    callerIds.add(new CallerId("Hall Dorothy", "9797942496"));
-    callerIds.add(new CallerId("Robinson Loretta", "2074537314"));
-    callerIds.add(new CallerId("Ortiz Terrence", "2674401160"));
-    callerIds.add(new CallerId("Nguyen Sharon", "8607696170"));
-    callerIds.add(new CallerId("Bezanson Brenda", "9375950530"));
-    callerIds.add(new CallerId("Snow Jamie", "8314214984"));
-    callerIds.add(new CallerId("Klein Jeff", "5027740667"));
-    callerIds.add(new CallerId("Carr Lawrence", "2077361797"));
-    callerIds.add(new CallerId("Loftin Sarah", "4029252250"));
-    callerIds.add(new CallerId("Lewis Bill", "2097085322"));
-    callerIds.add(new CallerId("Hopkins Claire", "6025479553"));
-    callerIds.add(new CallerId("Kavanagh Ryan", "6078350634"));
-    callerIds.add(new CallerId("Johnson Viola", "5204637748"));
-    callerIds.add(new CallerId("Ford Toni", "2106461815"));
-    callerIds.add(new CallerId("Houghton Gregorio", "2025332285"));
-    callerIds.add(new CallerId("Ellsworth Michael", "6194027263"));
-    callerIds.add(new CallerId("Towle Mark", "3055623747"));
-    callerIds.add(new CallerId("Melvin Maria", "9179894711"));
-    callerIds.add(new CallerId("Dorn Charles", "9155994479"));
-    callerIds.add(new CallerId("Phillips Sharon", "4849863060"));
-    callerIds.add(new CallerId("Shelton Robert", "5622545416"));
-    callerIds.add(new CallerId("Morgan Raymond", "8086809228"));
-    callerIds.add(new CallerId("Boyle Agatha", "4808212439"));
-    callerIds.add(new CallerId("Wright Michael", "3197885413"));
-    callerIds.add(new CallerId("Tobey Carolyn", "7184321534"));
-    callerIds.add(new CallerId("Witter Carolyn", "7325658777"));
-    callerIds.add(new CallerId("Purnell Amanda", "2604093171"));
-    callerIds.add(new CallerId("Lawrence Paul", "4342954958"));
-    callerIds.add(new CallerId("Hernandez Lara", "6085968676"));
-    callerIds.add(new CallerId("Ford Robert", "5618807157"));
-    callerIds.add(new CallerId("Haller James", "9376602232"));
-    callerIds.add(new CallerId("Gage Kara", "8023516203"));
-    callerIds.add(new CallerId("Lee Lawrence", "3366917571"));
-    callerIds.add(new CallerId("Lopez Jamie", "6784934743"));
-    callerIds.add(new CallerId("Channell David", "2146088656"));
-    callerIds.add(new CallerId("Lewis Alfred", "8502285124"));
-    callerIds.add(new CallerId("Edwards Sarah", "6152867058"));
-    callerIds.add(new CallerId("Stanford Michael", "7122787020"));
-    callerIds.add(new CallerId("Ainsworth Peter", "8454788962"));
-    callerIds.add(new CallerId("Chang Karen", "2604433304"));
-    callerIds.add(new CallerId("Robinson Pierre", "5182728160"));
-    callerIds.add(new CallerId("Coker Denver", "8475240258"));
-    callerIds.add(new CallerId("Guercio Vernon", "4255902765"));
-    callerIds.add(new CallerId("Campbell Raymond", "8647166495"));
-    callerIds.add(new CallerId("Bernier Lila", "6615175676"));
-    callerIds.add(new CallerId("Wills James", "9706775298"));
-    callerIds.add(new CallerId("Morales Robert", "7122268073"));
-    callerIds.add(new CallerId("Schantz Mary", "9897919418"));
-    callerIds.add(new CallerId("May Linda", "4123597451"));
-    callerIds.add(new CallerId("McGraw Charlie", "3375262711"));
-    callerIds.add(new CallerId("Moore Sharon", "5708046045"));
-    callerIds.add(new CallerId("Williams Joseph", "6027283514"));
-    callerIds.add(new CallerId("Thompson Jeff", "4058240299"));
-    callerIds.add(new CallerId("Williamson Brad", "4795770685"));
-    callerIds.add(new CallerId("Perkins Andrew", "5624136142"));
-    callerIds.add(new CallerId("Arrellano Debbie", "6098413567"));
-    callerIds.add(new CallerId("Johnson Johanna", "3125703009"));
-    callerIds.add(new CallerId("Clark Curtis", "9143764780"));
-    callerIds.add(new CallerId("Smyth Jerry", "7028623899"));
-    callerIds.add(new CallerId("Damiano Paul", "5702402433"));
-    callerIds.add(new CallerId("Carter Elva", "6197410094"));
-    callerIds.add(new CallerId("Harvey Elouise", "5707335951"));
-    callerIds.add(new CallerId("Cortez Regina", "8574018026"));
-    callerIds.add(new CallerId("Tucker Joyce", "8106789907"));
-    callerIds.add(new CallerId("Mann Paul", "2139921400"));
-    callerIds.add(new CallerId("Smith Robert", "2079675464"));
-    callerIds.add(new CallerId("Ramirez Melissa", "3604200924"));
-    callerIds.add(new CallerId("Watson Paula", "3022551501"));
-    callerIds.add(new CallerId("Rock Regina", "5035980333"));
-    callerIds.add(new CallerId("Morgan Henry", "7026802285"));
-    callerIds.add(new CallerId("Ridgeway William", "5187821895"));
-    callerIds.add(new CallerId("Miller Dale", "9787611357"));
-    callerIds.add(new CallerId("Ramirez Sharon", "2178628020"));
-    callerIds.add(new CallerId("Fletcher Chad", "7815835506"));
-    callerIds.add(new CallerId("Valentine John", "6607851952"));
-    callerIds.add(new CallerId("Burton Chris", "7124362462"));
-    callerIds.add(new CallerId("Hill Lewis", "5807657884"));
-    callerIds.add(new CallerId("Eichhorn Dana", "6464568252"));
-    callerIds.add(new CallerId("Hess Debra", "5026899021"));
-    callerIds.add(new CallerId("Flower Philip", "3044979250"));
-    callerIds.add(new CallerId("Russell Ruby", "2403542499"));
-    callerIds.add(new CallerId("Martinez Willis", "6053066192"));
-    callerIds.add(new CallerId("Devine Bradley", "2762101735"));
-    callerIds.add(new CallerId("Hungate Wiley", "6503496011"));
-
-  }
 
   public CallModel() {
     super(Call.class);
@@ -176,16 +66,12 @@ public class CallModel
     final JsonMap map = (JsonMap) super.toJson(request, call);
     final ProductLine productLine = null;
         //call.getQueue() == null ? null : call.getQueue().getProductLine();
-    final CallerId remoteCid = call.getRemoteCallerId();
-    map.put("remoteCallerId",
-        new JsonMap().$("name", remoteCid == null ? null : remoteCid.getName())
-            .$("number", remoteCid == null || isEmpty(remoteCid.getNumber())
-                ? "Unknown"
-                : remoteCid.getNumber()));
+    final CNAM remoteCid = call.getRemoteCaller();
+    map.put("remoteCallerId", new JsonMap().$("name", remoteCid.getName()) .$("number", remoteCid.getPhone()));
     if (!todo && (call.getDirection() == QUEUE || call.getDirection() == OUTBOUND)) {
       final JsonList contacts = new JsonList();
       map.put("contacts", contacts);
-      final String number = call.getCallerId().getNumber();
+      final String number = remoteCid.getPhone();
       if (!isEmpty(number) && !"anonymous".equalsIgnoreCase(number) && !"blocked".equalsIgnoreCase(
           number) && number.length() > 4) {
         final Query<Contact> contactQuery = Contact.withPhoneNumber(number);
@@ -331,7 +217,11 @@ public class CallModel
        */
       call.setDirection(QUEUE);
       call.setResolution(ACTIVE);
-      call.setCallerId(callerIds.get(random.nextInt(callerIds.size())));
+      call.setName("Customer, Test");
+      call.setCountry(Country.UNITED_STATES);
+      call.setState(State.NORTH_CAROLINA);
+      call.setZip("27616");
+      call.setCity("Testville");
       var now = LocalDateTime.now();
       call.setCreated(now);
       call.setAgent(agent);
@@ -377,9 +267,9 @@ public class CallModel
       case INTERNAL:
         break;
     }
-    final CallerId remoteCallerId = call.getRemoteCallerId();
+    final CNAM remoteCallerId = call.getRemoteCaller();
     if (remoteCallerId != null) {
-      final String number = remoteCallerId.getNumber();
+      final String number = remoteCallerId.getPhone();
       map.$("created", call.getCreated());
       map.$("localTime", AreaCodeTime.getLocalTime(number,LocalDateTime.now()).toLocalDateTime()) ;
       map.$("callerId", new JsonMap().$("name", remoteCallerId.getName()).$("number", number));

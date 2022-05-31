@@ -11,6 +11,8 @@ import com.twilio.rest.api.v2010.account.IncomingPhoneNumberReader;
 import com.twilio.rest.api.v2010.account.OutgoingCallerIdReader;
 import com.twilio.rest.api.v2010.account.sip.CredentialList;
 import com.twilio.rest.api.v2010.account.sip.CredentialListFetcher;
+import com.twilio.rest.api.v2010.account.sip.Domain;
+import com.twilio.rest.api.v2010.account.sip.DomainFetcher;
 import com.twilio.rest.api.v2010.account.sip.credentiallist.Credential;
 import com.twilio.rest.api.v2010.account.sip.credentiallist.CredentialDeleter;
 import com.twilio.rest.api.v2010.account.sip.credentiallist.CredentialReader;
@@ -34,6 +36,7 @@ public class TaskRouter {
   public final Activity offline;
   public final Activity available;
   public final Activity unavailable;
+  public final Domain domain;
   public final Map<String, Activity> bySid;
 
   private final ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
@@ -44,6 +47,7 @@ public class TaskRouter {
     var env = Dotenv.load();
     Twilio.init(env.get("twilioAccountSid"), env.get("twilioAuthToken"));
     rest = Twilio.getRestClient();
+    domain = new DomainFetcher(env.get("twilioDomainSid")).fetch(rest);
     workspace = new WorkspaceFetcher(env.get("twilioWorkspaceSid")).fetch(rest);
     sipCredentialList = new CredentialListFetcher(env.get("twilioCredentialListSid")).fetch(rest);
     offline = findActivity("Offline");

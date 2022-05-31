@@ -1,7 +1,9 @@
 package com.ameriglide.phenix.twilio;
 
 import com.ameriglide.phenix.PhenixServlet;
+import com.ameriglide.phenix.Startup;
 import com.ameriglide.phenix.common.Agent;
+import com.ameriglide.phenix.common.CNAM;
 import com.ameriglide.phenix.types.CallerId;
 import com.github.tomaslanger.chalk.Chalk;
 import com.twilio.twiml.TwiML;
@@ -13,6 +15,8 @@ import com.twilio.twiml.voice.Say;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import net.inetalliance.funky.Funky;
+import net.inetalliance.types.geopolitical.Country;
+import net.inetalliance.types.geopolitical.us.State;
 
 import java.io.IOException;
 import java.util.function.Function;
@@ -23,6 +27,7 @@ import static com.twilio.http.HttpMethod.GET;
 import static jakarta.servlet.http.HttpServletResponse.SC_NOT_FOUND;
 import static jakarta.servlet.http.HttpServletResponse.SC_NO_CONTENT;
 import static java.lang.System.out;
+import static net.inetalliance.funky.StringFun.isNotEmpty;
 import static net.inetalliance.potion.Locator.$1;
 
 public abstract class TwiMLServlet extends PhenixServlet {
@@ -33,29 +38,33 @@ public abstract class TwiMLServlet extends PhenixServlet {
       .method(GET)
       .build())
     .build();
+
   protected Say speak(String msg) {
     return new Say.Builder(msg)
       .voice(Say.Voice.POLLY_SALLI_NEURAL)
       .build();
 
   }
+
   protected void info(final String format, Object... args) {
-    if(format != null) {
+    if (format != null) {
       out.printf("%s\t%s\t%n%s%n",
         Chalk.on("TwiML").bgRed().cyan().bold(),
         Chalk.on(getClass().getSimpleName()).green().bold(),
         format.formatted(args));
     }
   }
+
   protected void error(final Throwable t) {
-    if(t != null) {
+    if (t != null) {
       out.printf("%s\t%s\t%n%s%n",
         Chalk.on("TwiML").bgRed().cyan().bold(),
         Chalk.on(getClass().getSimpleName()).red().bold(),
         t.getClass().getSimpleName());
-        t.printStackTrace(out);
+      t.printStackTrace(out);
     }
   }
+
   protected static void respond(final HttpServletResponse response, final TwiML twiml) throws IOException {
     if (twiml == null) {
       response.setStatus(SC_NOT_FOUND);
@@ -113,17 +122,31 @@ public abstract class TwiMLServlet extends PhenixServlet {
   }
 
   protected abstract TwiML getResponse(HttpServletRequest request, HttpServletResponse response) throws Exception;
+
   private static final Predicate<String> e164 = Pattern.compile("^\\+[1-9]\\d{1,14}$").asMatchPredicate();
 
-  protected static Party asParty(String sipUri) {
+  protected static Party asParty(HttpServletRequest request, String prefix) {
+    var name = request.getParameter(prefix + "Name");
+    var city = request.getParameter(prefix + "City");
+    var state = request.getParameter(prefix + "State");
+    var zip = request.getParameter(prefix + "Zip");
+    var country = request.getParameter(prefix + "Country");
+    var sipUri = request.getParameter(prefix);
     var matcher = sip.matcher(sipUri);
     if (matcher.matches()) {
       var user = matcher.group(1);
-      return new Party(user, isAgent.test(user), sipUri);
+      return new Party(user, isAgent.test(user), sipUri, name, city, state, zip, country);
     } else if (e164.test(sipUri)) {
-      return new Party(sipUri, false, sipUri);
+      return new Party(sipUri, false, sipUri, name, city, state, zip, country);
     }
     throw new IllegalArgumentException();
+  }
+
+  protected static Party asParty(final Agent agent) {
+    return new Party(agent.getSipUser(),
+      true,
+      "%s@%s".formatted(agent.getSipUser(),
+        Startup.router.domain.getDomainName()), null, null, null, null,null);
   }
 
   private static final Pattern sip = Pattern.compile("^sip:([A-Za-z\\d.]*)@([a-z]*).sip.twilio.com(;.*)?$");
@@ -131,7 +154,8 @@ public abstract class TwiMLServlet extends PhenixServlet {
 
   private static final Function<String, Agent> lookup = Funky.memoize(32, (user) -> $1(Agent.withSipUser(user)));
 
-  public record Party(String endpoint, boolean isAgent, String sip) {
+  public record Party(String endpoint, boolean isAgent, String sip, String name, String city, String state, String zip,
+                      String country) {
     Agent agent() {
       if (isAgent) {
         return lookup.apply(endpoint);
@@ -148,12 +172,28 @@ public abstract class TwiMLServlet extends PhenixServlet {
     }
 
     public String spoken() {
-      if(isAgent()) {
+      if (isAgent()) {
         var a = agent();
         return a == null ? endpoint : agent().getFullName();
       } else {
         return endpoint;
       }
+    }
+
+    public void setCNAM(CNAM cnam) {
+      cnam.setName(name);
+      cnam.setPhone(endpoint);
+      cnam.setCity(city);
+      if(isNotEmpty(state)) {
+        cnam.setState(State.fromAbbreviation(state));
+      }
+      if(isNotEmpty(country)) {
+        cnam.setCountry(Country.fromIsoA2(country));
+      } else {
+        cnam.setCountry(Country.UNITED_STATES);
+      }
+      cnam.setZip(zip);
+
     }
   }
 

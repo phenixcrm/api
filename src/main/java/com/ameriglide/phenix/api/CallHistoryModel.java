@@ -70,7 +70,7 @@ public class CallHistoryModel
         .$("name",b.getName())
         .$("abbreviation",b.getAbbreviation())));
       callMap.put(call.getDirection() == OUTBOUND ? "to" : "from",
-          call.getRemoteCallerId().getNumber());
+          call.getRemoteCaller().toDisplayName());
       if (call.getAgent() != null) {
         callMap.put(call.getDirection() == OUTBOUND ? "from" : "to",
             call.getAgent().getLastNameFirstInitial());

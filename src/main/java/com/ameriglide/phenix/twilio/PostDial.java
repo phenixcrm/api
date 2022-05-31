@@ -12,7 +12,7 @@ public class PostDial extends TwiMLServlet {
 
   @Override
   protected TwiML getResponse(HttpServletRequest request, HttpServletResponse response) {
-    var called = asParty(request.getParameter("To"));
+    var called = asParty(request, "To");
     if ("no-answer".equals(request.getParameter("DialCallStatus"))) {
       if (called.isAgent()) {
         var agent = called.agent();

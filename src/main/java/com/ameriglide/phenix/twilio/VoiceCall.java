@@ -12,12 +12,12 @@ import com.twilio.twiml.voice.*;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import net.inetalliance.potion.Locator;
 
 import java.time.LocalDateTime;
 import java.util.List;
 
-import static com.ameriglide.phenix.types.CallDirection.INTERNAL;
-import static com.ameriglide.phenix.types.CallDirection.OUTBOUND;
+import static com.ameriglide.phenix.types.CallDirection.*;
 import static com.twilio.http.HttpMethod.GET;
 import static com.twilio.twiml.voice.Number.Event.ANSWERED;
 import static com.twilio.twiml.voice.Number.Event.COMPLETED;
@@ -54,8 +54,8 @@ public class VoiceCall extends TwiMLServlet {
   @Override
   protected TwiML getResponse(HttpServletRequest request, HttpServletResponse response) {
     var callSid = request.getParameter("CallSid");
-    var called = asParty(request.getParameter("Called"));
-    var caller = asParty(request.getParameter("Caller"));
+    var called = asParty(request,"Called");
+    var caller = asParty(request,"Caller");
     var call = new Call(callSid);
     call.setResolution(Resolution.ACTIVE);
     call.setCreated(LocalDateTime.now());
@@ -78,7 +78,7 @@ public class VoiceCall extends TwiMLServlet {
           info("%s is a new outbound call %s->%s", callSid, caller, called);
           call.setDirection(OUTBOUND);
           var vCid = $1(VerifiedCallerId.isDefault);
-          call.setCallerId(called.callerId());
+          caller.setCNAM(call);
           call.setContact($1(Contact.withPhoneNumber(called.endpoint())));
           info("Outbound %s -> %s", caller.agent().getFullName(), called);
           return new VoiceResponse.Builder()
@@ -91,16 +91,34 @@ public class VoiceCall extends TwiMLServlet {
       } else {
         // INBOUND or IVR/QUEUE call
         info("%s is a new inbound call %s->%s", callSid, caller, called);
-        return new VoiceResponse.Builder()
-          .gather(new Gather.Builder()
-            .action("/twilio/menu/show")
-            .numDigits(1)
-            .timeout(19)
-            .build())
-          .say(speak("Thank you for calling AmeriGlide, your headquarters for Home Safety."))
-          .pause(new Pause.Builder().length(1).build())
-          .say(new Say.Builder().build())
-          .build();
+        var vCid = Locator.$1(VerifiedCallerId.withPhoneNumber(called.endpoint()));
+        if(vCid != null && vCid.isDirect()) {
+          call.setDirection(INBOUND);
+          caller.setCNAM(call);
+          call.setContact($1(Contact.withPhoneNumber(caller.endpoint())));
+          info("Inbound %s -> %s", caller.endpoint(), vCid.getDirect().getFullName());
+          return new VoiceResponse.Builder()
+            .dial(new Dial.Builder()
+              .action("/twilio/voice/postDial")
+              .method(HttpMethod.GET)
+              .answerOnBridge(true)
+              .timeout(15)
+              .callerId(caller.callerId().toString())
+              .sip(buildSip(asParty(vCid.getDirect())))
+              .build())
+            .build();
+        } else {
+          return new VoiceResponse.Builder()
+            .gather(new Gather.Builder()
+              .action("/twilio/menu/show")
+              .numDigits(1)
+              .timeout(19)
+              .build())
+            .say(speak("Thank you for calling AmeriGlide, your headquarters for Home Safety."))
+            .pause(new Pause.Builder().length(1).build())
+            .say(new Say.Builder().build())
+            .build();
+        }
 
       }
     } finally {

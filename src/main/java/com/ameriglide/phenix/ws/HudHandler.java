@@ -57,11 +57,17 @@ public class HudHandler
     try {
       final Action action = Action.valueOf(msg.get("action").toUpperCase());
       switch (action) {
-        case SUBSCRIBE:
+        case SUBSCRIBE -> {
           subscribers.add(session);
+          log.info("Added HUD subscription for %s, #:%d",Events.getTicket(session).agent().getSipUser(),
+            subscribers.size());
           return hud;
-        case UNSUBSCRIBE:
+        }
+        case UNSUBSCRIBE -> {
           subscribers.remove(session);
+          log.info("Removed HUD subscription for %s, #:%d",Events.getTicket(session).agent().getSipUser(),
+            subscribers.size());
+        }
       }
     } catch (IllegalArgumentException e) {
       log.error(e);
@@ -77,23 +83,31 @@ public class HudHandler
 
   @Override
   public void run() {
-    for (var value : status.values()) {
-      value.direction = null;
-      value.callId = null;
-    }
-    updateCalls();
-    updateAvailability();
-    var current = new JsonMap();
-    for (final var entry : status.entrySet()) {
-      current.put(Integer.toString(entry.getKey()),
-        new JsonMap().$("direction", entry.getValue().direction)
-          .$("available", entry.getValue().available));
-    }
+    try {
+      for (var value : status.values()) {
+        value.direction = null;
+        value.callId = null;
+      }
+      updateCalls();
+      updateAvailability();
+      var current = new JsonMap();
+      for (final var entry : status.entrySet()) {
+        var agentStatus = entry.getValue();
+        current.put(Integer.toString(entry.getKey()),
+          new JsonMap()
+            .$("direction", agentStatus.direction)
+            .$("callId", agentStatus.callId)
+            .$("available", agentStatus.available));
+      }
 
-    if (!current.equals(hud)) {
-      hud.clear();
-      hud.putAll(current);
-      broadcast(new JsonMap().$("type", "hud").$("msg", this.hud));
+      if (!current.equals(hud)) {
+        hud.clear();
+        hud.putAll(current);
+        log.info("Hud changed, broadcasting updates");
+        broadcast(new JsonMap().$("type", "hud").$("msg", this.hud));
+      }
+    } catch(Throwable t) {
+      log.error(t);
     }
   }
 

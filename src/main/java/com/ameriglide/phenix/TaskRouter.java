@@ -6,9 +6,9 @@ import com.ameriglide.phenix.common.VerifiedCallerId;
 import com.ameriglide.phenix.tasks.*;
 import com.ameriglide.phenix.util.Security;
 import com.twilio.Twilio;
+import com.twilio.http.HttpMethod;
 import com.twilio.http.TwilioRestClient;
-import com.twilio.rest.api.v2010.account.IncomingPhoneNumberReader;
-import com.twilio.rest.api.v2010.account.OutgoingCallerIdReader;
+import com.twilio.rest.api.v2010.account.*;
 import com.twilio.rest.api.v2010.account.sip.CredentialList;
 import com.twilio.rest.api.v2010.account.sip.CredentialListFetcher;
 import com.twilio.rest.api.v2010.account.sip.Domain;
@@ -19,19 +19,27 @@ import com.twilio.rest.api.v2010.account.sip.credentiallist.CredentialReader;
 import com.twilio.rest.taskrouter.v1.Workspace;
 import com.twilio.rest.taskrouter.v1.WorkspaceFetcher;
 import com.twilio.rest.taskrouter.v1.workspace.*;
+import com.twilio.type.Endpoint;
+import com.twilio.type.PhoneNumber;
 import io.github.cdimascio.dotenv.Dotenv;
 
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
 import static java.util.concurrent.TimeUnit.MINUTES;
 import static java.util.stream.StreamSupport.stream;
+import static net.inetalliance.potion.Locator.$1;
 
 public class TaskRouter {
+  private final Application app;
   private final Workspace workspace;
   private final TwilioRestClient rest;
   public final Activity offline;
@@ -44,12 +52,15 @@ public class TaskRouter {
   private final CredentialList sipCredentialList;
   private final Security security;
 
-  public final Map<String,Boolean> byAgent;
+  public final Map<String, Boolean> byAgent;
 
   public TaskRouter() {
     var env = Dotenv.load();
     Twilio.init(env.get("twilioAccountSid"), env.get("twilioAuthToken"));
     rest = Twilio.getRestClient();
+    app = StreamSupport.stream(new ApplicationReader().setFriendlyName("Phenix").read(rest).spliterator(), false)
+      .findFirst()
+      .orElseThrow(IllegalStateException::new);
     domain = new DomainFetcher(env.get("twilioDomainSid")).fetch(rest);
     workspace = new WorkspaceFetcher(env.get("twilioWorkspaceSid")).fetch(rest);
     sipCredentialList = new CredentialListFetcher(env.get("twilioCredentialListSid")).fetch(rest);
@@ -61,15 +72,15 @@ public class TaskRouter {
     bySid.put(available.getSid(), available);
     bySid.put(unavailable.getSid(), unavailable);
     byAgent = Collections.synchronizedMap(new HashMap<>());
-    executor.scheduleWithFixedDelay(new SyncWorkerStatus(this),0,1,MINUTES);
+    executor.scheduleWithFixedDelay(new SyncWorkerStatus(this), 0, 1, MINUTES);
     executor.scheduleWithFixedDelay(new CreateWorkers(this), 0, 5, MINUTES);
     executor.scheduleWithFixedDelay(new PruneWorkers(this), 0, 15, MINUTES);
     this.security = new Security(env.get("key"));
     executor.scheduleWithFixedDelay(new CredentialWorkers(sipCredentialList.getSid(),
       security), 0, 15, MINUTES);
     executor.scheduleWithFixedDelay(new PruneCredentials(this), 0, 15, MINUTES);
-    executor.scheduleWithFixedDelay(new CreateVerifiedCallerIds(this),0, 5,MINUTES);
-    executor.scheduleWithFixedDelay(new PruneVerifiedCallerIds(this),2, 5,MINUTES);
+    executor.scheduleWithFixedDelay(new CreateVerifiedCallerIds(this), 0, 5, MINUTES);
+    executor.scheduleWithFixedDelay(new PruneVerifiedCallerIds(this), 2, 5, MINUTES);
   }
 
   private Activity findActivity(final String name) {
@@ -91,12 +102,30 @@ public class TaskRouter {
     return stream(new CredentialReader(sipCredentialList.getSid()).read(rest).spliterator(), false);
   }
 
+  private URI getAbsolutePath(String relativePath, String qs) {
+    var base = app.getVoiceUrl();
+    try {
+      return new URI(base.getScheme(), base.getHost(), relativePath, qs, null);
+    } catch (URISyntaxException e) {
+      throw new IllegalArgumentException();
+    }
+  }
+
+  public Call call(final Endpoint to, String url, String qs) {
+    var vCid = $1(VerifiedCallerId.isDefault);
+    return new CallCreator(to, new PhoneNumber(vCid.getPhoneNumber()), getAbsolutePath(url, qs))
+      .setStatusCallbackMethod(HttpMethod.GET)
+      .setStatusCallbackEvent(List.of("answered", "completed"))
+      .setStatusCallback("/api/twilio/voice/status")
+      .create(rest);
+  }
+
   public Stream<VerifiedCallerId> getVerifiedCallerIds() {
     return Stream.concat(
-      stream(new OutgoingCallerIdReader().read(rest).spliterator(),false)
-        .map(oCid -> new VerifiedCallerId(oCid.getSid(),oCid.getFriendlyName(),oCid.getPhoneNumber().getEndpoint())),
-      stream(new IncomingPhoneNumberReader().read(rest).spliterator(),false)
-        .map(iPn -> new VerifiedCallerId(iPn.getSid(),iPn.getFriendlyName(),iPn.getPhoneNumber().getEndpoint())));
+      stream(new OutgoingCallerIdReader().read(rest).spliterator(), false)
+        .map(oCid -> new VerifiedCallerId(oCid.getSid(), oCid.getFriendlyName(), oCid.getPhoneNumber().getEndpoint())),
+      stream(new IncomingPhoneNumberReader().read(rest).spliterator(), false)
+        .map(iPn -> new VerifiedCallerId(iPn.getSid(), iPn.getFriendlyName(), iPn.getPhoneNumber().getEndpoint())));
   }
 
   public void shutdown() {

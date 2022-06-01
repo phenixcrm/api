@@ -7,20 +7,20 @@ import com.ameriglide.phenix.types.Resolution;
 import com.twilio.http.HttpMethod;
 import com.twilio.twiml.TwiML;
 import com.twilio.twiml.VoiceResponse;
-import com.twilio.twiml.voice.Number;
-import com.twilio.twiml.voice.*;
+import com.twilio.twiml.voice.Dial;
+import com.twilio.twiml.voice.Gather;
+import com.twilio.twiml.voice.Pause;
+import com.twilio.twiml.voice.Say;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import net.inetalliance.potion.Locator;
 
 import java.time.LocalDateTime;
-import java.util.List;
 
+import static com.ameriglide.phenix.twilio.VoiceStatus.buildNumber;
+import static com.ameriglide.phenix.twilio.VoiceStatus.buildSip;
 import static com.ameriglide.phenix.types.CallDirection.*;
-import static com.twilio.http.HttpMethod.GET;
-import static com.twilio.twiml.voice.Number.Event.ANSWERED;
-import static com.twilio.twiml.voice.Number.Event.COMPLETED;
 import static net.inetalliance.potion.Locator.$1;
 import static net.inetalliance.potion.Locator.create;
 
@@ -28,22 +28,6 @@ import static net.inetalliance.potion.Locator.create;
 public class VoiceCall extends TwiMLServlet {
 
 
-  private Number buildNumber(Party party) {
-    return new Number.Builder(party.endpoint())
-      .statusCallbackMethod(GET)
-      .statusCallbackEvents(List.of(ANSWERED, COMPLETED))
-      .statusCallback("/twilio/voice/status")
-      .build();
-  }
-  private Sip buildSip(Party party) {
-    return new Sip.Builder(party.sip()+";transport=tls")
-      .statusCallbackMethod(GET)
-      .statusCallbackEvents(List.of(com.twilio.twiml.voice.Sip.Event.ANSWERED,
-        com.twilio.twiml.voice.Sip.Event.COMPLETED))
-      .statusCallback("/twilio/voice/status")
-      .build();
-
-  }
 
   @Override
   protected void post(HttpServletRequest request, HttpServletResponse response) {
@@ -68,7 +52,7 @@ public class VoiceCall extends TwiMLServlet {
           call.setDirection(INTERNAL);
           return new VoiceResponse.Builder()
             .dial(new Dial.Builder()
-              .action("/twilio/voice/postDial")
+              .action("/twilio/voice/post-dial")
               .method(HttpMethod.GET)
               .answerOnBridge(true)
               .timeout(15)

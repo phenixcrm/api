@@ -4,6 +4,8 @@ import com.ameriglide.phenix.common.Call;
 import com.ameriglide.phenix.common.Leg;
 import com.ameriglide.phenix.exception.NotFoundException;
 import com.twilio.twiml.TwiML;
+import com.twilio.twiml.voice.Number;
+import com.twilio.twiml.voice.Sip;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -11,9 +13,12 @@ import net.inetalliance.funky.StringFun;
 import net.inetalliance.potion.Locator;
 
 import java.time.temporal.ChronoUnit;
+import java.util.List;
 
 import static com.ameriglide.phenix.types.Resolution.ANSWERED;
 import static com.ameriglide.phenix.types.Resolution.DROPPED;
+import static com.twilio.http.HttpMethod.GET;
+import static com.twilio.twiml.voice.Number.Event.COMPLETED;
 import static java.time.LocalDateTime.now;
 import static net.inetalliance.funky.Funky.of;
 import static net.inetalliance.potion.Locator.*;
@@ -66,6 +71,24 @@ public class VoiceStatus extends TwiMLServlet {
       });
     }
     return null;
+  }
+
+  protected static Number buildNumber(Party party) {
+    return new Number.Builder(party.endpoint())
+      .statusCallbackMethod(GET)
+      .statusCallbackEvents(List.of(Number.Event.ANSWERED, COMPLETED))
+      .statusCallback("/twilio/voice/status")
+      .build();
+  }
+
+  protected static Sip buildSip(Party party) {
+    return new Sip.Builder(party.sip())
+      .statusCallbackMethod(GET)
+      .statusCallbackEvents(List.of(com.twilio.twiml.voice.Sip.Event.ANSWERED,
+        com.twilio.twiml.voice.Sip.Event.COMPLETED))
+      .statusCallback("/twilio/voice/status")
+      .build();
+
   }
 
   private void processCallStatusChange(HttpServletRequest request, Call call, Leg leg, Call callCopy) {

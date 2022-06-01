@@ -12,6 +12,7 @@ import com.twilio.twiml.voice.Hangup;
 import com.twilio.twiml.voice.Pause;
 import com.twilio.twiml.voice.Redirect;
 import com.twilio.twiml.voice.Say;
+import com.twilio.type.PhoneNumber;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import net.inetalliance.funky.Funky;
@@ -143,11 +144,15 @@ public abstract class TwiMLServlet extends PhenixServlet {
     throw new IllegalArgumentException();
   }
 
+  protected static Party asParty(final PhoneNumber party) {
+    return new Party(party.getEndpoint(), false, party.getEndpoint(), null, null, null, null, null);
+  }
+
   protected static Party asParty(final Agent agent) {
     return new Party(agent.getSipUser(),
       true,
-      "%s@%s".formatted(agent.getSipUser(),
-        Startup.router.domain.getDomainName()), null, null, null, null,null);
+      "sip:%s@%s;transport=tls".formatted(agent.getSipUser(),
+        Startup.router.domain.getDomainName()), agent.getFullName(), null, null, null, null);
   }
 
   private static final Pattern sip = Pattern.compile("^sip:([A-Za-z\\d.]*)@([a-z]*).sip.twilio.com(;.*)?$");
@@ -185,10 +190,10 @@ public abstract class TwiMLServlet extends PhenixServlet {
       cnam.setName(name);
       cnam.setPhone(endpoint);
       cnam.setCity(city);
-      if(isNotEmpty(state)) {
+      if (isNotEmpty(state)) {
         cnam.setState(State.fromAbbreviation(state));
       }
-      if(isNotEmpty(country)) {
+      if (isNotEmpty(country)) {
         cnam.setCountry(Country.fromIsoA2(country));
       } else {
         cnam.setCountry(Country.UNITED_STATES);
@@ -198,12 +203,12 @@ public abstract class TwiMLServlet extends PhenixServlet {
     }
 
     public String sipCid() {
-      if(StringFun.isEmpty(name)) {
+      if (StringFun.isEmpty(name)) {
         return endpoint;
       }
-      var split = name.split("[,]",2);
-      if(split.length == 2) {
-        return split[1].trim()+"_"+split[0].trim();
+      var split = name.split("[,]", 2);
+      if (split.length == 2) {
+        return split[1].trim() + "_" + split[0].trim();
       }
       return split[0].trim();
     }

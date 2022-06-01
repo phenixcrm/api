@@ -153,7 +153,7 @@ public class CallModel
       throws IOException {
     if (call.sid.startsWith("sim-") && data.getEnum("resolution", Resolution.class) == ANSWERED) {
 
-      final Leg leg = call.getActiveSegment();
+      final Leg leg = call.getActiveLeg();
       Locator.update(leg, "call-sim", copy -> {
         copy.setEnded(LocalDateTime.now());
       });

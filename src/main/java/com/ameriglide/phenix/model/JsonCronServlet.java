@@ -36,7 +36,7 @@ public abstract class JsonCronServlet extends PhenixServlet implements Runnable 
   }
 
   @Override
-  public void run() {
+  public synchronized void run() {
     content = Json.pretty(produce());
   }
 
@@ -48,6 +48,9 @@ public abstract class JsonCronServlet extends PhenixServlet implements Runnable 
     response.setHeader("Expires", "-1");
     response.setContentType("application/json");
     try (var writer = response.getWriter()) {
+      if(content == null) {
+        run();
+      }
       writer.print(content);
       writer.flush();
     }

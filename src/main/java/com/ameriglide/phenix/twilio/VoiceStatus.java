@@ -27,7 +27,7 @@ public class VoiceStatus extends TwiMLServlet {
       if (call == null) {
         throw new NotFoundException();
       }
-      var seg = call.getActiveSegment();
+      var seg = call.getActiveLeg();
       if ("inbound".equals(request.getParameter("Direction"))) {
         if (seg != null) {
           update(call, "VoiceStatus", callCopy -> {

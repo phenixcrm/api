@@ -6,16 +6,16 @@ import jakarta.websocket.Session;
 import net.inetalliance.types.json.Json;
 import net.inetalliance.types.json.JsonMap;
 
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 import static com.ameriglide.phenix.ws.Events.send;
 import static net.inetalliance.util.shell.Shell.log;
 
-public class SessionHandler
-    implements MessageHandler.Whole<String> {
+public record SessionHandler(Session session)
+  implements MessageHandler.Whole<String> {
 
-  private static final ConcurrentHashMap<String, JsonMessageHandler> handlers = new ConcurrentHashMap<>();
-  private final Session session;
+  private static final Map<String, JsonMessageHandler> handlers = new ConcurrentHashMap<>();
 
   public SessionHandler(final Session session) {
     this.session = session;
@@ -27,6 +27,7 @@ public class SessionHandler
     handlers.put("status", new StatusHandler(router));
     handlers.put("reminder", new ReminderHandler());
     handlers.put("ping", new PingHandler());
+    handlers.put("hud", new HudHandler(router));
 
   }
 

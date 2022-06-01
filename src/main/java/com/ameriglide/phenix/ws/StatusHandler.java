@@ -52,6 +52,7 @@ public class StatusHandler extends PhenixServlet
         }
         var w = router.setActivity(ticket,newActivity);
         state.put("activity",w.getActivitySid());
+        router.byAgent.put(w.getSid(),w.getAvailable());
       }
       default -> throw new IllegalArgumentException();
     }

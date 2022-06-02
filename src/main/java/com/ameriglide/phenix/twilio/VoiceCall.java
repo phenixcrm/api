@@ -52,7 +52,7 @@ public class VoiceCall extends TwiMLServlet {
           call.setDirection(INTERNAL);
           return new VoiceResponse.Builder()
             .dial(new Dial.Builder()
-              .action("/twilio/voice/post-dial")
+              .action("/twilio/voice/postDial")
               .method(HttpMethod.GET)
               .answerOnBridge(true)
               .timeout(15)

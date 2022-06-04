@@ -3,6 +3,7 @@ package com.ameriglide.phenix.twilio;
 import com.ameriglide.phenix.common.Call;
 import com.ameriglide.phenix.common.Contact;
 import com.ameriglide.phenix.common.VerifiedCallerId;
+import com.ameriglide.phenix.types.CallDirection;
 import com.ameriglide.phenix.types.Resolution;
 import com.twilio.http.HttpMethod;
 import com.twilio.twiml.TwiML;
@@ -76,7 +77,22 @@ public class VoiceCall extends TwiMLServlet {
         // INBOUND or IVR/QUEUE call
         info("%s is a new inbound call %s->%s", callSid, caller, called);
         var vCid = Locator.$1(VerifiedCallerId.withPhoneNumber(called.endpoint()));
-        if(vCid != null && vCid.isDirect()) {
+        if(vCid == null) {
+          call.setDirection(CallDirection.QUEUE);
+          // main IVR
+          return new VoiceResponse.Builder()
+            .gather(new Gather.Builder()
+              .action("/twilio/menu/show")
+              .numDigits(1)
+              .timeout(19)
+              .build())
+            .say(speak("Thank you for calling AmeriGlide, your headquarters for Home Safety."))
+            .pause(new Pause.Builder().length(1).build())
+            .say(new Say.Builder().build())
+            .build();
+
+        }
+        else if(vCid.isDirect()) {
           call.setDirection(INBOUND);
           call.setContact($1(Contact.withPhoneNumber(caller.endpoint())));
           info("Inbound %s -> %s", caller.endpoint(), vCid.getDirect().getFullName());
@@ -90,17 +106,10 @@ public class VoiceCall extends TwiMLServlet {
               .build())
             .build();
         } else {
+          // straight to task router
           call.setDirection(QUEUE);
-          return new VoiceResponse.Builder()
-            .gather(new Gather.Builder()
-              .action("/twilio/menu/show")
-              .numDigits(1)
-              .timeout(19)
-              .build())
-            .say(speak("Thank you for calling AmeriGlide, your headquarters for Home Safety."))
-            .pause(new Pause.Builder().length(1).build())
-            .say(new Say.Builder().build())
-            .build();
+          return null;
+
         }
 
       }

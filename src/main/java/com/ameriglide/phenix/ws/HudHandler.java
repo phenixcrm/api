@@ -128,7 +128,7 @@ public class HudHandler
   private void updateAvailability() {
     forEach(Agent.isActive, agent -> {
       HudStatus hudStatus = status.computeIfAbsent(agent.id, k -> new HudStatus());
-      if (router.byAgent.get(agent.getTwilioSid()) != hudStatus.available) {
+      if (router.byAgent.getOrDefault(agent.getTwilioSid(),false) != hudStatus.available) {
         hudStatus.available = !hudStatus.available;
       }
     });

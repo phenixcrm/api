@@ -22,6 +22,7 @@ import com.twilio.rest.taskrouter.v1.workspace.*;
 import com.twilio.type.Endpoint;
 import com.twilio.type.PhoneNumber;
 import io.github.cdimascio.dotenv.Dotenv;
+import net.inetalliance.types.json.JsonMap;
 
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -37,6 +38,7 @@ import java.util.stream.StreamSupport;
 import static java.util.concurrent.TimeUnit.MINUTES;
 import static java.util.stream.StreamSupport.stream;
 import static net.inetalliance.potion.Locator.$1;
+import static net.inetalliance.types.json.Json.ugly;
 
 public class TaskRouter {
   private final Application app;
@@ -81,6 +83,17 @@ public class TaskRouter {
     executor.scheduleWithFixedDelay(new PruneCredentials(this), 0, 15, MINUTES);
     executor.scheduleWithFixedDelay(new CreateVerifiedCallerIds(this), 0, 5, MINUTES);
     executor.scheduleWithFixedDelay(new PruneVerifiedCallerIds(this), 2, 5, MINUTES);
+    executor.scheduleWithFixedDelay(new CreateTaskQueues(this), 0, 30, MINUTES);
+  }
+  private Stream<TaskQueue> getTaskQueues() {
+    return stream(new TaskQueueReader(workspace.getSid()).read(rest).spliterator(),false);
+  }
+  public TaskQueue createTaskQueue(String name, String workerExpression) {
+    return TaskQueue.creator(workspace.getSid(),name)
+      .setTaskOrder(TaskQueue.TaskOrder.FIFO)
+      .setTargetWorkers(workerExpression)
+      .create(rest);
+
   }
 
   private Activity findActivity(final String name) {
@@ -151,5 +164,18 @@ public class TaskRouter {
   public String getSipSecret(Agent a) {
     var bytes = a.getSipSecret();
     return bytes == null ? null : security.decrypt(bytes);
+  }
+
+  public void updateSkills(Agent a) {
+    new WorkerUpdater(workspace.getSid(),a.getTwilioSid()).setAttributes(a.getSkills()).update();
+  }
+
+  public Workflow createWorkFlow(String name, String queueSid) {
+    return new WorkflowCreator(workspace.getSid(),name,
+      ugly(new JsonMap()
+        .$("task_routing", new JsonMap()
+          .$("default_filter", new JsonMap()
+            .$("queue",queueSid)))))
+      .create(rest);
   }
 }

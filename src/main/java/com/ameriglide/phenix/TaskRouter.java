@@ -6,7 +6,6 @@ import com.ameriglide.phenix.common.VerifiedCallerId;
 import com.ameriglide.phenix.tasks.*;
 import com.ameriglide.phenix.util.Security;
 import com.twilio.Twilio;
-import com.twilio.http.HttpMethod;
 import com.twilio.http.TwilioRestClient;
 import com.twilio.rest.api.v2010.account.*;
 import com.twilio.rest.api.v2010.account.sip.CredentialList;
@@ -19,8 +18,10 @@ import com.twilio.rest.api.v2010.account.sip.credentiallist.CredentialReader;
 import com.twilio.rest.taskrouter.v1.Workspace;
 import com.twilio.rest.taskrouter.v1.WorkspaceFetcher;
 import com.twilio.rest.taskrouter.v1.workspace.*;
-import com.twilio.type.Endpoint;
+import com.twilio.rest.taskrouter.v1.workspace.task.Reservation;
+import com.twilio.rest.taskrouter.v1.workspace.task.ReservationFetcher;
 import com.twilio.type.PhoneNumber;
+import com.twilio.type.Sip;
 import io.github.cdimascio.dotenv.Dotenv;
 import net.inetalliance.types.json.JsonMap;
 
@@ -35,6 +36,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
+import static com.twilio.http.HttpMethod.GET;
 import static java.util.concurrent.TimeUnit.MINUTES;
 import static java.util.stream.StreamSupport.stream;
 import static net.inetalliance.potion.Locator.$1;
@@ -115,7 +117,7 @@ public class TaskRouter {
     return stream(new CredentialReader(sipCredentialList.getSid()).read(rest).spliterator(), false);
   }
 
-  private URI getAbsolutePath(String relativePath, String qs) {
+  public URI getAbsolutePath(String relativePath, String qs) {
     var base = app.getVoiceUrl();
     try {
       return new URI(base.getScheme(), base.getHost(), relativePath, qs, null);
@@ -123,11 +125,19 @@ public class TaskRouter {
       throw new IllegalArgumentException();
     }
   }
+  public Call call(final Sip from, Sip to, String url, String qs) {
+    return new CallCreator(to,from,getAbsolutePath(url,qs))
+      .setStatusCallbackMethod(GET)
+      .setStatusCallbackEvent(List.of("answered", "completed"))
+      .setStatusCallback("/api/twilio/voice/status")
+      .create(rest);
 
-  public Call call(final Endpoint to, String url, String qs) {
+  }
+
+  public Call call(final Sip to, String url, String qs) {
     var vCid = $1(VerifiedCallerId.isDefault);
     return new CallCreator(to, new PhoneNumber(vCid.getPhoneNumber()), getAbsolutePath(url, qs))
-      .setStatusCallbackMethod(HttpMethod.GET)
+      .setStatusCallbackMethod(GET)
       .setStatusCallbackEvent(List.of("answered", "completed"))
       .setStatusCallback("/api/twilio/voice/status")
       .create(rest);
@@ -176,6 +186,16 @@ public class TaskRouter {
         .$("task_routing", new JsonMap()
           .$("default_filter", new JsonMap()
             .$("queue",queueSid)))))
+      .setAssignmentCallbackUrl(getAbsolutePath("/twilio/assignment",null))
       .create(rest);
+  }
+
+  public Reservation getReservation(String taskSid, String reservationSid) {
+    return new ReservationFetcher(workspace.getSid(),taskSid, reservationSid).fetch(rest);
+  }
+
+
+  public Worker getWorker(String sid) {
+    return new WorkerFetcher(workspace.getSid(),sid).fetch(rest);
   }
 }

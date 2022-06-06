@@ -17,6 +17,7 @@ import java.util.concurrent.ScheduledExecutorService;
 
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.SECONDS;
+import static net.inetalliance.funky.StringFun.isNotEmpty;
 import static net.inetalliance.potion.Locator.forEach;
 
 public class HudHandler
@@ -128,7 +129,7 @@ public class HudHandler
   private void updateAvailability() {
     forEach(Agent.isActive, agent -> {
       HudStatus hudStatus = status.computeIfAbsent(agent.id, k -> new HudStatus());
-      if (router.byAgent
+      if (isNotEmpty(agent.getTwilioSid()) && router.byAgent
         .computeIfAbsent(agent.getTwilioSid(), sid->router.getWorker(sid).getAvailable()) != hudStatus.available) {
         hudStatus.available = !hudStatus.available;
       }

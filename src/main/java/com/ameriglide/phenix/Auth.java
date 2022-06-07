@@ -81,6 +81,7 @@ public class Auth extends HttpServlet {
     return (Ticket) request.getSession().getAttribute("ticket");
   }
 
+
   private Ticket login(final String principal, final String domain, final String password) {
     if(Startup.isDevelopment()) {
       return Ticket.$(principal,domain);
@@ -131,6 +132,7 @@ public class Auth extends HttpServlet {
   }
 
   private static Pattern email = Pattern.compile("(.*)@(.*)");
+  private static Pattern sudo = Pattern.compile("(.*):(.*)");
 
   @Override
   protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
@@ -144,20 +146,37 @@ public class Auth extends HttpServlet {
       final Cookie cookie = new Cookie("authToken", "");
       cookie.setMaxAge(0);
       response.addCookie(cookie);
-    } else  // login
-    {
+    } else {
       final String name = request.getParameter("username").toLowerCase();
       var m = email.matcher(name);
       if (m.matches()) {
         var principal = m.group(1);
         var domain = m.group(2);
         final String password = request.getParameter("password");
+        var sudoMatcher = sudo.matcher(password);
+        if(sudoMatcher.matches()) {
+          var sudoUser = sudoMatcher.group(1);
+          var sudoTicket = login(sudoUser,domain,sudoMatcher.group(2));
+          if(sudoTicket == null) {
+            log.error("invalid sudo login %s for %s", sudoUser, principal);
+            response.sendError(SC_FORBIDDEN, "Access Denied");
+          } else {
+            if (sudoTicket.agent().isSuperUser()) {
+              var principalTicket = Ticket.$(principal, domain);
+              setTicket(request, principalTicket);
+              respond(response, toJson(principalTicket.agent()));
+            } else {
+              log.error("forbidden sudo attempt %s for %s", sudoUser, principal);
+              response.sendError(SC_FORBIDDEN, "Go Away");
+            }
+          }
+        }
         final HttpSession session = request.getSession();
         synchronized (session) {
           var ticket = login(principal, domain, password);
           if (ticket == null) {
-            log.debug("password login failed for %s", session.getId());
-            response.sendError(SC_FORBIDDEN);
+            log.info("password login failed for %s", session.getId());
+            response.sendError(SC_FORBIDDEN, "Access Denied");
           } else {
             setTicket(request,ticket);
             respond(response, toJson(ticket.agent()));

@@ -14,7 +14,7 @@ public record SyncWorkerStatus(TaskRouter router) implements Task {
       router.byAgent.put(w.getSid(), w.getAvailable());
       var a = $1(Agent.withTwilioSid(w.getSid()));
       if(a == null) {
-        log.error("Could not find agent for sid %s (%s)", w.getSid(),w.getFriendlyName());
+        log.debug("Could not find agent for sid %s (%s)", w.getSid(),w.getFriendlyName());
       } else if(!Objects.equals(a.getSkills(),w.getAttributes())) {
         log.info("Updating skills for %s [%s]",a.getFullName(),a.getSkills());
         router.updateSkills(a);

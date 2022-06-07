@@ -315,28 +315,15 @@ public class LeadModel
 
   }
 
-  public enum SortField {
-    ESTIMATED_CLOSE_ASC("estimatedClose", ASCENDING),
-    ESTIMATED_CLOSE_DESC("estimatedClose", DESCENDING);
-    private final String field;
-    private final OrderBy.Direction direction;
-
-    SortField(final String field, final OrderBy.Direction direction) {
-      this.field = field;
-      this.direction = direction;
-    }
+  public record SortField(String field, OrderBy.Direction direction) {
 
     static SortField from(final HttpServletRequest request) {
       final String raw = request.getParameter("sort");
-      if (raw != null) {
-        switch (raw) {
-          case "estimatedClose":
-            return ESTIMATED_CLOSE_ASC;
-          case "-estimatedClose":
-            return ESTIMATED_CLOSE_DESC;
-        }
+      if(raw == null) {
+        return new SortField("created", DESCENDING);
       }
-      return ESTIMATED_CLOSE_DESC;
+      var desc = raw.startsWith("-");
+      return new SortField(desc ? raw.substring(1) : raw, desc ? DESCENDING : ASCENDING);
     }
   }
 

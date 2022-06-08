@@ -21,5 +21,4 @@ dependencies {
   implementation("jakarta.websocket:jakarta.websocket-api:2.0.0")
   implementation("com.twilio.sdk:twilio:8.29.1")
   implementation("io.github.cdimascio:dotenv-java:2.2.3")
-  implementation("com.github.tomas-langer:chalk:1.0.2")
 }

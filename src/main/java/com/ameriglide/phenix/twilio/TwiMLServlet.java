@@ -5,7 +5,6 @@ import com.ameriglide.phenix.Startup;
 import com.ameriglide.phenix.common.Agent;
 import com.ameriglide.phenix.common.CNAM;
 import com.ameriglide.phenix.types.CallerId;
-import com.github.tomaslanger.chalk.Chalk;
 import com.twilio.twiml.TwiML;
 import com.twilio.twiml.VoiceResponse;
 import com.twilio.twiml.voice.Hangup;
@@ -51,8 +50,8 @@ public abstract class TwiMLServlet extends PhenixServlet {
   protected void info(final String format, Object... args) {
     if (format != null) {
       out.printf("%s\t%s\t%n%s%n",
-        Chalk.on("TwiML").bgRed().cyan().bold(),
-        Chalk.on(getClass().getSimpleName()).green().bold(),
+        "TwiML",
+        getClass().getSimpleName(),
         format.formatted(args));
     }
   }
@@ -60,8 +59,8 @@ public abstract class TwiMLServlet extends PhenixServlet {
   protected void error(final Throwable t) {
     if (t != null) {
       out.printf("%s\t%s\t%n%s%n",
-        Chalk.on("TwiML").bgRed().cyan().bold(),
-        Chalk.on(getClass().getSimpleName()).red().bold(),
+        "TwiML",
+        getClass().getSimpleName(),
         t.getClass().getSimpleName());
       t.printStackTrace(out);
     }

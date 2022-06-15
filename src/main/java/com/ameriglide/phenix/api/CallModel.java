@@ -151,7 +151,7 @@ public class CallModel
                         final HttpServletResponse response,
                         final Call call, final JsonMap data)
       throws IOException {
-    if (call.sid.startsWith("sim-") && data.getEnum("resolution", Resolution.class) == ANSWERED) {
+    if (call.sid.startsWith("SIM") && data.getEnum("resolution", Resolution.class) == ANSWERED) {
 
       final Leg leg = call.getActiveLeg();
       Locator.update(leg, "call-sim", copy -> {
@@ -200,7 +200,7 @@ public class CallModel
         throw new NotFoundException("Could not find product line %d",
             data.getInteger("productLine"));
       }
-      final Call call = new Call(format("sim-%d", currentTimeMillis()));
+      final Call call = new Call(format("SIM%d", currentTimeMillis()));
       call.setBusiness(business);
       /* todo: figure this out
       for (final Queue q : business.getQueues()) {
@@ -238,7 +238,7 @@ public class CallModel
 
   @Override
   protected Json toJson(final Key<Call> key, final Call call, final HttpServletRequest request) {
-    final JsonMap map = new JsonMap().$("key").$("direction");
+    final JsonMap map = new JsonMap().$("sid").$("direction");
     key.info.fill(call, map);
     map.$("todo", call.isTodo());
     switch (call.getDirection()) {

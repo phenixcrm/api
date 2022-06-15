@@ -14,6 +14,8 @@ import net.inetalliance.log.Log;
 import net.inetalliance.potion.Locator;
 import net.inetalliance.potion.info.Info;
 import net.inetalliance.types.json.Json;
+import net.inetalliance.types.json.JsonList;
+import net.inetalliance.types.json.JsonString;
 import net.inetalliance.types.www.ContentType;
 
 import javax.naming.AuthenticationException;
@@ -25,6 +27,7 @@ import java.io.IOException;
 import java.util.Hashtable;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Stream;
 
 import static jakarta.servlet.http.HttpServletResponse.*;
 import static java.lang.String.format;
@@ -58,7 +61,13 @@ public class Auth extends HttpServlet {
     if (a == null) {
       throw new IllegalStateException();
     }
-    return  Info.$(Agent.class).toJson($(a)).$("sipSecret", Startup.router.getSipSecret(a));
+    var manager = a.isSuperUser() || Locator.count(Team.withManager(a))>0;
+    var json  = Info.$(Agent.class).toJson($(a))
+      .$("sipSecret", Startup.router.getSipSecret(a));
+    if(manager) {
+      json.$("roles", JsonList.collect(Stream.of(new JsonString("manager"))));
+    }
+    return json;
   }
 
   public static boolean isTeamLeader(final HttpServletRequest req) {

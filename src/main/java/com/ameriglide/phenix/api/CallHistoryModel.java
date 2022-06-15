@@ -64,7 +64,7 @@ public class CallHistoryModel
     forEach(callQuery, call -> {
       var callMap = new JsonMap();
       calls.add(callMap);
-      callMap.$("key").$("notes").$("resolution").$("created").$("direction");
+      callMap.$("sid").$("notes").$("resolution").$("created").$("direction");
       Info.$(call).fill(call, callMap);
       Funky.of(call.getBusiness()).ifPresent(b->callMap.$("business",new JsonMap()
         .$("name",b.getName())

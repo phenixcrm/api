@@ -77,9 +77,10 @@ public class LeadModel
           .$("abbreviation", o.getBusiness().getAbbreviation()));
       final Note n = Locator.$1(Note.withOpportunity(o));
       if(n != null) {
+        var a = n.getAuthor();
         extra.$("note", new JsonMap()
           .$("text",n.getNote())
-          .$("author",n.getAuthor().getFullName())
+          .$("author",a == null ? "Unknown" : a.getFullName())
           .$("created", n.getCreated()));
       }
       json.put("extra", extra);

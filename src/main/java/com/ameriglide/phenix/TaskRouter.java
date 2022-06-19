@@ -6,6 +6,7 @@ import com.ameriglide.phenix.common.VerifiedCallerId;
 import com.ameriglide.phenix.tasks.*;
 import com.ameriglide.phenix.util.Security;
 import com.twilio.Twilio;
+import com.twilio.exception.ApiException;
 import com.twilio.http.TwilioRestClient;
 import com.twilio.rest.api.v2010.account.*;
 import com.twilio.rest.api.v2010.account.sip.CredentialList;
@@ -13,16 +14,18 @@ import com.twilio.rest.api.v2010.account.sip.CredentialListFetcher;
 import com.twilio.rest.api.v2010.account.sip.Domain;
 import com.twilio.rest.api.v2010.account.sip.DomainFetcher;
 import com.twilio.rest.api.v2010.account.sip.credentiallist.Credential;
-import com.twilio.rest.api.v2010.account.sip.credentiallist.CredentialDeleter;
-import com.twilio.rest.api.v2010.account.sip.credentiallist.CredentialReader;
 import com.twilio.rest.taskrouter.v1.Workspace;
 import com.twilio.rest.taskrouter.v1.WorkspaceFetcher;
-import com.twilio.rest.taskrouter.v1.workspace.*;
+import com.twilio.rest.taskrouter.v1.workspace.Activity;
+import com.twilio.rest.taskrouter.v1.workspace.TaskQueue;
+import com.twilio.rest.taskrouter.v1.workspace.Worker;
+import com.twilio.rest.taskrouter.v1.workspace.Workflow;
 import com.twilio.rest.taskrouter.v1.workspace.task.Reservation;
-import com.twilio.rest.taskrouter.v1.workspace.task.ReservationFetcher;
 import com.twilio.type.PhoneNumber;
 import com.twilio.type.Sip;
 import io.github.cdimascio.dotenv.Dotenv;
+import net.inetalliance.log.Log;
+import net.inetalliance.potion.Locator;
 import net.inetalliance.types.json.JsonMap;
 
 import java.net.URI;
@@ -57,6 +60,7 @@ public class TaskRouter {
   private final Security security;
 
   public final Map<String, Boolean> byAgent;
+  private final CredentialWorkers credentialTask;
 
   public TaskRouter() {
     var env = Dotenv.load();
@@ -80,15 +84,15 @@ public class TaskRouter {
     executor.scheduleWithFixedDelay(new CreateWorkers(this), 0, 5, MINUTES);
     executor.scheduleWithFixedDelay(new PruneWorkers(this), 0, 15, MINUTES);
     this.security = new Security(env.get("key"));
-    executor.scheduleWithFixedDelay(new CredentialWorkers(sipCredentialList.getSid(),
-      security), 0, 15, MINUTES);
+    credentialTask = new CredentialWorkers(this, security);
+    executor.scheduleWithFixedDelay(credentialTask, 0, 15, MINUTES);
     executor.scheduleWithFixedDelay(new PruneCredentials(this), 0, 15, MINUTES);
     executor.scheduleWithFixedDelay(new CreateVerifiedCallerIds(this), 0, 5, MINUTES);
     executor.scheduleWithFixedDelay(new PruneVerifiedCallerIds(this), 2, 5, MINUTES);
     executor.scheduleWithFixedDelay(new CreateTaskQueues(this), 0, 30, MINUTES);
   }
   private Stream<TaskQueue> getTaskQueues() {
-    return stream(new TaskQueueReader(workspace.getSid()).read(rest).spliterator(),false);
+    return stream(TaskQueue.reader(workspace.getSid()).read(rest).spliterator(),false);
   }
   public TaskQueue createTaskQueue(String name, String workerExpression) {
     return TaskQueue.creator(workspace.getSid(),name)
@@ -99,22 +103,22 @@ public class TaskRouter {
   }
 
   private Activity findActivity(final String name) {
-    return stream(new ActivityReader(workspace.getSid())
+    return stream(Activity.reader(workspace.getSid())
       .setFriendlyName(name)
       .read(rest).spliterator(), false
     ).findFirst().orElseThrow();
   }
 
   public Stream<Activity> getActivities() {
-    return stream(new ActivityReader(workspace.getSid()).read(rest).spliterator(), false);
+    return stream(Activity.reader(workspace.getSid()).read(rest).spliterator(), false);
   }
 
   public Stream<Worker> getWorkers() {
-    return stream(new WorkerReader(workspace.getSid()).read(rest).spliterator(), false);
+    return stream(Worker.reader(workspace.getSid()).read(rest).spliterator(), false);
   }
 
   public Stream<Credential> getCredentials() {
-    return stream(new CredentialReader(sipCredentialList.getSid()).read(rest).spliterator(), false);
+    return stream(Credential.reader(sipCredentialList.getSid()).read(rest).spliterator(), false);
   }
 
   public URI getAbsolutePath(String relativePath, String qs) {
@@ -126,7 +130,7 @@ public class TaskRouter {
     }
   }
   public Call call(final Sip from, Sip to, String url, String qs) {
-    return new CallCreator(to,from,getAbsolutePath(url,qs))
+    return Call.creator(to,from,getAbsolutePath(url,qs))
       .setStatusCallbackMethod(GET)
       .setStatusCallbackEvent(List.of("answered", "completed"))
       .setStatusCallback("/api/twilio/voice/status")
@@ -136,7 +140,7 @@ public class TaskRouter {
 
   public Call call(final Sip to, String url, String qs) {
     var vCid = $1(VerifiedCallerId.isDefault);
-    return new CallCreator(to, new PhoneNumber(vCid.getPhoneNumber()), getAbsolutePath(url, qs))
+    return Call.creator(to, new PhoneNumber(vCid.getPhoneNumber()), getAbsolutePath(url, qs))
       .setStatusCallbackMethod(GET)
       .setStatusCallbackEvent(List.of("answered", "completed"))
       .setStatusCallback("/api/twilio/voice/status")
@@ -145,9 +149,9 @@ public class TaskRouter {
 
   public Stream<VerifiedCallerId> getVerifiedCallerIds() {
     return Stream.concat(
-      stream(new OutgoingCallerIdReader().read(rest).spliterator(), false)
+      stream(OutgoingCallerId.reader().read(rest).spliterator(), false)
         .map(oCid -> new VerifiedCallerId(oCid.getSid(), oCid.getFriendlyName(), oCid.getPhoneNumber().getEndpoint())),
-      stream(new IncomingPhoneNumberReader().read(rest).spliterator(), false)
+      stream(IncomingPhoneNumber.reader().read(rest).spliterator(), false)
         .map(iPn -> new VerifiedCallerId(iPn.getSid(), iPn.getFriendlyName(), iPn.getPhoneNumber().getEndpoint())));
   }
 
@@ -156,15 +160,15 @@ public class TaskRouter {
   }
 
   public Worker setActivity(Ticket ticket, Activity newActivity) {
-    return new WorkerUpdater(workspace.getSid(), ticket.sid()).setActivitySid(newActivity.getSid()).update(rest);
+    return Worker.updater(workspace.getSid(), ticket.sid()).setActivitySid(newActivity.getSid()).update(rest);
   }
 
   public boolean delete(Worker w) {
-    return new WorkerDeleter(workspace.getSid(), w.getSid()).delete(rest);
+    return Worker.deleter(workspace.getSid(), w.getSid()).delete(rest);
   }
 
   public boolean deleteCredential(String credentialSid) {
-    return new CredentialDeleter(sipCredentialList.getSid(), credentialSid).delete(rest);
+    return Credential.deleter(sipCredentialList.getSid(), credentialSid).delete(rest);
   }
 
   public Worker createWorker(Agent a) {
@@ -177,11 +181,18 @@ public class TaskRouter {
   }
 
   public void updateSkills(Agent a) {
-    new WorkerUpdater(workspace.getSid(),a.getTwilioSid()).setAttributes(a.getSkills()).update();
+    try {
+      Worker.updater(workspace.getSid(), a.getTwilioSid())
+        .setAttributes(a.getSkills())
+        .update(rest);
+    } catch(Throwable t) {
+      log.error("UPDATE SKILLS ERROR", t);
+    }
   }
+  private static final Log log = Log.getInstance(TaskRouter.class);
 
   public Workflow createWorkFlow(String name, String queueSid) {
-    return new WorkflowCreator(workspace.getSid(),name,
+    return Workflow.creator(workspace.getSid(),name,
       ugly(new JsonMap()
         .$("task_routing", new JsonMap()
           .$("default_filter", new JsonMap()
@@ -191,11 +202,29 @@ public class TaskRouter {
   }
 
   public Reservation getReservation(String taskSid, String reservationSid) {
-    return new ReservationFetcher(workspace.getSid(),taskSid, reservationSid).fetch(rest);
+    return Reservation.fetcher(workspace.getSid(),taskSid, reservationSid).fetch(rest);
   }
 
 
-  public Worker getWorker(String sid) {
-    return new WorkerFetcher(workspace.getSid(),sid).fetch(rest);
+  public synchronized Worker getWorker(String sid) {
+    try {
+      return Worker.fetcher(workspace.getSid(), sid).fetch(rest);
+    } catch(ApiException e) {
+      if(e.getCode() == 20404) {
+        var a = Locator.$1(Agent.withTwilioSid(sid));
+          if(a != null) {
+            return createWorker(a);
+          }
+      }
+      throw e;
+    }
+  }
+
+  public void credential(Agent a) {
+    credentialTask.credential(a);
+  }
+
+  public Credential createCredentials(String sipUser, String secret) {
+    return Credential.creator(sipCredentialList.getSid(), sipUser, secret).create(rest);
   }
 }

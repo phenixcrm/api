@@ -61,7 +61,7 @@ public class Model<T>
     this.pattern = pattern;
   }
 
-  public static <T, K extends Key<T>> JsonMap createObject(final K key,
+  public <K extends Key<T>> JsonMap createObject(final K key,
                                                                                     final HttpServletRequest request,
                                                                                     final HttpServletResponse response, final JsonMap data,
                                                                                     final Function<T, JsonMap> toJson) {
@@ -69,15 +69,19 @@ public class Model<T>
     });
   }
 
-  public static <T, K extends Key<T>> JsonMap createObject(final K key,
-                                                                                    final HttpServletRequest request,
-                                                                                    final HttpServletResponse response, final JsonMap data, final Function<T, JsonMap> toJson,
-                                                                                    final Consumer<? super T> success) {
+  protected void setDefaults(final T t, final HttpServletRequest request, JsonMap data) {
+
+  }
+
+  public <K extends Key<T>> JsonMap createObject(final K key, final HttpServletRequest request,
+                                                 final HttpServletResponse response, final JsonMap data,
+                                                 final Function<T, JsonMap> toJson, final Consumer<? super T> success) {
     try {
       final T t = key.info.type.getDeclaredConstructor().newInstance();
       final ValidationErrors errors = new ValidationErrors();
       final JsonMap externalMap = new JsonMap();
-      setProperties(request, data, t, errors, externalMap);
+      setDefaults(t,request,data);
+      setProperties(request, data, t, errors);
       if (isNotEmpty(key.id)) {
         final Property<T, ?> keyProperty = key.info.keys().findFirst().orElseThrow();
         keyProperty.field.set(t, ClassFun.convert(keyProperty.type, key.id));
@@ -113,7 +117,7 @@ public class Model<T>
 
   private static <T> void setProperties(final HttpServletRequest request, final JsonMap data,
       final T t,
-      final ValidationErrors errors, final JsonMap externalMap) {
+      final ValidationErrors errors) {
     final Info<T> info = Info.$(t);
     info.properties().filter(p -> !p.isGenerated()).forEach(property -> {
       if (property instanceof SubObjectProperty && ((SubObjectProperty) property).external) {
@@ -147,13 +151,13 @@ public class Model<T>
 
   public static <T> ValidationErrors update(final HttpServletRequest request, final T t,
       final JsonMap data) {
-    return Locator.update(t, getRemoteUser(request), new Function<T, ValidationErrors>() {
+    return Locator.update(t, getRemoteUser(request), new Function<>() {
       final ValidationErrors errors = new ValidationErrors();
 
       @Override
       public ValidationErrors apply(final T copy) {
         final JsonMap externalMap = new JsonMap();
-        setProperties(request, data, copy, errors, externalMap);
+        setProperties(request, data, copy, errors);
         final Locale locale = request.getLocale();
         errors.add(Validator.update(locale, copy));
         return errors;

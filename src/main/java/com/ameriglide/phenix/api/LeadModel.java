@@ -17,6 +17,7 @@ import net.inetalliance.potion.info.Info;
 import net.inetalliance.potion.query.*;
 import net.inetalliance.sql.*;
 import net.inetalliance.types.json.Json;
+import net.inetalliance.types.json.JsonList;
 import net.inetalliance.types.json.JsonMap;
 
 import java.io.IOException;
@@ -75,14 +76,17 @@ public class LeadModel
         .$("business", new JsonMap()
           .$("name", o.getBusiness().getName())
           .$("abbreviation", o.getBusiness().getAbbreviation()));
-      final Note n = Locator.$1(Note.withOpportunity(o));
-      if(n != null) {
+
+      var notes = new JsonList();
+      extra.$("notes", notes);
+      Locator.forEach(Note.withOpportunity(o), n -> {
         var a = n.getAuthor();
-        extra.$("note", new JsonMap()
-          .$("text",n.getNote())
-          .$("author",a == null ? "Unknown" : a.getFullName())
-          .$("created", n.getCreated()));
-      }
+        notes.add(new JsonMap()
+          .$("id",n.id)
+          .$("note",n.getNote())
+          .$("author", a == null ? "Unknown" : a.getFullName())
+          .$("created",n.getCreated()));
+      });
       json.put("extra", extra);
     }
     final Contact contact = o.getContact();

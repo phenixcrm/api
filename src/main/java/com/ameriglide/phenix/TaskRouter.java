@@ -43,6 +43,7 @@ import static com.twilio.http.HttpMethod.GET;
 import static java.util.concurrent.TimeUnit.MINUTES;
 import static java.util.stream.StreamSupport.stream;
 import static net.inetalliance.potion.Locator.$1;
+import static net.inetalliance.potion.Locator.update;
 import static net.inetalliance.types.json.Json.ugly;
 
 public class TaskRouter {
@@ -172,7 +173,22 @@ public class TaskRouter {
   }
 
   public Worker createWorker(Agent a) {
-    return Worker.creator(workspace.getSid(), a.getFullName()).create(rest);
+    try {
+      return Worker.creator(workspace.getSid(), a.getFullName()).create(rest);
+    } catch (ApiException e) {
+      if(e.getCode() == 20001) { // worker with name already exists
+        var w = stream(Worker.reader(workspace.getSid()).setFriendlyName(a.getFullName()).read(rest).spliterator(),
+          false)
+          .findFirst()
+          .orElseThrow(()->e);
+        update(a,"TaskRouter", copy -> {
+          copy.setSid(w.getSid());
+        });
+        log.info("assigned existing worker %s -> %s", w.getSid(), a.getFullName());
+        return w;
+      }
+      throw e;
+    }
   }
 
   public String getSipSecret(Agent a) {

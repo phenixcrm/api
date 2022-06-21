@@ -47,8 +47,7 @@ import static java.util.regex.Pattern.compile;
 import static java.util.stream.Collectors.toSet;
 import static net.inetalliance.funky.Funky.of;
 import static net.inetalliance.funky.StringFun.isEmpty;
-import static net.inetalliance.potion.Locator.$$;
-import static net.inetalliance.potion.Locator.forEach;
+import static net.inetalliance.potion.Locator.*;
 import static net.inetalliance.sql.OrderBy.Direction.ASCENDING;
 import static net.inetalliance.sql.OrderBy.Direction.DESCENDING;
 
@@ -234,10 +233,7 @@ public class CallModel
       final Call call = new Call(format("SIM%d", currentTimeMillis()));
       call.setBusiness(business);
 
-      var skill = Locator.$1(Skill.withProductLine(product));
-      if (skill != null) {
-        call.setQueue(Locator.$1(SkillQueue.withSkill(skill).and(SkillQueue.withBusiness(business))));
-      }
+      call.setQueue($1(SkillQueue.withProduct(product).and(SkillQueue.withBusiness(business))));
 
       if (call.getQueue() == null) {
         return new JsonMap().$("success", false)

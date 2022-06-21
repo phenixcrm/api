@@ -14,7 +14,7 @@ import static com.ameriglide.phenix.twilio.TwiMLServlet.asParty;
 public class Assignment extends PhenixServlet {
   @Override
   protected void post(HttpServletRequest request, HttpServletResponse response) throws Exception {
-    var agent = Locator.$1(Agent.withTwilioSid(request.getParameter("WorkerSid")));
+    var agent = Locator.$1(Agent.withSid(request.getParameter("WorkerSid")));
     respond(response, new JsonMap()
       .$("instruction","conference")
       .$("to",asParty(agent).sip()));

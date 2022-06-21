@@ -12,7 +12,7 @@ public record SyncWorkerStatus(TaskRouter router) implements Task {
   public void exec() {
     router.getWorkers().forEach(w -> {
       router.byAgent.put(w.getSid(), w.getAvailable());
-      var a = $1(Agent.withTwilioSid(w.getSid()));
+      var a = $1(Agent.withSid(w.getSid()));
       if(a == null) {
         log.debug("Could not find agent for sid %s (%s)", w.getSid(),w.getFriendlyName());
       } else if(!Objects.equals(a.getSkills(),w.getAttributes())) {

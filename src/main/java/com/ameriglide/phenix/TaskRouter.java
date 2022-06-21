@@ -182,7 +182,7 @@ public class TaskRouter {
 
   public void updateSkills(Agent a) {
     try {
-      Worker.updater(workspace.getSid(), a.getTwilioSid())
+      Worker.updater(workspace.getSid(), a.getSid())
         .setAttributes(a.getSkills())
         .update(rest);
     } catch(Throwable t) {
@@ -211,7 +211,7 @@ public class TaskRouter {
       return Worker.fetcher(workspace.getSid(), sid).fetch(rest);
     } catch(ApiException e) {
       if(e.getCode() == 20404) {
-        var a = Locator.$1(Agent.withTwilioSid(sid));
+        var a = Locator.$1(Agent.withSid(sid));
           if(a != null) {
             return createWorker(a);
           }

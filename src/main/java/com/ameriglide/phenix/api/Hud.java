@@ -38,7 +38,7 @@ public class Hud extends JsonCronServlet {
           .$("id",agent.id)
           .$("firstName", agent.getFirstName())
           .$("lastName", agent.getLastName())
-          .$("available", Startup.router.byAgent.getOrDefault(agent.getTwilioSid(),false)));
+          .$("available", Startup.router.byAgent.getOrDefault(agent.getSid(),false)));
       });
     });
     return json;

@@ -14,7 +14,7 @@ public record CreateWorkers(TaskRouter router) implements Task {
       forEach(Agent.disconnected, a -> {
         var w = router.createWorker(a);
         update(a, "ConnectWorkers", copy -> {
-          copy.setTwilioSid(w.getSid());
+          copy.setSid(w.getSid());
           log.info("ConnectWorkers: %s -> %s", a.getEmail(), w.getSid());
         });
       });

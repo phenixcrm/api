@@ -6,27 +6,28 @@ import net.inetalliance.log.Log;
 import net.inetalliance.potion.Locator;
 
 import static net.inetalliance.funky.StringFun.isNotEmpty;
+import static net.inetalliance.potion.Locator.update;
 
 public record PruneWorkers(TaskRouter router) implements Runnable {
   @Override
   public void run() {
     try {
       router.getWorkers().forEach(w -> {
-        var a = Locator.$1(Agent.withTwilioSid(w.getSid()));
+        var a = Locator.$1(Agent.withSid(w.getSid()));
         if (a != null && !a.isActive()) {
           if (router.delete(w)) {
             var credentialSid = a.getCredentialSid();
             if (isNotEmpty(credentialSid)) {
               if (router.deleteCredential(credentialSid)) {
-                Locator.update(a, "PruneWorkers", copy -> {
+                update(a, "PruneWorkers", copy -> {
                   copy.setCredentialSid(null);
                 });
               } else {
                 log.warning("Could not remove credential: %s", credentialSid);
               }
             }
-            Locator.update(a, "PruneWorkers", copy -> {
-              copy.setTwilioSid(null);
+            update(a, "PruneWorkers", copy -> {
+              copy.setSid(null);
               log.info("PruneWorkers %s -%s", a.getEmail(), w.getSid());
             });
           } else {

@@ -114,23 +114,21 @@ public class HudHandler
 
   private void updateCalls() {
 
-    forEach(Call.isActive, call -> {
-      call.getActiveAgents().forEach(a-> {
-        var agentStatus = status.computeIfAbsent(a.id,k-> new HudStatus());
-        agentStatus.direction = call.getDirection();
-        agentStatus.callId = call.sid;
-        agentStatus.available = router.byAgent.get(a.getTwilioSid());
+    forEach(Call.isActive, call -> call.getActiveAgents().forEach(a-> {
+      var agentStatus = status.computeIfAbsent(a.id,k-> new HudStatus());
+      agentStatus.direction = call.getDirection();
+      agentStatus.callId = call.sid;
+      agentStatus.available = router.byAgent.get(a.getSid());
 
-      });
-    });
+    }));
   }
 
 
   private void updateAvailability() {
     forEach(Agent.isActive, agent -> {
       HudStatus hudStatus = status.computeIfAbsent(agent.id, k -> new HudStatus());
-      if (isNotEmpty(agent.getTwilioSid()) && router.byAgent
-        .computeIfAbsent(agent.getTwilioSid(), sid->router.getWorker(sid).getAvailable()) != hudStatus.available) {
+      if (isNotEmpty(agent.getSid()) && router.byAgent
+        .computeIfAbsent(agent.getSid(), sid->router.getWorker(sid).getAvailable()) != hudStatus.available) {
         hudStatus.available = !hudStatus.available;
       }
     });

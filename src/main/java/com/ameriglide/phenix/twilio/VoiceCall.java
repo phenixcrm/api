@@ -84,8 +84,6 @@ public class VoiceCall extends TwiMLServlet {
           leg.setCreated(LocalDateTime.now());
           Locator.create("VoiceCall", leg);
           return null;
-
-
         } else {
           info("%s is a new inbound call %s->%s", callSid, caller, called);
           var vCid = $1(VerifiedCallerId.withPhoneNumber(called.endpoint()));
@@ -102,7 +100,6 @@ public class VoiceCall extends TwiMLServlet {
               .pause(new Pause.Builder().length(1).build())
               .say(new Say.Builder().build())
               .build();
-
           } else if (vCid.isDirect()) {
             call.setDirection(INBOUND);
             call.setContact($1(Contact.withPhoneNumber(caller.endpoint())));
@@ -120,7 +117,6 @@ public class VoiceCall extends TwiMLServlet {
             // straight to task router
             call.setDirection(QUEUE);
             var q = vCid.getQueue();
-
             return new VoiceResponse.Builder()
               .say(speak(q.getWelcomeMessage()))
               .enqueue(new Enqueue.Builder()

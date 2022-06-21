@@ -90,13 +90,15 @@ public class TaskRouter {
     executor.scheduleWithFixedDelay(new PruneCredentials(this), 0, 15, MINUTES);
     executor.scheduleWithFixedDelay(new CreateVerifiedCallerIds(this), 0, 5, MINUTES);
     executor.scheduleWithFixedDelay(new PruneVerifiedCallerIds(this), 2, 5, MINUTES);
-    executor.scheduleWithFixedDelay(new CreateTaskQueues(this), 0, 30, MINUTES);
+    executor.scheduleWithFixedDelay(new SyncQueues(this), 0, 30, MINUTES);
   }
+
   private Stream<TaskQueue> getTaskQueues() {
-    return stream(TaskQueue.reader(workspace.getSid()).read(rest).spliterator(),false);
+    return stream(TaskQueue.reader(workspace.getSid()).read(rest).spliterator(), false);
   }
+
   public TaskQueue createTaskQueue(String name, String workerExpression) {
-    return TaskQueue.creator(workspace.getSid(),name)
+    return TaskQueue.creator(workspace.getSid(), name)
       .setTaskOrder(TaskQueue.TaskOrder.FIFO)
       .setTargetWorkers(workerExpression)
       .create(rest);
@@ -130,8 +132,9 @@ public class TaskRouter {
       throw new IllegalArgumentException();
     }
   }
+
   public Call call(final Sip from, Sip to, String url, String qs) {
-    return Call.creator(to,from,getAbsolutePath(url,qs))
+    return Call.creator(to, from, getAbsolutePath(url, qs))
       .setStatusCallbackMethod(GET)
       .setStatusCallbackEvent(List.of("answered", "completed"))
       .setStatusCallback("/api/twilio/voice/status")
@@ -176,12 +179,12 @@ public class TaskRouter {
     try {
       return Worker.creator(workspace.getSid(), a.getFullName()).create(rest);
     } catch (ApiException e) {
-      if(e.getCode() == 20001) { // worker with name already exists
+      if (e.getCode() == 20001) { // worker with name already exists
         var w = stream(Worker.reader(workspace.getSid()).setFriendlyName(a.getFullName()).read(rest).spliterator(),
           false)
           .findFirst()
-          .orElseThrow(()->e);
-        update(a,"TaskRouter", copy -> {
+          .orElseThrow(() -> e);
+        update(a, "TaskRouter", copy -> {
           copy.setSid(w.getSid());
         });
         log.info("assigned existing worker %s -> %s", w.getSid(), a.getFullName());
@@ -201,36 +204,37 @@ public class TaskRouter {
       Worker.updater(workspace.getSid(), a.getSid())
         .setAttributes(a.getSkills())
         .update(rest);
-    } catch(Throwable t) {
+    } catch (Throwable t) {
       log.error("UPDATE SKILLS ERROR", t);
     }
   }
+
   private static final Log log = Log.getInstance(TaskRouter.class);
 
   public Workflow createWorkFlow(String name, String queueSid) {
-    return Workflow.creator(workspace.getSid(),name,
-      ugly(new JsonMap()
-        .$("task_routing", new JsonMap()
-          .$("default_filter", new JsonMap()
-            .$("queue",queueSid)))))
-      .setAssignmentCallbackUrl(getAbsolutePath("/twilio/assignment",null))
+    return Workflow.creator(workspace.getSid(), name,
+        ugly(new JsonMap()
+          .$("task_routing", new JsonMap()
+            .$("default_filter", new JsonMap()
+              .$("queue", queueSid)))))
+      .setAssignmentCallbackUrl(getAbsolutePath("/twilio/assignment", null))
       .create(rest);
   }
 
   public Reservation getReservation(String taskSid, String reservationSid) {
-    return Reservation.fetcher(workspace.getSid(),taskSid, reservationSid).fetch(rest);
+    return Reservation.fetcher(workspace.getSid(), taskSid, reservationSid).fetch(rest);
   }
 
 
   public synchronized Worker getWorker(String sid) {
     try {
       return Worker.fetcher(workspace.getSid(), sid).fetch(rest);
-    } catch(ApiException e) {
-      if(e.getCode() == 20404) {
+    } catch (ApiException e) {
+      if (e.getCode() == 20404) {
         var a = Locator.$1(Agent.withSid(sid));
-          if(a != null) {
-            return createWorker(a);
-          }
+        if (a != null) {
+          return createWorker(a);
+        }
       }
       throw e;
     }
@@ -242,5 +246,17 @@ public class TaskRouter {
 
   public Credential createCredentials(String sipUser, String secret) {
     return Credential.creator(sipCredentialList.getSid(), sipUser, secret).create(rest);
+  }
+
+  public TaskQueue getTaskQueue(String sid) {
+    return TaskQueue.fetcher(workspace.getSid(), sid).fetch(rest);
+  }
+
+  public Workflow getWorkflow(String workflowSid) {
+    return Workflow.fetcher(workspace.getSid(), workflowSid).fetch(rest);
+  }
+
+  public void updateQueueExpression(TaskQueue tq, String queueExpression) {
+    TaskQueue.updater(workspace.getSid(), tq.getSid()).setTargetWorkers(queueExpression).update(rest);
   }
 }

@@ -1,6 +1,6 @@
 package com.ameriglide.phenix.model;
 
-import com.ameriglide.phenix.PhenixServlet;
+import com.ameriglide.phenix.servlet.PhenixServlet;
 import jakarta.servlet.ServletConfig;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;

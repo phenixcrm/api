@@ -3,7 +3,7 @@ package com.ameriglide.phenix.api;
 import com.ameriglide.phenix.Auth;
 import com.ameriglide.phenix.common.Note;
 import com.ameriglide.phenix.common.Opportunity;
-import com.ameriglide.phenix.exception.NotFoundException;
+import com.ameriglide.phenix.servlet.exception.NotFoundException;
 import com.ameriglide.phenix.model.Key;
 import com.ameriglide.phenix.model.ListableModel;
 import jakarta.servlet.annotation.WebServlet;

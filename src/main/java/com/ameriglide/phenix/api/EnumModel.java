@@ -1,8 +1,8 @@
 package com.ameriglide.phenix.api;
 
-import com.ameriglide.phenix.exception.BadRequestException;
-import com.ameriglide.phenix.exception.NotFoundException;
-import com.ameriglide.phenix.PhenixServlet;
+import com.ameriglide.phenix.servlet.exception.BadRequestException;
+import com.ameriglide.phenix.servlet.exception.NotFoundException;
+import com.ameriglide.phenix.servlet.PhenixServlet;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;

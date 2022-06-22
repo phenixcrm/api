@@ -2,8 +2,8 @@ package com.ameriglide.phenix.api;
 
 import com.ameriglide.phenix.Auth;
 import com.ameriglide.phenix.common.*;
-import com.ameriglide.phenix.exception.ForbiddenException;
-import com.ameriglide.phenix.exception.NotFoundException;
+import com.ameriglide.phenix.servlet.exception.ForbiddenException;
+import com.ameriglide.phenix.servlet.exception.NotFoundException;
 import com.ameriglide.phenix.model.Key;
 import com.ameriglide.phenix.model.ListableModel;
 import com.ameriglide.phenix.ws.ReminderHandler;

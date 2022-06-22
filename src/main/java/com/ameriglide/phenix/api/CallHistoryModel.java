@@ -4,7 +4,7 @@ import com.ameriglide.phenix.common.Call;
 import com.ameriglide.phenix.common.Contact;
 import com.ameriglide.phenix.common.Opportunity;
 import com.ameriglide.phenix.common.Leg;
-import com.ameriglide.phenix.exception.MethodNotAllowedException;
+import com.ameriglide.phenix.servlet.exception.MethodNotAllowedException;
 import com.ameriglide.phenix.model.Key;
 import com.ameriglide.phenix.model.Model;
 import jakarta.servlet.annotation.WebServlet;

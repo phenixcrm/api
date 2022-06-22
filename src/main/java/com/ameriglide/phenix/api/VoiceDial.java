@@ -20,7 +20,7 @@ import static com.ameriglide.phenix.servlet.TwiMLServlet.asParty;
 import static java.time.LocalDateTime.now;
 import static net.inetalliance.funky.StringFun.isEmpty;
 
-@WebServlet("/api/twilio/voice/dial")
+@WebServlet("/api/voice/dial")
 public class VoiceDial extends PhenixServlet {
 
   @Override

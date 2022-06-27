@@ -112,8 +112,8 @@ public class Pop
 
     map.$("direction", call.getDirection());
     map.$("source", call.getSource());
+    /* todo: implement referral tracking
     if (call.getSource() != null && call.getSource() == Source.REFERRAL) {
-      /* todo: implement referral tracking
       final Queue queue = call.getQueue();
       if(queue != null) {
         final Affiliate affiliate = queue.getAffiliate();
@@ -124,24 +124,23 @@ public class Pop
           map.$("referrer", affiliate.getDomain());
         }
       }
-
-       */
     }
+       */
     if (phone != null) {
       map.$("phone", phone);
       String[] split = call.getName().split("[ ,]", 2);
-      map.$("firstName", titleCase(split[0]));
+      map.$("lastName", titleCase(split[0]));
       if (split.length == 2) {
-        map.$("lastName", titleCase(split[1]));
+        map.$("firstName", titleCase(split[1]));
       }
       Funky.of(call.getState())
         .or(() -> Funky.of(AreaCodeTime.getAreaCodeTime(phone))
           .map(AreaCodeTime::getUsState))
         .ifPresent(s -> map.$("state", s));
     }
-    map.$("city",StringFun.titleCase(call.getCity()));
-    map.$("country",Funky.of(call.getCountry()).orElse(Country.UNITED_STATES));
-    map.$("postalCode",call.getZip());
+    map.$("city", StringFun.titleCase(call.getCity()));
+    map.$("country", Funky.of(call.getCountry()).orElse(Country.UNITED_STATES));
+    map.$("postalCode", call.getZip());
     return map;
   }
 

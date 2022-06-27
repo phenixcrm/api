@@ -90,7 +90,7 @@ public class Pop
         });
     });
     final ProductLine productLine =
-      call.getQueue() == null ? null : call.getProductLine();
+      call.getQueue() == null ? null : call.getQueue().getProduct();
     final Business biz = call.getBusiness();
 
     final JsonMap map = new JsonMap().$("contacts", contacts)

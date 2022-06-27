@@ -4,19 +4,24 @@ import com.ameriglide.phenix.Auth;
 import com.ameriglide.phenix.common.*;
 import com.ameriglide.phenix.model.Key;
 import com.ameriglide.phenix.model.TypeModel;
+import com.ameriglide.phenix.twilio.TaskRouter;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServletRequest;
+import net.inetalliance.funky.Funky;
 import net.inetalliance.funky.StringFun;
 import net.inetalliance.log.Log;
 import net.inetalliance.potion.Locator;
 import net.inetalliance.potion.query.Query;
 import net.inetalliance.potion.query.Search;
+import net.inetalliance.types.geopolitical.Country;
 import net.inetalliance.types.json.Json;
 import net.inetalliance.types.json.JsonList;
 import net.inetalliance.types.json.JsonMap;
 
 import java.util.Comparator;
 import java.util.regex.Pattern;
+
+import static net.inetalliance.funky.StringFun.titleCase;
 
 
 @WebServlet("/api/pop/*")
@@ -31,11 +36,10 @@ public class Pop
   protected Json toJson(final Key<Call> key, final Call call, final HttpServletRequest request) {
     final Query<Contact> query;
     final var q = request.getParameter("q");
-    final var phone = Address.unformatPhoneNumber(call.getPhone());
+    final var phone = TaskRouter.toUS10(call.getPhone());
     if (StringFun.isNotEmpty(q)) {
-      final Search<Contact> search = new Search<>(Contact.class, getParameter(request, "n", 10),
+      query = new Search<>(Contact.class, getParameter(request, "n", 10),
         q.split(" "));
-        query = search;
     } else if (call.getContact() != null) {
       query = Contact.withId(Contact.class, call.getContact().id);
     } else if (phone != null && phone.length() >= 10) {
@@ -72,7 +76,7 @@ public class Pop
       final JsonList list = new JsonList(1);
       contacts
         .add(new JsonMap().$("id", contact.id).$("name", contact.getFullName()).$("leads", list));
-      Locator.forEach(Opportunity.withContact(contact) ,
+      Locator.forEach(Opportunity.withContact(contact),
         opp -> {
           if (matchQuality.compare(opp, preferred[0]) > 0) {
             preferred[0] = opp;
@@ -108,7 +112,7 @@ public class Pop
 
     map.$("direction", call.getDirection());
     map.$("source", call.getSource());
-    if(call.getSource() != null && call.getSource() == Source.REFERRAL) {
+    if (call.getSource() != null && call.getSource() == Source.REFERRAL) {
       /* todo: implement referral tracking
       final Queue queue = call.getQueue();
       if(queue != null) {
@@ -125,17 +129,21 @@ public class Pop
     }
     if (phone != null) {
       map.$("phone", phone);
-      String[] split = call.getName().split(" ", 2);
-      map.$("firstName", split[0]);
+      String[] split = call.getName().split("[ ,]", 2);
+      map.$("firstName", titleCase(split[0]));
       if (split.length == 2) {
-        map.$("lastName", split[1]);
+        map.$("lastName", titleCase(split[1]));
       }
-      final AreaCodeTime areaCodeTime = AreaCodeTime.getAreaCodeTime(phone);
-      if (areaCodeTime != null) {
-        map.$("state", areaCodeTime.getUsState());
-      }
+      Funky.of(call.getState())
+        .or(() -> Funky.of(AreaCodeTime.getAreaCodeTime(phone))
+          .map(AreaCodeTime::getUsState))
+        .ifPresent(s -> map.$("state", s));
     }
+    map.$("city",StringFun.titleCase(call.getCity()));
+    map.$("country",Funky.of(call.getCountry()).orElse(Country.UNITED_STATES));
+    map.$("postalCode",call.getZip());
     return map;
   }
+
   private static final transient Log log = Log.getInstance(Pop.class);
 }

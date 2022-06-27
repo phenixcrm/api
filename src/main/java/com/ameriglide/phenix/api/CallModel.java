@@ -289,7 +289,7 @@ public class CallModel
     if (remoteCallerId != null) {
       final String number = remoteCallerId.getPhone();
       map.$("created", call.getCreated());
-      map.$("localTime", AreaCodeTime.getLocalTime(number, LocalDateTime.now()).toLocalDateTime());
+      map.$("localTime", AreaCodeTime.getLocalTime(number, call.getCreated()).getOffset().getTotalSeconds());
       map.$("callerId", new JsonMap().$("name", remoteCallerId.getName()).$("number", number));
       final JsonList contactMatches;
       if (isEmpty(number)) {

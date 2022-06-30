@@ -71,9 +71,9 @@ public class Pop
     var loggedIn = Auth.getAgent(request);
     final JsonList contacts = new JsonList(1);
     forEach(query, c -> {
-      ContactJson e = toJson(c,loggedIn);
+      ContactJson e = toJson(c, loggedIn);
       contacts.add(e.json());
-      if(e.preferred() != null) {
+      if (e.preferred() != null) {
         preferred[0] = e.preferred();
       }
     });
@@ -133,7 +133,7 @@ public class Pop
 
   record ContactJson(JsonMap json, Opportunity preferred) {
     void addPreferred() {
-      if(preferred != null) {
+      if (preferred != null) {
         json.$("preferred", preferred.id);
       }
     }
@@ -149,8 +149,18 @@ public class Pop
         if (matchQuality.compare(opp, preferred[0]) > 0) {
           preferred[0] = opp;
         }
+        var notes = new JsonList();
+        forEach(Note.withOpportunity(opp), n -> {
+          var a = n.getAuthor();
+          notes.add(new JsonMap()
+            .$("id", n.id)
+            .$("note", n.getNote())
+            .$("author", a == null ? "Unknown" : a.getFullName())
+            .$("created", n.getCreated()));
+        });
         list.add(new JsonMap()
           .$("id", opp.id)
+          .$("notes", notes)
           .$("source", opp.getSource())
           .$("heat", opp.getHeat())
           .$("productLine", new JsonMap()

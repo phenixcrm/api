@@ -9,8 +9,6 @@ import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import net.inetalliance.funky.Funky;
 import net.inetalliance.funky.StringFun;
-import net.inetalliance.log.Log;
-import net.inetalliance.potion.Locator;
 import net.inetalliance.potion.query.Query;
 import net.inetalliance.potion.query.Search;
 import net.inetalliance.types.geopolitical.Country;
@@ -22,11 +20,33 @@ import java.util.Comparator;
 import java.util.regex.Pattern;
 
 import static net.inetalliance.funky.StringFun.titleCase;
+import static net.inetalliance.potion.Locator.forEach;
 
 
 @WebServlet("/api/pop/*")
 public class Pop
   extends TypeModel<Call> {
+
+  private static Comparator<Opportunity> matchQuality(Agent loggedIn) {
+    return (a, b) -> {
+      if (b == null) {
+        return 1;
+      }
+
+      // then same agent opps
+      if (!a.getAssignedTo().id.equals(b.getAssignedTo().id)) {
+        if (loggedIn.id.equals(a.getAssignedTo().id)) {
+          return 1;
+        }
+        if (loggedIn.id.equals(b.getAssignedTo().id)) {
+          return -1;
+        }
+      }
+      // then hot before cold
+      return a.getHeat().compareTo(b.getHeat());
+    };
+  }
+
 
   public Pop() {
     super(Call.class, Pattern.compile("/api/pop/(.*)"));
@@ -48,50 +68,14 @@ public class Pop
       query = Query.none(Contact.class);
     }
     final Opportunity[] preferred = new Opportunity[1];
+    var loggedIn = Auth.getAgent(request);
     final JsonList contacts = new JsonList(1);
-    final Agent loggedIn = Auth.getAgent(request);
-    final Comparator<Opportunity> matchQuality = (a, b) -> {
-      if (b == null) {
-        return 1;
+    forEach(query, c -> {
+      ContactJson e = toJson(c,loggedIn);
+      contacts.add(e.json());
+      if(e.preferred() != null) {
+        preferred[0] = e.preferred();
       }
-
-      // then same agent opps
-      if (!a.getAssignedTo().id.equals(b.getAssignedTo().id)) {
-        if (loggedIn.id.equals(a.getAssignedTo().id)) {
-          return 1;
-        }
-        if (loggedIn.id.equals(b.getAssignedTo().id)) {
-          return -1;
-        }
-      }
-      // then hot before cold
-      int stageCompare = a.getHeat().compareTo(b.getHeat());
-      if (stageCompare != 0) {
-        return stageCompare;
-      }
-
-      return 0;
-    };
-    Locator.forEach(query, contact -> {
-      final JsonList list = new JsonList(1);
-      contacts
-        .add(new JsonMap().$("id", contact.id).$("name", contact.getFullName()).$("leads", list));
-      Locator.forEach(Opportunity.withContact(contact),
-        opp -> {
-          if (matchQuality.compare(opp, preferred[0]) > 0) {
-            preferred[0] = opp;
-          }
-          list.add(new JsonMap().$("id", opp.id)
-            .$("source", opp.getSource())
-            .$("heat", opp.getHeat())
-            .$("productLine", new JsonMap().$("id", opp.getProductLine().id)
-              .$("name", opp.getProductLine().getName()))
-            .$("agent", new JsonMap().$("id", opp.getAssignedTo().id)
-              .$("name", opp.getAssignedTo()
-                .getFirstNameLastInitial()))
-            .$("business", new JsonMap().$("id", opp.getBusiness().id)
-              .$("name", opp.getBusiness().getName())));
-        });
     });
     final ProductLine productLine =
       call.getQueue() == null ? null : call.getQueue().getProduct();
@@ -107,7 +91,10 @@ public class Pop
           : preferred[0].id.toString()));
 
     if (productLine != null) {
-      map.$("productLine", new JsonMap().$("id", productLine.id).$("name", productLine.getName()));
+      map.$("productLine", new JsonMap()
+        .$("id", productLine.id)
+        .$("abbreviation", productLine.getAbbreviation())
+        .$("name", productLine.getName()));
     }
 
     map.$("direction", call.getDirection());
@@ -144,5 +131,38 @@ public class Pop
     return map;
   }
 
-  private static final transient Log log = Log.getInstance(Pop.class);
+  record ContactJson(JsonMap json, Opportunity preferred) {
+    void addPreferred() {
+      if(preferred != null) {
+        json.$("preferred", preferred.id);
+      }
+    }
+  }
+
+  protected static ContactJson toJson(Contact contact, Agent agent) {
+    final JsonList list = new JsonList(1);
+    var json = new JsonMap().$("id", contact.id).$("name", contact.getFullName()).$("leads", list);
+    var preferred = new Opportunity[1];
+    var matchQuality = matchQuality(agent);
+    forEach(Opportunity.withContact(contact),
+      opp -> {
+        if (matchQuality.compare(opp, preferred[0]) > 0) {
+          preferred[0] = opp;
+        }
+        list.add(new JsonMap()
+          .$("id", opp.id)
+          .$("source", opp.getSource())
+          .$("heat", opp.getHeat())
+          .$("productLine", new JsonMap()
+            .$("id", opp.getProductLine().id)
+            .$("name", opp.getProductLine().getName()))
+          .$("agent", new JsonMap()
+            .$("id", opp.getAssignedTo().id)
+            .$("name", opp.getAssignedTo().getFirstNameLastInitial()))
+          .$("business", new JsonMap().$("id", opp.getBusiness().id)
+            .$("name", opp.getBusiness().getName())));
+      });
+    return new ContactJson(json, preferred[0]);
+  }
+
 }

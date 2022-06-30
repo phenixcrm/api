@@ -1,12 +1,13 @@
 package com.ameriglide.phenix.api;
 
+import com.ameriglide.phenix.Auth;
 import com.ameriglide.phenix.common.Call;
 import com.ameriglide.phenix.common.Contact;
 import com.ameriglide.phenix.common.Opportunity;
-import com.ameriglide.phenix.servlet.exception.BadRequestException;
-import com.ameriglide.phenix.servlet.exception.NotFoundException;
 import com.ameriglide.phenix.model.Key;
 import com.ameriglide.phenix.model.ListableModel;
+import com.ameriglide.phenix.servlet.exception.BadRequestException;
+import com.ameriglide.phenix.servlet.exception.NotFoundException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import net.inetalliance.log.Log;
@@ -16,6 +17,7 @@ import net.inetalliance.types.json.Json;
 import net.inetalliance.types.json.JsonMap;
 
 import static net.inetalliance.funky.StringFun.isEmpty;
+import static net.inetalliance.funky.StringFun.isNotEmpty;
 import static net.inetalliance.potion.Locator.$1;
 import static net.inetalliance.sql.OrderBy.Direction.DESCENDING;
 
@@ -33,7 +35,19 @@ public class ContactModel
         return new JsonMap().$("id", contact.id).$("name", contact.getFullName());
     }
 
-    private static JsonMap lead(final Contact contact) {
+  @Override
+  protected JsonMap onError(Key<Contact> key, JsonMap data, JsonMap errors) {
+    var email = errors.get("email");
+    var phone = errors.get("phone");
+    if (isNotEmpty(email) && email.startsWith("There is already")) {
+      errors.$("refer", Locator.$1(Contact.withEmail( data.get("email"))).id);
+    } else if (isNotEmpty(phone) && phone.startsWith("There is already")){
+      errors.$("refer", Locator.$1(Contact.withPhoneNumber(data.get("phone"))).id);
+    }
+    return errors;
+  }
+
+  private static JsonMap lead(final Contact contact) {
         var lead = $1(Opportunity
                 .withContact(contact)
                 .orderBy("created", DESCENDING));
@@ -69,6 +83,12 @@ public class ContactModel
     protected Json toJson(Key<Contact> key, Contact contact, HttpServletRequest request) {
         if (request.getParameter("lead") != null){
             return toJson(request, contact);
+        } else if(request.getParameter("pop") != null) {
+          var pop = Pop.toJson(contact, Auth.getAgent(request));
+          pop.addPreferred();
+          var json = pop.json();
+          json.putAll(((JsonMap)super.toJson(key,contact,request)));
+          return json;
         }
         return super.toJson(key, contact, request);
     }

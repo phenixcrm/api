@@ -108,7 +108,7 @@ public class Model<T>
         }
       } else {
         response.setStatus(SC_BAD_REQUEST);
-        return errors.toJsonMap();
+        return onError(key, data, errors.toJsonMap());
       }
     } catch (Exception e) {
       throw new RuntimeException(e);
@@ -339,8 +339,11 @@ public class Model<T>
       return toJson(key, t, request);
     } else {
       response.setStatus(SC_BAD_REQUEST);
-      return errors.toJsonMap();
+      return onError(key,data,errors.toJsonMap());
     }
+  }
+  protected JsonMap onError(Key<T> key, JsonMap data, JsonMap errors) {
+    return errors;
   }
 
   protected boolean requireAuthentication() {

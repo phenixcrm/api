@@ -88,7 +88,7 @@ public class CreateLead extends PhenixServlet {
     var taskData = new JsonMap()
       .$("type", "sales")
       .$("product", product.getAbbreviation())
-      .$("Opportunity", opp.id);
+      .$("Lead", opp.id);
     if (opp.getAssignedTo() != null) {
       taskData.$("preferred", opp.getAssignedTo().getSid());
     }

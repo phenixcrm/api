@@ -37,8 +37,7 @@ import java.util.List;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-import static com.ameriglide.phenix.types.CallDirection.OUTBOUND;
-import static com.ameriglide.phenix.types.CallDirection.QUEUE;
+import static com.ameriglide.phenix.types.CallDirection.*;
 import static com.ameriglide.phenix.types.Resolution.ACTIVE;
 import static com.ameriglide.phenix.types.Resolution.ANSWERED;
 import static java.lang.String.format;
@@ -98,7 +97,7 @@ public class CallModel
     //call.getQueue() == null ? null : call.getQueue().getProductLine();
     final CNAM remoteCid = call.getRemoteCaller();
     map.put("remoteCallerId", new JsonMap().$("name", remoteCid.getName()).$("number", remoteCid.getPhone()));
-    if (!todo && (call.getDirection() == QUEUE || call.getDirection() == OUTBOUND)) {
+    if (!todo && (call.getDirection() != INTERNAL)) {
       final JsonList contacts = new JsonList();
       map.put("contacts", contacts);
       final String number = remoteCid.getPhone();
@@ -269,8 +268,7 @@ public class CallModel
     key.info.fill(call, map);
     map.$("todo", call.isTodo());
     switch (call.getDirection()) {
-      case OUTBOUND:
-      case QUEUE:
+      case OUTBOUND,QUEUE,VIRTUAL-> {
         final Business business = call.getBusiness();
         map.$("business",
           new JsonMap().$("name", business.getName()).$("id", business.id));
@@ -279,11 +277,7 @@ public class CallModel
           queue.$("name", call.getQueue().getName());
           map.$("queue", queue);
         }
-        break;
-      case INBOUND:
-        break;
-      case INTERNAL:
-        break;
+      }
     }
     final CNAM remoteCallerId = call.getRemoteCaller();
     if (remoteCallerId != null) {

@@ -10,6 +10,7 @@ import com.ameriglide.phenix.types.Resolution;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import net.inetalliance.funky.Funky;
 import net.inetalliance.funky.StringFun;
 import net.inetalliance.potion.Locator;
 import net.inetalliance.sql.Aggregate;
@@ -61,8 +62,27 @@ public class CreateLead extends PhenixServlet {
         updateContact(data,copy,phone,email);
       });
     }
-
-    var product = $(new ProductLine(data.getInteger("productLine")));
+    var product = Locator.$(new ProductLine(switch(Funky.of(data.getInteger("productLine")).orElse(0)) {
+      case 0,1,10,25,10031,10035,10039 -> 17; // unassigned, adj bed, jewelry, walk-in tubs, patient lifts, shower
+      // chairs, massage chairs -> undetermined
+      case 2->6; // lift chairs
+      case 3 -> 10; // scooters
+      case 4,10030,10038 ->  8; // power, manual, specialty -> wheelchairs
+      case 5 -> 5; // ramps
+      case 6,10036,10037 -> 2; // stair lifts, stair climber, used -> stair lifts
+      case 7 -> 1; // CVPLs
+      case 8 -> 4; // dumbwaiters
+      case  12 -> 9; // vehicle lifts
+      case 13,15 -> 11; // bath lifts, toilet seat lifts -> bath lifts
+      case 16,17,19,27,10032,10033 -> 12; // rolling walkers,med supply,accessories,parts,cushions,overlays ->
+      // accessories
+      case 18 -> 7; // elevators
+      case 23 -> 14; // RVPLs
+      case 26->15; // IVPLs
+      case 10040 -> 3; // pool lifts
+      case 10041 -> 16; // curved stair lifts
+      default -> 17; // when all else fails, set to undetermined
+    }));
     Opportunity opp;
     //todo add business support here
     var q = Locator.$1(SkillQueue.withProduct(product));

@@ -60,7 +60,7 @@ public class Startup implements ServletContextListener {
       System.exit(1);
     }
     Validator.register(Unique.class, new UniqueValidator());
-    Startup.router = new TaskRouter();
+    Startup.router = new TaskRouter(!dev.get());
     SessionHandler.init(router);
     Events.handler = SessionHandler::new;
 

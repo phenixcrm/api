@@ -7,10 +7,10 @@ import com.ameriglide.phenix.servlet.exception.BadRequestException;
 import com.ameriglide.phenix.twilio.TaskRouter;
 import com.ameriglide.phenix.types.CallDirection;
 import com.ameriglide.phenix.types.Resolution;
+import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import net.inetalliance.funky.StringFun;
-import net.inetalliance.log.Log;
 import net.inetalliance.potion.Locator;
 import net.inetalliance.sql.Aggregate;
 import net.inetalliance.types.Currency;
@@ -24,21 +24,20 @@ import java.util.Locale;
 import static jakarta.servlet.http.HttpServletResponse.SC_OK;
 import static net.inetalliance.funky.StringFun.isNotEmpty;
 import static net.inetalliance.funky.StringFun.titleCase;
-import static net.inetalliance.potion.Locator.$;
-import static net.inetalliance.potion.Locator.$1;
+import static net.inetalliance.potion.Locator.*;
 
+@WebServlet("/api/createLead")
 public class CreateLead extends PhenixServlet {
-
-  private Opportunity newOpp(final Contact c, final SkillQueue q) {
-    var opp = new Opportunity();
-    opp.setContact(c);
-    opp.setBusiness(q.getBusiness());
-    opp.setHeat(Heat.HOT);
-    opp.setProductLine(q.getProduct());
-    opp.setAmount(Locator.$$(Opportunity.withProductLine(q.getProduct())
-      .and(Opportunity.isSold), Aggregate.AVG, Currency.class, "amount"));
-    Locator.create("CreateLead", opp);
-    return opp;
+  void updateContact(final JsonMap data, Contact contact, final String phone, final String email) {
+    contact.setPhone(phone);
+    contact.setEmail(email);
+    contact.setFirstName(titleCase(data.get("first")));
+    contact.setLastName(titleCase(data.get("last")));
+    contact.getShipping().setPostalCode(data.get("zip"));
+    var state = data.get("State");
+    if (isNotEmpty(state)) {
+      contact.getShipping().setState(State.fromAbbreviation(state));
+    }
   }
 
   @Override
@@ -55,35 +54,42 @@ public class CreateLead extends PhenixServlet {
     }
     if (contact == null) {
       contact = new Contact();
+      updateContact(data,contact,phone,email);
+      create("CreateLead",contact);
+    } else {
+      update(contact, "CreateLead", copy -> {
+        updateContact(data,copy,phone,email);
+      });
     }
-    contact.setPhone(phone);
-    contact.setEmail(email);
-    contact.setFirstName(titleCase(data.get("first")));
-    contact.setLastName(titleCase(data.get("last")));
-    contact.getShipping().setPostalCode(data.get("zip"));
-    var state = data.get("State");
-    if (isNotEmpty(state)) {
-      contact.getShipping().setState(State.fromAbbreviation(state));
-    }
+
     var product = $(new ProductLine(data.getInteger("productLine")));
     Opportunity opp;
     //todo add business support here
     var q = Locator.$1(SkillQueue.withProduct(product));
     if (contact.id == null) {
-      Locator.create("CreateLead", contact);
+      create("CreateLead", contact);
       opp = null;
     } else {
       opp = Locator.$1(Opportunity.withContact(contact).and(Opportunity.withProductLine(product)));
     }
     if (opp == null) {
-      opp = newOpp(contact, q);
+      opp = new Opportunity();
+      opp.setContact(contact);
+      opp.setAssignedTo(Agent.system());
+      opp.setSource(Source.FORM);
+      opp.setBusiness(q.getBusiness());
+      opp.setHeat(Heat.HOT);
+      opp.setProductLine(q.getProduct());
+      opp.setAmount(Locator.$$(Opportunity.withProductLine(q.getProduct())
+        .and(Opportunity.isSold), Aggregate.AVG, Currency.class, "amount"));
+      create("CreateLead", opp);
     } else {
       var n = new Note();
       n.setOpportunity(opp);
       n.setAuthor(Agent.system());
       n.setCreated(LocalDateTime.now());
       n.setNote("Customer submitted web form");
-      Locator.create("CreateLead", n);
+      create("CreateLead", n);
     }
     var taskData = new JsonMap()
       .$("type", "sales")
@@ -105,9 +111,8 @@ public class CreateLead extends PhenixServlet {
     call.setQueue(q);
     call.setOpportunity(opp);
     call.setZip(contact.getShipping().getPostalCode());
-    Locator.create("CreateLead", call);
+    create("CreateLead", call);
     response.sendError(SC_OK);
   }
 
-  private static final Log log = Log.getInstance(CreateLead.class);
 }

@@ -52,6 +52,7 @@ public class Startup implements ServletContextListener {
       final Db db = new Db(new URI(dbParam));
       Class.forName(db.vendor.getDriver());
       Locator.attach(db);
+      log.info("Db -> %s",db);
     } catch (URISyntaxException e) {
       log.error("could not parse db parameter as uri: %s", dbParam, e);
       throw new RuntimeException(e);

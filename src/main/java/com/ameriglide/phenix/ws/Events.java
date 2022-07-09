@@ -41,10 +41,10 @@ public class Events
     sessions.clear();
   }
 
-  public static void sendToLatest(final String type, final Ticket ticket, final Json msg) {
+  public static void sendToLatest(final String type, final Integer agent, final Json msg) {
     lock.lock();
     try {
-      final List<Session> sessions = Events.sessions.get(ticket);
+      final List<Session> sessions = Events.sessions.get(agent);
       if (!sessions.isEmpty()) {
         send(sessions.get(sessions.size() - 1), type, msg);
       }

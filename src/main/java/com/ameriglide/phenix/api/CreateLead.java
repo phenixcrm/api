@@ -21,6 +21,7 @@ import net.inetalliance.types.json.JsonMap;
 
 import java.time.LocalDateTime;
 import java.util.Locale;
+import java.util.concurrent.TimeUnit;
 
 import static jakarta.servlet.http.HttpServletResponse.SC_OK;
 import static net.inetalliance.funky.StringFun.isNotEmpty;
@@ -122,7 +123,7 @@ public class CreateLead extends PhenixServlet {
     if (opp.getAssignedTo() != null) {
       taskData.$("preferred", opp.getAssignedTo().getSid());
     }
-    var task = Startup.router.createTask(Json.ugly(taskData));
+    var task = Startup.router.createTask(Json.ugly(taskData), (int) TimeUnit.DAYS.toSeconds(1));
     var call = new Call(task.getSid());
     call.setCreated(LocalDateTime.now());
     call.setDirection(CallDirection.VIRTUAL);

@@ -58,6 +58,7 @@ public class Assignment extends PhenixServlet {
         copy.setAssignedTo(agent);
       });
       PhenixServlet.respond(response, new JsonMap().$("instruction","accept"));
+      Startup.router.completeTask(task);
     }
     Events.sendToLatest("pop",agent.id,new JsonMap().$("callId",callSid));
   }

@@ -31,7 +31,8 @@ public class Events
     .synchronizedMap(new HashMap<>());
 
   public static Ticket getTicket(final Session session) {
-    return (Ticket) session.getUserProperties().get("ticket");
+    return (Ticket) ((HttpSession)session.getUserProperties().get(HttpSession.class.getName()))
+      .getAttribute("ticket");
   }
 
   public static void init() {
@@ -44,7 +45,7 @@ public class Events
   public static void sendToLatest(final String type, final Integer agent, final Json msg) {
     lock.lock();
     try {
-      final List<Session> sessions = Events.sessions.get(agent);
+      final List<Session> sessions = Events.sessions.getOrDefault(agent,Collections.emptyList());
       if (!sessions.isEmpty()) {
         send(sessions.get(sessions.size() - 1), type, msg);
       }
@@ -127,12 +128,7 @@ public class Events
     public void modifyHandshake(final ServerEndpointConfig config, final HandshakeRequest request,
                                 final HandshakeResponse response) {
       final HttpSession session = (HttpSession) request.getHttpSession();
-      if (session != null) {
-        var ticket = session.getAttribute("ticket");
-        if (ticket != null) {
-          config.getUserProperties().put("ticket", ticket);
-        }
-      }
+      config.getUserProperties().put(HttpSession.class.getName(),session);
     }
   }
 

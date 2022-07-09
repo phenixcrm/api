@@ -34,10 +34,14 @@ public class CreateLead extends PhenixServlet {
     contact.setEmail(email);
     contact.setFirstName(titleCase(data.get("first")));
     contact.setLastName(titleCase(data.get("last")));
-    contact.getShipping().setPostalCode(data.get("zip"));
+    var shipping = Funky.of(contact.getShipping()).orElseGet(()-> {
+      contact.setShipping(new Address());
+      return contact.getShipping();
+    });
+    shipping.setPostalCode(data.get("zip"));
     var state = data.get("State");
     if (isNotEmpty(state)) {
-      contact.getShipping().setState(State.fromAbbreviation(state));
+      shipping.setState(State.fromAbbreviation(state));
     }
   }
 

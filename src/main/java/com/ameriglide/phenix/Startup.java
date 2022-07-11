@@ -2,6 +2,7 @@ package com.ameriglide.phenix;
 
 import com.ameriglide.phenix.twilio.TaskRouter;
 import com.ameriglide.phenix.ws.Events;
+import com.ameriglide.phenix.ws.HudHandler;
 import com.ameriglide.phenix.ws.SessionHandler;
 import io.github.cdimascio.dotenv.Dotenv;
 import jakarta.servlet.ServletContextEvent;
@@ -69,11 +70,14 @@ public class Startup implements ServletContextListener {
 
   @Override
   public void contextDestroyed(ServletContextEvent sce) {
-    router.shutdown();
-    router = null;
+    HudHandler.shutdown();
+    if(router != null) {
+      router.shutdown();
+      router = null;
+    }
     Locator.detach();
     RedisObjectCache.shutdown();
-    log.info("Deregistering JDBC drivers");
+    log.info("Unregistering JDBC drivers");
     list(DriverManager.getDrivers()).forEach(d -> {
       try {
         deregisterDriver(d);

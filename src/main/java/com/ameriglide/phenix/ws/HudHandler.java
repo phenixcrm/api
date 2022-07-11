@@ -1,8 +1,9 @@
 package com.ameriglide.phenix.ws;
 
-import com.ameriglide.phenix.twilio.TaskRouter;
 import com.ameriglide.phenix.common.Agent;
 import com.ameriglide.phenix.common.Call;
+import com.ameriglide.phenix.servlet.PhenixServlet;
+import com.ameriglide.phenix.twilio.TaskRouter;
 import jakarta.websocket.Session;
 import net.inetalliance.log.Log;
 import net.inetalliance.types.json.Json;
@@ -15,8 +16,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 
-import static java.util.concurrent.TimeUnit.MILLISECONDS;
-import static java.util.concurrent.TimeUnit.SECONDS;
+import static java.util.concurrent.TimeUnit.*;
 import static net.inetalliance.funky.StringFun.isNotEmpty;
 import static net.inetalliance.potion.Locator.forEach;
 
@@ -32,12 +32,12 @@ public class HudHandler
 
   private final JsonMap hud;
   private final Set<Session> subscribers;
-  private final ExecutorService service = Executors.newFixedThreadPool(4, (r) -> {
+  private static final ExecutorService service = Executors.newFixedThreadPool(4, (r) -> {
     var t = new Thread(r);
     t.setDaemon(true);
     return t;
   });
-  private final ScheduledExecutorService scheduler = Executors
+  private static final ScheduledExecutorService scheduler = Executors
     .newSingleThreadScheduledExecutor((r) -> {
       var t = new Thread(r);
       t.setDaemon(true);
@@ -45,11 +45,17 @@ public class HudHandler
     });
   private final TaskRouter router;
 
+  public static void shutdown() {
+    PhenixServlet.shutdown("HUD scheduling",scheduler);
+    PhenixServlet.shutdown("HUD notification", service);
+
+  }
+
   HudHandler(TaskRouter router) {
     this.router = router;
     subscribers = Collections.synchronizedSet(new HashSet<>(8));
     hud = new JsonMap(true);
-    scheduler.scheduleWithFixedDelay(this, 0, 250, MILLISECONDS);
+    scheduler.scheduleWithFixedDelay(this, 0, 5, MINUTES);
 
   }
 
@@ -79,11 +85,11 @@ public class HudHandler
   @Override
   public void destroy() {
     hud.clear();
-    scheduler.shutdownNow();
   }
 
   @Override
   public void run() {
+    log.info("HUD update started");
     try {
       for (var value : status.values()) {
         value.direction = null;
@@ -110,6 +116,7 @@ public class HudHandler
     } catch(Throwable t) {
       log.error(t);
     }
+    log.info("HUD update finished");
   }
 
   private void updateCalls() {

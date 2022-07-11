@@ -11,7 +11,6 @@ import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import net.inetalliance.funky.Funky;
-import net.inetalliance.funky.StringFun;
 import net.inetalliance.potion.Locator;
 import net.inetalliance.sql.Aggregate;
 import net.inetalliance.types.Currency;
@@ -23,9 +22,9 @@ import java.time.LocalDateTime;
 import java.util.Locale;
 import java.util.concurrent.TimeUnit;
 
+import static com.ameriglide.phenix.common.Source.SOCIAL;
 import static jakarta.servlet.http.HttpServletResponse.SC_OK;
-import static net.inetalliance.funky.StringFun.isNotEmpty;
-import static net.inetalliance.funky.StringFun.titleCase;
+import static net.inetalliance.funky.StringFun.*;
 import static net.inetalliance.potion.Locator.*;
 
 @WebServlet("/api/createLead")
@@ -41,8 +40,15 @@ public class CreateLead extends PhenixServlet {
     });
     shipping.setPostalCode(data.get("zip"));
     var state = data.get("State");
+    if(isEmpty(state)) {
+      state = data.get("state");
+    }
     if (isNotEmpty(state)) {
       shipping.setState(State.fromAbbreviation(state));
+    }
+    var city = data.get("city");
+    if(isNotEmpty(city)) {
+      shipping.setCity(city);
     }
   }
 
@@ -50,12 +56,12 @@ public class CreateLead extends PhenixServlet {
   protected void post(final HttpServletRequest request, final HttpServletResponse response) throws Exception {
     var data = JsonMap.parse(request.getInputStream());
     var phone = TaskRouter.toUS10(data.get("mobile"));
-    if (StringFun.isEmpty(phone)) {
+    if (isEmpty(phone)) {
       throw new BadRequestException("Must include 'mobile' phone");
     }
     var contact = $1(Contact.withPhoneNumber(phone));
     var email = data.get("email");
-    if (contact == null && !StringFun.isEmpty(email)) {
+    if (contact == null && !isEmpty(email)) {
       contact = $1(Contact.withEmail(email.toLowerCase(Locale.ROOT)));
     }
     if (contact == null) {
@@ -101,7 +107,7 @@ public class CreateLead extends PhenixServlet {
       opp = new Opportunity();
       opp.setContact(contact);
       opp.setAssignedTo(Agent.system());
-      opp.setSource(Source.FORM);
+      opp.setSource("Facebook".equalsIgnoreCase(data.get("source")) ? SOCIAL : Source.FORM);
       opp.setBusiness(q.getBusiness());
       opp.setHeat(Heat.HOT);
       opp.setProductLine(q.getProduct());

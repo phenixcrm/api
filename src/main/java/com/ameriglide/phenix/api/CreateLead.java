@@ -23,7 +23,6 @@ import java.util.Locale;
 import java.util.concurrent.TimeUnit;
 
 import static com.ameriglide.phenix.common.Source.SOCIAL;
-import static jakarta.servlet.http.HttpServletResponse.SC_OK;
 import static net.inetalliance.funky.StringFun.*;
 import static net.inetalliance.potion.Locator.*;
 
@@ -143,7 +142,7 @@ public class CreateLead extends PhenixServlet {
     call.setOpportunity(opp);
     call.setZip(contact.getShipping().getPostalCode());
     create("CreateLead", call);
-    response.sendError(SC_OK);
+    respond(response, new JsonMap().$("call",call.sid).$("opportunity",opp.id));
   }
 
 }

@@ -11,6 +11,8 @@ import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import net.inetalliance.funky.Funky;
+import net.inetalliance.funky.StringFun;
+import net.inetalliance.log.Log;
 import net.inetalliance.potion.Locator;
 import net.inetalliance.sql.Aggregate;
 import net.inetalliance.types.Currency;
@@ -20,7 +22,10 @@ import net.inetalliance.types.json.JsonMap;
 
 import java.time.LocalDateTime;
 import java.util.Locale;
+import java.util.Objects;
 import java.util.concurrent.TimeUnit;
+import java.util.regex.Pattern;
+import java.util.stream.Stream;
 
 import static com.ameriglide.phenix.common.Source.SOCIAL;
 import static net.inetalliance.funky.StringFun.*;
@@ -50,6 +55,7 @@ public class CreateLead extends PhenixServlet {
       shipping.setCity(city);
     }
   }
+  static final Pattern productFromCampaign = Pattern.compile(".*Lead - (.*)");
 
   @Override
   protected void post(final HttpServletRequest request, final HttpServletResponse response) throws Exception {
@@ -72,7 +78,27 @@ public class CreateLead extends PhenixServlet {
         updateContact(data,copy,phone,email);
       });
     }
-    var product = Locator.$(new ProductLine(switch(Funky.of(data.getInteger("productLine")).orElse(0)) {
+    var campaign = data.get("campaign");
+    final Integer productId;
+    if(StringFun.isNotEmpty(campaign)) {
+      var m = productFromCampaign.matcher(campaign);
+      if(m.matches()) {
+        productId = switch(m.group(1).toUpperCase(Locale.ROOT)) {
+          case "STAIRLIFT","STAIRLIFT W/ NUMBER" -> 6;
+          case "LC" -> 2;
+          case "VPL" -> 23;
+          default -> null;
+        };
+      } else {
+        log.warning("weird FB campaign name %s", campaign);
+        productId = null;
+      }
+    } else {
+      productId = null;
+    }
+    var product =
+      Locator.$(new ProductLine(switch(Stream.of(productId,
+        data.getInteger("productLine")).filter(Objects::nonNull).findFirst().orElse(0)) {
       case 0,1,10,25,10031,10035,10039 -> 17; // unassigned, adj bed, jewelry, walk-in tubs, patient lifts, shower
       // chairs, massage chairs -> undetermined
       case 2->6; // lift chairs
@@ -144,5 +170,6 @@ public class CreateLead extends PhenixServlet {
     create("CreateLead", call);
     respond(response, new JsonMap().$("call",call.sid).$("opportunity",opp.id));
   }
+  private static final Log log = Log.getInstance(CreateLead.class);
 
 }

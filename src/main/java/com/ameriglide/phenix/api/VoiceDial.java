@@ -68,6 +68,7 @@ public class VoiceDial extends PhenixServlet {
         log.warning("Could not find queue for %s (%s)", b.getName(), opp.getProductLine().getName());
       } else {
         var cid = Locator.$1(VerifiedCallerId.withQueue(q));
+        call.setQueue(q);
         if (cid == null) {
           log.warning("Could not find Verified CallerID mapping for %s(%s)", q.getName(), q.id);
         } else {

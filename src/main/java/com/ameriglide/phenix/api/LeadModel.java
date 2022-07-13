@@ -2,10 +2,10 @@ package com.ameriglide.phenix.api;
 
 import com.ameriglide.phenix.Auth;
 import com.ameriglide.phenix.common.*;
-import com.ameriglide.phenix.servlet.exception.ForbiddenException;
-import com.ameriglide.phenix.servlet.exception.NotFoundException;
 import com.ameriglide.phenix.model.Key;
 import com.ameriglide.phenix.model.ListableModel;
+import com.ameriglide.phenix.servlet.exception.ForbiddenException;
+import com.ameriglide.phenix.servlet.exception.NotFoundException;
 import com.ameriglide.phenix.ws.ReminderHandler;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServletRequest;
@@ -82,10 +82,10 @@ public class LeadModel
       Locator.forEach(Note.withOpportunity(o), n -> {
         var a = n.getAuthor();
         notes.add(new JsonMap()
-          .$("id",n.id)
-          .$("note",n.getNote())
+          .$("id", n.id)
+          .$("note", n.getNote())
           .$("author", a == null ? "Unknown" : a.getFullName())
-          .$("created",n.getCreated()));
+          .$("created", n.getCreated()));
       });
       json.put("extra", extra);
     }
@@ -96,7 +96,7 @@ public class LeadModel
       if (time == null) {
         json.put("localTime", (Integer) null);
       } else {
-        json.put("localTime", ZonedDateTime.ofInstant(Instant.now(),time.getZoneId()).getOffset().getTotalSeconds());
+        json.put("localTime", ZonedDateTime.ofInstant(Instant.now(), time.getZoneId()).getOffset().getTotalSeconds());
       }
     }
     return json;
@@ -197,17 +197,25 @@ public class LeadModel
     final boolean support = request.getParameter("support") != null;
     final boolean review = request.getParameter("review") != null;
     final boolean asap = request.getParameter("asap") != null;
+    final boolean digis = request.getParameter("digis") != null;
     final SortField sort = SortField.from(request);
     final Agent loggedIn = Auth.getAgent(request);
     final boolean teamLeader = Auth.isTeamLeader(request);
     if (review && !teamLeader) {
       throw new ForbiddenException("%s tried to access review section", loggedIn.getFullName());
     }
-    Query<Opportunity> query = support
-      ? isClosed.orderBy(sort.field, sort.direction)
-      : review
-      ? Query.all(Opportunity.class).orderBy(sort.field, sort.direction)
-      : Opportunity.withAgent(loggedIn).orderBy(sort.field, sort.direction);
+    Query<Opportunity> query;
+    if (support) {
+      query = isClosed.orderBy(sort.field, sort.direction);
+    } else if (review) {
+      query = Query.all(Opportunity.class).orderBy(sort.field, sort.direction);
+    } else if (digis) {
+      query = Opportunity.withSources(Set.of(Source.FORM, Source.SOCIAL))
+        .and(Opportunity.withAgent(Agent.system()));
+    } else {
+      query = Opportunity.withAgent(loggedIn).orderBy(sort.field, sort.direction);
+    }
+
     final String[] pls = request.getParameterValues("pl");
     if (pls != null && pls.length > 0) {
       query = query
@@ -260,32 +268,37 @@ public class LeadModel
         query = query.and(Opportunity.withAgentIdIn(Arrays.stream(as).map(Integer::parseInt).collect(toSet())));
       } else if (review) {
         query = query.and(Agent.viewableBy(loggedIn).join(Opportunity.class, "assignedTo"));
-      }
-      if (asap) {
+      } else if (asap) {
         query = query.and(Opportunity.uncontacted).orderBy("created", ASCENDING);
       }
     }
+
     final Range ec = getParameter(request, Range.class, "ec");
     if (ec != null) {
       if (onlySold) {
         query = query.and(Opportunity.soldInInterval(ec.toInterval()));
-
       } else {
         query = query.and(Opportunity.estimatedCloseInInterval(ec.toInterval()));
       }
     }
+
     final Range sd = getParameter(request, Range.class, "sd");
     if (sd != null) {
       query = query.and(Opportunity.soldInInterval(sd.toInterval()));
     }
+
     final Range c = getParameter(request, Range.class, "c");
     if (c != null) {
       query = query.and(Opportunity.createdInInterval(c.toInterval()));
     }
-    if (isEmpty(q)) {
+    if (
+
+      isEmpty(q)) {
       return query;
     }
-    return buildSearchQuery(query, q);
+    return
+
+      buildSearchQuery(query, q);
   }
 
   @Override
@@ -324,7 +337,7 @@ public class LeadModel
 
     static SortField from(final HttpServletRequest request) {
       final String raw = request.getParameter("sort");
-      if(raw == null) {
+      if (raw == null) {
         return new SortField("created", DESCENDING);
       }
       var desc = raw.startsWith("-");

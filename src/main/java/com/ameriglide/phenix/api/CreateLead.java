@@ -1,6 +1,6 @@
 package com.ameriglide.phenix.api;
 
-import com.ameriglide.phenix.Startup;
+import com.ameriglide.phenix.servlet.Startup;
 import com.ameriglide.phenix.common.*;
 import com.ameriglide.phenix.servlet.PhenixServlet;
 import com.ameriglide.phenix.servlet.exception.BadRequestException;

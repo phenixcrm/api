@@ -1,7 +1,7 @@
 package com.ameriglide.phenix.api;
 
 import com.ameriglide.phenix.Auth;
-import com.ameriglide.phenix.Startup;
+import com.ameriglide.phenix.servlet.Startup;
 import com.ameriglide.phenix.common.*;
 import com.ameriglide.phenix.servlet.PhenixServlet;
 import com.ameriglide.phenix.servlet.TwiMLServlet;
@@ -20,14 +20,10 @@ import static com.ameriglide.phenix.servlet.TwiMLServlet.asParty;
 import static java.time.LocalDateTime.now;
 import static net.inetalliance.funky.StringFun.isEmpty;
 import static net.inetalliance.funky.StringFun.isNotEmpty;
+import static net.inetalliance.potion.Locator.$;
 
 @WebServlet({"/api/voice/dial", "/api/dial"})
 public class VoiceDial extends PhenixServlet {
-
-  TwiMLServlet.Party fromLead(final HttpServletRequest req) {
-
-    return null;
-  }
 
   @Override
   protected void get(HttpServletRequest request, HttpServletResponse response) throws Exception {
@@ -42,7 +38,7 @@ public class VoiceDial extends PhenixServlet {
       }
       called = asParty(new PhoneNumber(number));
     } else {
-      called = asParty(Locator.$(new Agent(Integer.parseInt(agent))));
+      called = asParty($(new Agent(Integer.parseInt(agent))));
     }
     // create new Call with twilio
     var from = new Sip(asParty(Auth.getAgent(request)).sip());
@@ -56,7 +52,7 @@ public class VoiceDial extends PhenixServlet {
     var lead = request.getParameter("lead");
     var setCNAM = false;
     if (isNotEmpty(lead)) {
-      var opp = Locator.$(new Opportunity(Integer.valueOf(lead)));
+      var opp = $(new Opportunity(Integer.valueOf(lead)));
       if (opp == null) {
         throw new NotFoundException();
       }

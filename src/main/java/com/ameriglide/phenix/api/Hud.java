@@ -1,6 +1,6 @@
 package com.ameriglide.phenix.api;
 
-import com.ameriglide.phenix.Startup;
+import com.ameriglide.phenix.servlet.Startup;
 import com.ameriglide.phenix.common.Agent;
 import com.ameriglide.phenix.common.Team;
 import com.ameriglide.phenix.common.TeamMember;
@@ -33,13 +33,11 @@ public class Hud extends JsonCronServlet {
       teamJson.$("name",team.getName()).$("id",team.id);
       var members = new JsonList();
       teamJson.$("members", members);
-      forEach(TeamMember.withTeam(team).and(Agent.isActive), agent -> {
-        members.add(new JsonMap()
-          .$("id",agent.id)
-          .$("firstName", agent.getFirstName())
-          .$("lastName", agent.getLastName())
-          .$("available", Startup.router.byAgent.getOrDefault(agent.getSid(),false)));
-      });
+      forEach(TeamMember.withTeam(team).and(Agent.isActive), agent -> members.add(new JsonMap()
+        .$("id",agent.id)
+        .$("firstName", agent.getFirstName())
+        .$("lastName", agent.getLastName())
+        .$("available", Startup.router.byAgent.getOrDefault(agent.getSid(),false))));
     });
     return json;
   }

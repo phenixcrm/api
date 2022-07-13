@@ -4,6 +4,7 @@ import com.ameriglide.phenix.common.Agent;
 import com.ameriglide.phenix.common.JumpcloudOrg;
 import com.ameriglide.phenix.common.Team;
 import com.ameriglide.phenix.common.Ticket;
+import com.ameriglide.phenix.servlet.Startup;
 import com.ameriglide.phenix.servlet.exception.NotFoundException;
 import com.ameriglide.phenix.servlet.exception.UnauthorizedException;
 import jakarta.servlet.ServletException;
@@ -39,7 +40,7 @@ import static net.inetalliance.potion.Locator.$;
 @WebServlet({"/login", "/logout"})
 public class Auth extends HttpServlet {
 
-  private static final transient Log log = getInstance(Auth.class);
+  private static final Log log = getInstance(Auth.class);
   public Auth() {
     super();
   }
@@ -140,8 +141,8 @@ public class Auth extends HttpServlet {
     });
   }
 
-  private static Pattern email = Pattern.compile("(.*)@(.*)");
-  private static Pattern sudo = Pattern.compile("(.*):(.*)");
+  private static final Pattern email = Pattern.compile("(.*)@(.*)");
+  private static final Pattern sudo = Pattern.compile("(.*):(.*)");
 
   @Override
   protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {

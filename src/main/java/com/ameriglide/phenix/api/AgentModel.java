@@ -31,6 +31,9 @@ public class AgentModel extends ListableModel<Agent> {
     if (request.getParameter("active") != null) {
       query = query.and(Agent.isActive);
     }
+    if(request.getParameter("sales") != null) {
+      query = query.and(Agent.sales);
+    }
     return query.orderBy("lastName", ASCENDING).orderBy("firstName", ASCENDING);
   }
 

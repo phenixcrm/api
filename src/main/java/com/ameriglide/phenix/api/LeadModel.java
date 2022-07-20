@@ -159,8 +159,7 @@ public class LeadModel
     } else if (review) {
       query = Query.all(Opportunity.class).orderBy(sort.field, sort.direction);
     } else if (digis) {
-      query = Opportunity.withSources(Set.of(Source.FORM, Source.SOCIAL))
-        .and(Opportunity.withAgent(Agent.system()));
+      query = Opportunity.withSources(Set.of(Source.FORM, Source.SOCIAL));
     } else {
       query = Opportunity.withAgent(loggedIn).orderBy(sort.field, sort.direction);
     }

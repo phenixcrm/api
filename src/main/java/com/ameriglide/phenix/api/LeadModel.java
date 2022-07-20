@@ -202,12 +202,11 @@ public class LeadModel
 
     Supplier<Set<Agent>> viewable = () -> Locator.$$(Agent.viewableBy(loggedIn));
 
-    if (support || review || asap) {
+    if (support || review || asap || digis) {
       final String[] as = request.getParameterValues("a");
       if (as != null && as.length > 0) {
-        if (review && !loggedIn.isSuperUser()) {
-          Set<String> viewableKeys = viewable.get().stream().map(a -> a.id.toString())
-            .collect(toSet());
+        if ((review || digis) && !loggedIn.isSuperUser()) {
+          var viewableKeys = viewable.get().stream().map(a -> a.id.toString()).collect(toSet());
           Arrays.stream(as).filter(s -> !viewableKeys.contains(s)).findFirst().ifPresent(a -> {
             throw new ForbiddenException("%s tried to look at non-subordinates: %s in %s",
               loggedIn.getFullName(), a, as);

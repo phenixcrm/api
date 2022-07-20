@@ -5,7 +5,6 @@ import com.ameriglide.phenix.common.*;
 import com.ameriglide.phenix.model.Key;
 import com.ameriglide.phenix.model.ListableModel;
 import com.ameriglide.phenix.servlet.exception.ForbiddenException;
-import com.ameriglide.phenix.servlet.exception.NotFoundException;
 import com.ameriglide.phenix.ws.ReminderHandler;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServletRequest;
@@ -48,7 +47,7 @@ public class LeadModel
   extends ListableModel<Opportunity> {
 
   private static final Pattern space = compile("[ @.]");
-  private static final Pattern spaces = compile("[ ]+");
+  private static final Pattern spaces = compile(" +");
   private static final Pattern or = compile("( \\| )|( OR )", CASE_INSENSITIVE);
 
   public LeadModel() {
@@ -103,57 +102,7 @@ public class LeadModel
 
   }
 
-  public static JsonMap getFilters(final HttpServletRequest request) {
-    final JsonMap filters = new JsonMap();
-    final String[] bs = request.getParameterValues("b");
-    if (bs != null && bs.length > 0) {
-      final JsonMap labels = new JsonMap();
-      for (final String b : bs) {
-        final Business biz = Locator.$(new Business(Integer.parseInt(b)));
-        if (biz == null) {
-          throw new NotFoundException("Could not find business with id %s", b);
-        }
-        labels.put("b", biz.getAbbreviation());
-      }
-      filters.put("b", labels);
-    }
 
-    final String[] sources = request.getParameterValues("src");
-    if (sources != null && sources.length > 0) {
-      final JsonMap labels = new JsonMap();
-      for (final String sourceKey : sources) {
-        final Source source = Source.valueOf(sourceKey);
-        labels.put(sourceKey, source.name());
-      }
-      filters.put("src", labels);
-    }
-    final String[] pls = request.getParameterValues("pl");
-    if (pls != null && pls.length > 0) {
-      final JsonMap labels = new JsonMap();
-      for (final String pl : pls) {
-        final ProductLine productLine = Locator.$(new ProductLine(Integer.valueOf(pl)));
-        if (productLine == null) {
-          throw new NotFoundException("Could not find product line with id %s", pl);
-        }
-        labels.put(pl, productLine.getName());
-      }
-      filters.put("pl", labels);
-    }
-    final String[] as = request.getParameterValues("a");
-    if (as != null && as.length > 0) {
-      final JsonMap labels = new JsonMap();
-      for (final String a : as) {
-        final Agent agent = Locator.$(new Agent(Integer.parseInt(a)));
-        if (agent == null) {
-          throw new NotFoundException("Could not find agent with id %s", a);
-        }
-        labels.put(a, agent.getFirstNameLastInitial());
-      }
-      filters.put("a", labels);
-    }
-    return filters;
-
-  }
 
   public static Query<Opportunity> buildSearchQuery(final Query<Opportunity> query,
                                                     String searchQuery) {

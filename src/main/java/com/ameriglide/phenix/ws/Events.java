@@ -13,8 +13,6 @@ import net.inetalliance.types.json.JsonMap;
 
 import java.io.IOException;
 import java.util.*;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Function;
 
 import static net.inetalliance.log.Log.getInstance;
@@ -23,7 +21,6 @@ import static net.inetalliance.log.Log.getInstance;
 public class Events
   extends Endpoint {
 
-  private final static Lock lock = new ReentrantLock();
   private static final Log log = getInstance(Events.class);
   public static Function<Session, MessageHandler> handler = session ->
     (MessageHandler.Whole<String>) message -> log.debug("session [%s] new message %s", session.getId(), message);
@@ -31,7 +28,7 @@ public class Events
     .synchronizedMap(new HashMap<>());
 
   public static Ticket getTicket(final Session session) {
-    return (Ticket) ((HttpSession)session.getUserProperties().get(HttpSession.class.getName()))
+    return (Ticket) ((HttpSession) session.getUserProperties().get(HttpSession.class.getName()))
       .getAttribute("ticket");
   }
 
@@ -43,14 +40,9 @@ public class Events
   }
 
   public static void sendToLatest(final String type, final Integer agent, final Json msg) {
-    lock.lock();
-    try {
-      final List<Session> sessions = Events.sessions.getOrDefault(agent,Collections.emptyList());
-      if (!sessions.isEmpty()) {
-        send(sessions.get(sessions.size() - 1), type, msg);
-      }
-    } finally {
-      lock.unlock();
+    final var sessions = Events.sessions.getOrDefault(agent, Collections.emptyList());
+    if (!sessions.isEmpty()) {
+      send(sessions.get(sessions.size() - 1), type, msg);
     }
   }
 
@@ -67,41 +59,26 @@ public class Events
   }
 
   public static void broadcast(final String type, final Integer principal, final Json msg) {
-    lock.lock();
-    try {
-      if (principal == null) {
-        // tell everyone
-        sessions.values().stream().flatMap(Funky::stream)
-          .forEach(session -> send(session, type, msg));
-      } else {
-        // tell only the sockets for that agent
-        sessions.computeIfAbsent(principal, a -> new ArrayList<>())
-          .forEach(session -> send(session, type, msg));
-      }
-    } finally {
-      lock.unlock();
+    if (principal == null) {
+      // tell everyone
+      sessions.values().stream().flatMap(Funky::stream)
+        .forEach(session -> send(session, type, msg));
+    } else {
+      // tell only the sockets for that agent
+      sessions.computeIfAbsent(principal, a -> Collections.synchronizedList(new LinkedList<>()))
+        .forEach(session -> send(session, type, msg));
     }
   }
 
   public static Set<Integer> getActiveAgents() {
-    lock.lock();
-    try {
       return new HashSet<>(sessions.keySet());
-    } finally {
-      lock.unlock();
-    }
   }
 
   @Override
   public void onOpen(final Session session, final EndpointConfig config) {
     var ticket = getTicket(session);
-    if(ticket != null) {
-      lock.lock();
-      try {
-        sessions.computeIfAbsent(ticket.id(), u -> new LinkedList<>()).add(session);
-      } finally {
-        lock.unlock();
-      }
+    if (ticket != null) {
+      sessions.computeIfAbsent(ticket.id(), u -> Collections.synchronizedList(new LinkedList<>())).add(session);
       log.trace("%s connected", ticket.principal());
       session.addMessageHandler(handler.apply(session));
     }
@@ -110,14 +87,9 @@ public class Events
   @Override
   public void onClose(final Session session, final CloseReason closeReason) {
     var ticket = getTicket(session);
-    if(ticket != null) {
-      lock.lock();
-      try {
+    if (ticket != null) {
         Funky.of(sessions.get(ticket.id())).ifPresent(l -> l.remove(session));
         log.trace("%s disconnected", ticket.principal());
-      } finally {
-        lock.unlock();
-      }
     }
   }
 
@@ -128,7 +100,7 @@ public class Events
     public void modifyHandshake(final ServerEndpointConfig config, final HandshakeRequest request,
                                 final HandshakeResponse response) {
       final HttpSession session = (HttpSession) request.getHttpSession();
-      config.getUserProperties().put(HttpSession.class.getName(),session);
+      config.getUserProperties().put(HttpSession.class.getName(), session);
     }
   }
 

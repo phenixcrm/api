@@ -1,0 +1,77 @@
+package com.ameriglide.phenix.api;
+
+import com.ameriglide.phenix.Auth;
+import com.ameriglide.phenix.common.Agent;
+import com.ameriglide.phenix.common.Opportunity;
+import com.ameriglide.phenix.servlet.PhenixServlet;
+import com.ameriglide.phenix.servlet.exception.BadRequestException;
+import jakarta.servlet.annotation.WebServlet;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+import net.inetalliance.sql.DateTimeInterval;
+import net.inetalliance.types.json.Json;
+import net.inetalliance.types.json.JsonList;
+import net.inetalliance.types.json.JsonMap;
+
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+
+import static com.ameriglide.phenix.common.Opportunity.withAgent;
+import static net.inetalliance.funky.StringFun.isEmpty;
+import static net.inetalliance.potion.Locator.forEach;
+import static net.inetalliance.sql.OrderBy.Direction.ASCENDING;
+
+@WebServlet("/api/freeBusy")
+public class FreeBusy extends PhenixServlet {
+
+  private static JsonMap toJson(final Opportunity opp) {
+    return new JsonMap().$("id", opp.id)
+      .$("productLine", opp.getProductLine().getName())
+      .$("reminder", opp.getReminder())
+      .$("contact", opp.getContact().getLastNameFirstInitial())
+      .$("business", opp.getBusiness().getName())
+      .$("heat", opp.getHeat())
+      .$("amount", opp.getAmount());
+  }
+
+  @Override
+  protected void get(final HttpServletRequest request, final HttpServletResponse response)
+    throws Exception {
+    final boolean monthMode;
+    final DateTimeInterval interval;
+    final String day = request.getParameter("day");
+    if (isEmpty(day)) {
+      final String month = request.getParameter("month");
+      if (isEmpty(month)) {
+        throw new BadRequestException("Missing parameter \"month\"");
+      } else {
+        monthMode = true;
+        final LocalDate startOfMonth = Json.jsDateTimeFormat.parse(month,LocalDate::from).withDayOfMonth(1);
+        final LocalDateTime start = startOfMonth.minusDays(startOfMonth.getDayOfWeek().getValue()%7).atStartOfDay();
+        interval = new DateTimeInterval(start, start.plusDays(35));
+      }
+    } else {
+      monthMode = false;
+      var start = Json.jsDateTimeFormat.parse(day,LocalDate::from).atStartOfDay();
+      interval = new DateTimeInterval(start,start.plusDays(1));
+    }
+    final Agent agent = Auth.getAgent(request);
+
+    final JsonMap map = new JsonMap();
+    forEach(Opportunity.withReminderIn(interval).and(withAgent(agent)).orderBy("reminder", ASCENDING), opp -> {
+      if (monthMode) {
+        final String day1 = Json.jsDateFormat.format(opp.getReminder().toLocalDate());
+        JsonList list = map.getList(day1);
+        if (list == null) {
+          list = new JsonList();
+          map.put(day1, list);
+        }
+        list.add(toJson(opp));
+      } else {
+        map.put(Json.jsDateTimeFormat.format(opp.getReminder()), toJson(opp));
+      }
+
+    });
+    respond(response, map);
+  }
+}

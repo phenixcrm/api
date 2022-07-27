@@ -1,9 +1,9 @@
 package com.ameriglide.phenix.api;
 
 import com.ameriglide.phenix.Auth;
-import com.ameriglide.phenix.servlet.Startup;
 import com.ameriglide.phenix.common.*;
 import com.ameriglide.phenix.servlet.PhenixServlet;
+import com.ameriglide.phenix.servlet.Startup;
 import com.ameriglide.phenix.servlet.TwiMLServlet;
 import com.ameriglide.phenix.servlet.exception.NotFoundException;
 import com.ameriglide.phenix.types.CallDirection;
@@ -18,9 +18,11 @@ import net.inetalliance.potion.Locator;
 
 import static com.ameriglide.phenix.servlet.TwiMLServlet.asParty;
 import static java.time.LocalDateTime.now;
+import static net.inetalliance.funky.Funky.of;
 import static net.inetalliance.funky.StringFun.isEmpty;
 import static net.inetalliance.funky.StringFun.isNotEmpty;
 import static net.inetalliance.potion.Locator.$;
+import static net.inetalliance.potion.Locator.$1;
 
 @WebServlet({"/api/voice/dial", "/api/dial"})
 public class VoiceDial extends PhenixServlet {
@@ -30,6 +32,7 @@ public class VoiceDial extends PhenixServlet {
 
     var agent = request.getParameter("agent");
     var number = request.getParameter("number");
+    CNAM.CallerIdSource cid  ;
 
     TwiMLServlet.Party called;
     if (isEmpty(agent)) {
@@ -50,7 +53,6 @@ public class VoiceDial extends PhenixServlet {
     call.setCreated(now());
     call.setResolution(Resolution.ACTIVE);
     var lead = request.getParameter("lead");
-    var setCNAM = false;
     if (isNotEmpty(lead)) {
       var opp = $(new Opportunity(Integer.valueOf(lead)));
       if (opp == null) {
@@ -59,27 +61,22 @@ public class VoiceDial extends PhenixServlet {
       call.setOpportunity(opp);
       var b = opp.getBusiness();
       call.setBusiness(b);
-      var q = Locator.$1(SkillQueue.withProduct(opp.getProductLine()).and(SkillQueue.withBusiness(b)));
-      if (q == null) {
-        log.warning("Could not find queue for %s (%s)", b.getName(), opp.getProductLine().getName());
-      } else {
-        var cid = Locator.$1(VerifiedCallerId.withQueue(q));
-        call.setQueue(q);
-        if (cid == null) {
-          log.warning("Could not find Verified CallerID mapping for %s(%s)", q.getName(), q.id);
-        } else {
-          TwiMLServlet.asParty(new PhoneNumber(cid.getPhoneNumber())).setCNAM(call);
-          setCNAM = true;
-        }
-      }
+      cid =
+        of($1(SkillQueue.withProduct(opp.getProductLine()).and(SkillQueue.withBusiness(b))))
+          .stream()
+          .peek(call::setQueue)
+          .map(q -> $1(VerifiedCallerId.withQueue(q)))
+          .findFirst()
+          .orElseGet(() -> $1(VerifiedCallerId.isDefault));
+    } else if (called.isAgent()) {
+      cid = callingAgent;
+    } else {
+      cid = $1(VerifiedCallerId.isDefault);
     }
-    if(!setCNAM) {
-      TwiMLServlet.asParty(callingAgent).setCNAM(call);
-    }
+    cid.setPhoneNumber(call);
     Locator.create("VoiceDial", call);
     log.info("New API dial %s %s -> %s", call.sid, callingAgent.getSipUser(), called.endpoint());
     response.sendError(HttpServletResponse.SC_NO_CONTENT);
-
   }
 
   private static final Log log = Log.getInstance(VoiceDial.class);

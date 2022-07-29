@@ -16,6 +16,8 @@ import jakarta.servlet.http.HttpServletResponse;
 import net.inetalliance.log.Log;
 import net.inetalliance.potion.Locator;
 
+import java.util.Objects;
+
 import static com.ameriglide.phenix.servlet.TwiMLServlet.asParty;
 import static java.time.LocalDateTime.now;
 import static net.inetalliance.funky.Funky.of;
@@ -66,6 +68,7 @@ public class VoiceDial extends PhenixServlet {
           .stream()
           .peek(call::setQueue)
           .map(q -> $1(VerifiedCallerId.withQueue(q)))
+          .filter(Objects::nonNull)
           .findFirst()
           .orElseGet(() -> $1(VerifiedCallerId.isDefault));
     } else if (called.isAgent()) {

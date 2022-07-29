@@ -66,6 +66,7 @@ public class VoiceDial extends PhenixServlet {
       cid =
         of($1(SkillQueue.withProduct(opp.getProductLine()).and(SkillQueue.withBusiness(b))))
           .stream()
+          .filter(Objects::nonNull)
           .peek(call::setQueue)
           .map(q -> $1(VerifiedCallerId.withQueue(q)))
           .filter(Objects::nonNull)

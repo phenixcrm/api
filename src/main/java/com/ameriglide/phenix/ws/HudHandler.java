@@ -66,14 +66,18 @@ public class HudHandler
       switch (action) {
         case SUBSCRIBE -> {
           subscribers.add(session);
-          log.info("Added HUD subscription for %s, #:%d",Events.getTicket(session).agent().getSipUser(),
-            subscribers.size());
+          if(log.isDebugEnabled()) {
+            log.debug("Added HUD subscription for %s, #:%d", Events.getTicket(session).agent().getSipUser(),
+              subscribers.size());
+          }
           return hud;
         }
         case UNSUBSCRIBE -> {
           subscribers.remove(session);
-          log.info("Removed HUD subscription for %s, #:%d",Events.getTicket(session).agent().getSipUser(),
-            subscribers.size());
+          if(log.isDebugEnabled()) {
+            log.debug("Removed HUD subscription for %s, #:%d", Events.getTicket(session).agent().getSipUser(),
+              subscribers.size());
+          }
         }
       }
     } catch (IllegalArgumentException e) {
@@ -89,7 +93,7 @@ public class HudHandler
 
   @Override
   public void run() {
-    log.info("HUD update started");
+    log.debug("HUD update started");
     try {
       for (var value : status.values()) {
         value.direction = null;
@@ -116,7 +120,7 @@ public class HudHandler
     } catch(Throwable t) {
       log.error(t);
     }
-    log.info("HUD update finished");
+    log.debug("HUD update finished");
   }
 
   private void updateCalls() {

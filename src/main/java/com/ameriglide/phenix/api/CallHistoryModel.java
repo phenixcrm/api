@@ -1,115 +1,116 @@
 package com.ameriglide.phenix.api;
 
 import com.ameriglide.phenix.common.Call;
-import com.ameriglide.phenix.common.Contact;
-import com.ameriglide.phenix.common.Opportunity;
 import com.ameriglide.phenix.common.Leg;
-import com.ameriglide.phenix.servlet.exception.MethodNotAllowedException;
-import com.ameriglide.phenix.model.Key;
-import com.ameriglide.phenix.model.Model;
+import com.ameriglide.phenix.common.Opportunity;
+import com.ameriglide.phenix.model.Listable;
+import com.ameriglide.phenix.servlet.PhenixServlet;
+import com.ameriglide.phenix.servlet.exception.BadRequestException;
+import com.ameriglide.phenix.servlet.exception.NotFoundException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import net.inetalliance.funky.Funky;
+import net.inetalliance.potion.Locator;
 import net.inetalliance.potion.info.Info;
-import net.inetalliance.potion.query.SortedQuery;
+import net.inetalliance.potion.query.Query;
 import net.inetalliance.types.json.Json;
 import net.inetalliance.types.json.JsonList;
 import net.inetalliance.types.json.JsonMap;
 
 import java.time.Duration;
-import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import static com.ameriglide.phenix.types.CallDirection.OUTBOUND;
-import static java.util.regex.Pattern.compile;
-import static net.inetalliance.potion.Locator.count;
 import static net.inetalliance.potion.Locator.forEach;
 import static net.inetalliance.sql.OrderBy.Direction.ASCENDING;
 import static net.inetalliance.sql.OrderBy.Direction.DESCENDING;
 
 @WebServlet("/api/callHistory/*")
-public class CallHistoryModel
-    extends Model<Opportunity> {
+public class CallHistoryModel extends PhenixServlet {
+  private static final Pattern id = Pattern.compile("/api/callHistory/(.*)");
 
   public CallHistoryModel() {
-    super(compile("/api/callHistory/(.*)"));
   }
 
-  @Override
-  protected void post(final HttpServletRequest request, final HttpServletResponse response) {
-    throw new MethodNotAllowedException();
-  }
 
   @Override
-  protected void delete(final HttpServletRequest request, final HttpServletResponse response) {
-    throw new MethodNotAllowedException();
-  }
-
-  @Override
-  protected Key<Opportunity> getKey(final Matcher m) {
-    return Key.$(Opportunity.class, m.group(1));
-  }
-
-  @Override
-  protected void put(final HttpServletRequest request, final HttpServletResponse response) {
-    throw new MethodNotAllowedException();
-  }
-
-  @Override
-  protected Json toJson(final Key<Opportunity> key, final Opportunity opportunity,
-      final HttpServletRequest request) {
-    final Contact contact = opportunity.getContact();
-    final SortedQuery<Call> callQuery = Call.withContact(contact).orderBy("created", DESCENDING);
-    final JsonList calls = new JsonList(count(callQuery));
-    forEach(callQuery, call -> {
-      var callMap = new JsonMap();
-      calls.add(callMap);
-      callMap.$("sid").$("notes").$("resolution").$("created").$("direction");
-      Info.$(call).fill(call, callMap);
-      Funky.of(call.getBusiness()).ifPresent(b->callMap.$("business",new JsonMap()
-        .$("name",b.getName())
-        .$("abbreviation",b.getAbbreviation())));
-      callMap.put(call.getDirection() == OUTBOUND ? "to" : "from",
-          call.getRemoteCaller().toDisplayName());
-      if (call.getAgent() != null) {
-        callMap.put(call.getDirection() == OUTBOUND ? "from" : "to",
-            call.getAgent().getLastNameFirstInitial());
+  protected void get(HttpServletRequest request, HttpServletResponse response) throws Exception {
+    var opp = Funky.matcher(id).apply(request.getRequestURI())
+      .map(m -> m.group(1))
+      .map(Integer::parseInt)
+      .map(Opportunity::new)
+      .map(Locator::$)
+      .orElseThrow(() -> new BadRequestException("request must match /api/callHistory/(.*)"));
+    if (opp == null) {
+      throw new NotFoundException();
+    }
+    var contact = opp.getContact();
+    respond(response, Listable.$(Call.class, new Listable<>() {
+      @Override
+      public Query<Call> all(Class<Call> type, HttpServletRequest request) {
+        return Call.withContact(contact).orderBy("created", DESCENDING);
       }
-      final JsonList talkList = new JsonList();
-      callMap.put("talkTime", talkList);
-      forEach(Leg.withCall(call).orderBy("created", ASCENDING), segment -> {
-        final JsonMap talkMap = new JsonMap();
-        if (segment.getAgent() != null) {
-          talkMap.put("agent", segment.getAgent().getLastNameFirstInitial());
-        }
-        if (segment.getAnswered() != null && segment.getTalkTime() != null) {
-          talkMap.put("talkTime", format(segment.getTalkTime()));
-        }
-        talkList.add(talkMap);
-      });
-    });
-    return calls;
+
+      @Override
+      public Json toJson(HttpServletRequest request, Call call) {
+        new JsonMap();
+        var json = JsonMap
+          .$()
+          .$("sid")
+          .$("recordingSid")
+          .$("resolution")
+          .$("created")
+          .$("direction")
+          .$("transcription");
+        Info.$(call).fill(call, json);
+        Funky.of(call.getBusiness())
+          .ifPresent(b -> json.$("business",
+            JsonMap
+              .$()
+              .$("name", b.getName())
+              .$("abbreviation", b.getAbbreviation())));
+        json.$(call.getDirection() == OUTBOUND ? "to" : "from", call.getRemoteCaller().toDisplayName());
+        Funky.of(call.getAgent())
+          .ifPresent(a -> json.$(call.getDirection() == OUTBOUND ? "from" : "to", a.getFullName()));
+        final JsonList talkList = new JsonList();
+        json.put("talkTime", talkList);
+        forEach(Leg.withCall(call).orderBy("created", ASCENDING), segment -> {
+          final JsonMap talkMap = new JsonMap();
+          if (segment.getAgent() != null) {
+            talkMap.put("agent", segment.getAgent().getLastNameFirstInitial());
+          }
+          if (segment.getAnswered() != null && segment.getTalkTime() != null) {
+            talkMap.put("talkTime", format(segment.getTalkTime()));
+          }
+          talkList.add(talkMap);
+        });
+        return json;
+      }
+    }, request));
+
   }
- private  String format(long seconds) {
+
+  private String format(long seconds) {
     var duration = Duration.ofSeconds(seconds);
     var string = new StringBuilder();
     var days = duration.toDays();
-    if(days>0) {
+    if (days > 0) {
       string.append(days).append("duration ");
     }
     var h = duration.toHoursPart();
-    if(h>0) {
+    if (h > 0) {
       string.append(h).append("h ");
     }
     var m = duration.toMinutesPart();
-    if(m>0) {
+    if (m > 0) {
       string.append(m).append("m ");
     }
     var s = duration.toSecondsPart();
-    if(s>0) {
+    if (s > 0) {
       string.append(s).append("s ");
     }
-    return string.length()>0 ? string.substring(0,string.length()-1) : "";
+    return string.length() > 0 ? string.substring(0, string.length() - 1) : "";
 
   }
 }

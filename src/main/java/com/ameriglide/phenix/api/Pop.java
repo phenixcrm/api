@@ -57,7 +57,7 @@ public class Pop
   protected Json toJson(final Key<Call> key, final Call call, final HttpServletRequest request) {
     final Query<Contact> query;
     final var q = request.getParameter("q");
-    final var phone = TaskRouter.toUS10(call.getPhone());
+    final var phone = TaskRouter.toE164(call.getPhone());
     if (StringFun.isNotEmpty(q)) {
       query = new Search<>(Contact.class, getParameter(request, "n", 10),
         q.split(" "));

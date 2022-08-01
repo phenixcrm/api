@@ -60,7 +60,7 @@ public class CreateLead extends PhenixServlet {
   @Override
   protected void post(final HttpServletRequest request, final HttpServletResponse response) throws Exception {
     var data = JsonMap.parse(request.getInputStream());
-    var phone = TaskRouter.toUS10(data.get("mobile"));
+    var phone = TaskRouter.toE164(data.get("mobile"));
     if (isEmpty(phone)) {
       throw new BadRequestException("Must include 'mobile' phone");
     }

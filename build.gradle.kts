@@ -16,9 +16,9 @@ dependencies {
   implementation("net.inetalliance.msg:aj:1.1-SNAPSHOT")
   implementation("org.apache.commons:commons-csv:1.9.0")
   implementation("net.inetalliance.msg:bjx:6.1-SNAPSHOT")
-  implementation("org.postgresql:postgresql:42.3.4")
+  implementation("org.postgresql:postgresql:42.3.6")
   implementation("jakarta.servlet:jakarta.servlet-api:5.0.0")
   implementation("jakarta.websocket:jakarta.websocket-api:2.0.0")
-  implementation("com.twilio.sdk:twilio:8.29.1")
-  implementation("io.github.cdimascio:dotenv-java:2.2.3")
+  implementation("com.twilio.sdk:twilio:8.34.0")
+  implementation("io.github.cdimascio:dotenv-java:2.2.4")
 }

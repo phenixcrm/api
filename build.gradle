@@ -6,6 +6,7 @@ description = 'Phénix objects shared between modules'
 dependencies {
   implementation(
     project(':common'),
+    project(':core'),
     'net.inetalliance:potion:6.1-SNAPSHOT',
     'net.inetalliance:types:1.1-SNAPSHOT',
     'net.inetalliance:util:1.1-SNAPSHOT',

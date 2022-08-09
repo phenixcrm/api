@@ -2,6 +2,7 @@ package com.ameriglide.phenix.api;
 
 import com.ameriglide.phenix.Auth;
 import com.ameriglide.phenix.common.*;
+import com.ameriglide.phenix.core.Optionals;
 import com.ameriglide.phenix.model.Key;
 import com.ameriglide.phenix.model.TypeModel;
 import com.ameriglide.phenix.twilio.TaskRouter;
@@ -78,9 +79,9 @@ public class Pop
         preferred[0] = e.preferred();
       }
     });
-    final ProductLine productLine =
-      call.getQueue() == null ? null : call.getQueue().getProduct();
-    final Business biz = call.getBusiness();
+
+
+    final Business biz = Optionals.of(call.getBusiness()).orElseGet(Business.getDefault);
 
     final JsonMap map = new JsonMap().$("contacts", contacts)
       .$("business", new JsonMap().$("id", biz.id).$("name", biz.getName()))
@@ -90,13 +91,12 @@ public class Pop
         .$("lead", preferred[0] == null
           ? "new"
           : preferred[0].id.toString()));
+    var productLine = call.findProductLine();
+    map.$("productLine", new JsonMap()
+      .$("id", productLine.id)
+      .$("abbreviation", productLine.getAbbreviation())
+      .$("name", productLine.getName()));
 
-    if (productLine != null) {
-      map.$("productLine", new JsonMap()
-        .$("id", productLine.id)
-        .$("abbreviation", productLine.getAbbreviation())
-        .$("name", productLine.getName()));
-    }
 
     map.$("direction", call.getDirection());
     map.$("source", call.getSource());

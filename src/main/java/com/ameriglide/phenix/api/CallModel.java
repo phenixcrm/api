@@ -1,15 +1,16 @@
 package com.ameriglide.phenix.api;
 
 import com.ameriglide.phenix.Auth;
-import com.ameriglide.phenix.servlet.PhenixServlet;
 import com.ameriglide.phenix.common.*;
+import com.ameriglide.phenix.core.Optionals;
+import com.ameriglide.phenix.model.Key;
+import com.ameriglide.phenix.model.ListableModel;
+import com.ameriglide.phenix.model.Range;
+import com.ameriglide.phenix.servlet.PhenixServlet;
 import com.ameriglide.phenix.servlet.exception.BadRequestException;
 import com.ameriglide.phenix.servlet.exception.ForbiddenException;
 import com.ameriglide.phenix.servlet.exception.NotFoundException;
 import com.ameriglide.phenix.servlet.exception.UnauthorizedException;
-import com.ameriglide.phenix.model.Key;
-import com.ameriglide.phenix.model.ListableModel;
-import com.ameriglide.phenix.model.Range;
 import com.ameriglide.phenix.types.Resolution;
 import jakarta.servlet.ServletConfig;
 import jakarta.servlet.ServletException;
@@ -37,7 +38,8 @@ import java.util.List;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-import static com.ameriglide.phenix.types.CallDirection.*;
+import static com.ameriglide.phenix.types.CallDirection.INTERNAL;
+import static com.ameriglide.phenix.types.CallDirection.QUEUE;
 import static com.ameriglide.phenix.types.Resolution.ACTIVE;
 import static com.ameriglide.phenix.types.Resolution.ANSWERED;
 import static java.lang.String.format;
@@ -65,8 +67,10 @@ public class CallModel
   public void init(ServletConfig config) throws ServletException {
     super.init(config);
     simContacts = new ArrayList<>(100);
+    var data = CallModel.class.getResourceAsStream("/callsim-contacts.csv");
+    assert (data != null);
     try (var reader = new BufferedReader(new InputStreamReader(
-      CallModel.class.getResourceAsStream("/callsim-contacts.csv")))) {
+      data))) {
       String line;
       while ((line = reader.readLine()) != null) {
         var split = line.split(",");
@@ -93,8 +97,7 @@ public class CallModel
     }
     final Agent agent = ticket.agent();
     final JsonMap map = (JsonMap) super.toJson(request, call);
-    final ProductLine productLine = null;
-    //call.getQueue() == null ? null : call.getQueue().getProductLine();
+    final ProductLine productLine = call.findProductLine();
     final CNAM remoteCid = call.getRemoteCaller();
     map.put("remoteCallerId", new JsonMap().$("name", remoteCid.getName()).$("number", remoteCid.getPhone()));
     if (!todo && (call.getDirection() != INTERNAL)) {
@@ -268,8 +271,8 @@ public class CallModel
     key.info.fill(call, map);
     map.$("todo", call.isTodo());
     switch (call.getDirection()) {
-      case OUTBOUND,QUEUE,VIRTUAL-> {
-        final Business business = call.getBusiness();
+      case OUTBOUND, QUEUE, VIRTUAL -> {
+        final Business business = Optionals.of(call.getBusiness()).orElseGet(Business.getDefault);
         map.$("business",
           new JsonMap().$("name", business.getName()).$("id", business.id));
         if (call.getQueue() != null) {

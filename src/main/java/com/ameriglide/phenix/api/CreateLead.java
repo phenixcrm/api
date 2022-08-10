@@ -1,9 +1,12 @@
 package com.ameriglide.phenix.api;
 
-import com.ameriglide.phenix.servlet.Startup;
 import com.ameriglide.phenix.common.*;
+import com.ameriglide.phenix.core.Log;
+import com.ameriglide.phenix.core.Strings;
 import com.ameriglide.phenix.servlet.PhenixServlet;
+import com.ameriglide.phenix.servlet.Startup;
 import com.ameriglide.phenix.servlet.exception.BadRequestException;
+import com.ameriglide.phenix.servlet.exception.NotFoundException;
 import com.ameriglide.phenix.twilio.TaskRouter;
 import com.ameriglide.phenix.types.CallDirection;
 import com.ameriglide.phenix.types.Resolution;
@@ -11,8 +14,6 @@ import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import net.inetalliance.funky.Funky;
-import net.inetalliance.funky.StringFun;
-import net.inetalliance.log.Log;
 import net.inetalliance.potion.Locator;
 import net.inetalliance.sql.Aggregate;
 import net.inetalliance.types.Currency;
@@ -27,7 +28,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
-import static com.ameriglide.phenix.common.Source.SOCIAL;
+import static com.ameriglide.phenix.common.Source.*;
 import static net.inetalliance.funky.StringFun.*;
 import static net.inetalliance.potion.Locator.*;
 
@@ -38,32 +39,62 @@ public class CreateLead extends PhenixServlet {
     contact.setEmail(email);
     contact.setFirstName(titleCase(data.get("first")));
     contact.setLastName(titleCase(data.get("last")));
-    var shipping = Funky.of(contact.getShipping()).orElseGet(()-> {
+    var shipping = Funky.of(contact.getShipping()).orElseGet(() -> {
       contact.setShipping(new Address());
       return contact.getShipping();
     });
     shipping.setPostalCode(data.get("zip"));
     var state = data.get("State");
-    if(isEmpty(state)) {
+    if (isEmpty(state)) {
       state = data.get("state");
     }
     if (isNotEmpty(state)) {
       shipping.setState(State.fromAbbreviation(state));
     }
     var city = data.get("city");
-    if(isNotEmpty(city)) {
+    if (isNotEmpty(city)) {
       shipping.setCity(city);
     }
   }
+
   static final Pattern productFromCampaign = Pattern.compile(".*Lead - (.*)");
+
+  private Campaign getLeadGenSource(HttpServletRequest req) {
+    var apiKey = req.getHeader("x-api-key");
+    if (isNotEmpty(apiKey)) {
+      var leadGen = Locator.$1(LeadGen.withApiKey(apiKey));
+      if (leadGen == null) {
+        throw new NotFoundException("no partner with the specified key");
+      }
+      var campaignKey = req.getHeader("x-campaign-key");
+      if (isEmpty(campaignKey)) {
+        throw new BadRequestException("you must provide x-campaign-key as a header");
+      }
+      var campaign = Locator.$1(Campaign.withLeadGenCampaign(campaignKey));
+      if (campaign == null) {
+        throw new NotFoundException("no campaign with the specified key");
+      }
+      if (!leadGen.equals(campaign.getSource())) {
+        log.error(() -> "somehow a lead with campaign %s was submitted by the wrong lead gen %d, expected %d"
+          .formatted(campaign.id, campaign.getSource().id, leadGen.id));
+        throw new BadRequestException("please contact your representative");
+      }
+      return campaign;
+    }
+    return null;
+  }
 
   @Override
   protected void post(final HttpServletRequest request, final HttpServletResponse response) throws Exception {
+    var leadgen = getLeadGenSource(request);
+
     var data = JsonMap.parse(request.getInputStream());
-    var phone = TaskRouter.toE164(data.get("mobile"));
-    if (isEmpty(phone)) {
-      throw new BadRequestException("Must include 'mobile' phone");
-    }
+    var phone = Stream.of("mobile", "phone")
+      .map(data::get)
+      .map(TaskRouter::toE164)
+      .filter(Strings::isNotEmpty)
+      .findFirst()
+      .orElseThrow(() -> new BadRequestException("You must provide either 'mobile' or 'phone'"));
     var contact = $1(Contact.withPhoneNumber(phone));
     var email = data.get("email");
     if (contact == null && !isEmpty(email)) {
@@ -71,68 +102,78 @@ public class CreateLead extends PhenixServlet {
     }
     if (contact == null) {
       contact = new Contact();
-      updateContact(data,contact,phone,email);
-      create("CreateLead",contact);
+      updateContact(data, contact, phone, email);
+      create("CreateLead", contact);
     } else {
       update(contact, "CreateLead", copy -> {
-        updateContact(data,copy,phone,email);
+        updateContact(data, copy, phone, email);
       });
     }
     var campaign = data.get("campaign");
     final Integer productId;
-    if(StringFun.isNotEmpty(campaign)) {
+    if (isNotEmpty(campaign)) {
       var m = productFromCampaign.matcher(campaign);
-      if(m.matches()) {
-        productId = switch(m.group(1).toUpperCase(Locale.ROOT)) {
-          case "STAIRLIFT","STAIRLIFT W/ NUMBER" -> 6;
+      if (m.matches()) {
+        productId = switch (m.group(1).toUpperCase(Locale.ROOT)) {
+          case "STAIRLIFT", "STAIRLIFT W/ NUMBER" -> 6;
           case "LC" -> 2;
           case "VPL" -> 23;
           default -> null;
         };
       } else {
-        log.warning("weird FB campaign name %s", campaign);
+        log.warn(() -> "weird FB campaign name %s".formatted(campaign));
         productId = null;
       }
+    } else if (leadgen != null) {
+      productId = leadgen.getProductLine().id;
     } else {
       productId = null;
     }
     var product =
-      Locator.$(new ProductLine(switch(Stream.of(productId,
+      Locator.$(new ProductLine(switch (Stream.of(productId,
         data.getInteger("productLine")).filter(Objects::nonNull).findFirst().orElse(0)) {
-      case 0,1,10,25,10031,10035,10039 -> 17; // unassigned, adj bed, jewelry, walk-in tubs, patient lifts, shower
-      // chairs, massage chairs -> undetermined
-      case 2->6; // lift chairs
-      case 3 -> 10; // scooters
-      case 4,10030,10038 ->  8; // power, manual, specialty -> wheelchairs
-      case 5 -> 5; // ramps
-      case 6,10036,10037 -> 2; // stair lifts, stair climber, used -> stair lifts
-      case 7 -> 1; // CVPLs
-      case 8 -> 4; // dumbwaiters
-      case  12 -> 9; // vehicle lifts
-      case 13,15 -> 11; // bath lifts, toilet seat lifts -> bath lifts
-      case 16,17,19,27,10032,10033 -> 12; // rolling walkers,med supply,accessories,parts,cushions,overlays ->
-      // accessories
-      case 18 -> 7; // elevators
-      case 23 -> 14; // RVPLs
-      case 26->15; // IVPLs
-      case 10040 -> 3; // pool lifts
-      case 10041 -> 16; // curved stair lifts
-      default -> 17; // when all else fails, set to undetermined
-    }));
+        case 0, 1, 10, 25, 10031, 10035, 10039 ->
+          17; // unassigned, adj bed, jewelry, walk-in tubs, patient lifts, shower
+        // chairs, massage chairs -> undetermined
+        case 2 -> 6; // lift chairs
+        case 3 -> 10; // scooters
+        case 4, 10030, 10038 -> 8; // power, manual, specialty -> wheelchairs
+        case 5 -> 5; // ramps
+        case 6, 10036, 10037 -> 2; // stair lifts, stair climber, used -> stair lifts
+        case 7 -> 1; // CVPLs
+        case 8 -> 4; // dumbwaiters
+        case 12 -> 9; // vehicle lifts
+        case 13, 15 -> 11; // bath lifts, toilet seat lifts -> bath lifts
+        case 16, 17, 19, 27, 10032, 10033 -> 12; // rolling walkers,med supply,accessories,parts,cushions,overlays ->
+        // accessories
+        case 18 -> 7; // elevators
+        case 23 -> 14; // RVPLs
+        case 26 -> 15; // IVPLs
+        case 10040 -> 3; // pool lifts
+        case 10041 -> 16; // curved stair lifts
+        default -> 17; // when all else fails, set to undetermined
+      }));
     Opportunity opp;
-    //todo add business support here
-    var q = Locator.$1(SkillQueue.withProduct(product));
+    var q = $1(SkillQueue.withProduct(product));
     if (contact.id == null) {
       create("CreateLead", contact);
       opp = null;
     } else {
-      opp = Locator.$1(Opportunity.withContact(contact).and(Opportunity.withProductLine(product)));
+      opp = $1(Opportunity.withContact(contact).and(Opportunity.withProductLine(product)));
     }
     if (opp == null) {
       opp = new Opportunity();
       opp.setContact(contact);
       opp.setAssignedTo(Agent.system());
-      opp.setSource("Facebook".equalsIgnoreCase(data.get("source")) ? SOCIAL : Source.FORM);
+      if (leadgen != null) {
+        opp.setSource(REFERRAL);
+        opp.setCampaign(leadgen);
+        opp.setReferrerId(data.get("referrerId"));
+      } else if (isNotEmpty(campaign)) {
+        opp.setSource(SOCIAL);
+      } else {
+        opp.setSource(FORM);
+      }
       opp.setBusiness(q.getBusiness());
       opp.setHeat(Heat.HOT);
       opp.setProductLine(q.getProduct());
@@ -159,7 +200,7 @@ public class CreateLead extends PhenixServlet {
     call.setCreated(LocalDateTime.now());
     call.setDirection(CallDirection.VIRTUAL);
     call.setBusiness(q.getBusiness());
-    call.setSource(Source.FORM);
+    call.setSource(FORM);
     call.setResolution(Resolution.ACTIVE);
     call.setName("%s,%s".formatted(contact.getLastName(), contact.getFirstName()));
     call.setPhone(contact.getPhone());
@@ -168,8 +209,9 @@ public class CreateLead extends PhenixServlet {
     call.setOpportunity(opp);
     call.setZip(contact.getShipping().getPostalCode());
     create("CreateLead", call);
-    respond(response, new JsonMap().$("call",call.sid).$("opportunity",opp.id));
+    respond(response, new JsonMap().$("call", call.sid).$("opportunity", opp.id));
   }
-  private static final Log log = Log.getInstance(CreateLead.class);
+
+  private static final Log log = new Log();
 
 }

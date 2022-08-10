@@ -59,11 +59,14 @@ public class Pop
     final Query<Contact> query;
     final var q = request.getParameter("q");
     final var phone = TaskRouter.toE164(call.getPhone());
+    var contact = Optionals.of(call.getOpportunity())
+      .map(Opportunity::getContact)
+      .orElseGet(call::getContact);
     if (StringFun.isNotEmpty(q)) {
       query = new Search<>(Contact.class, getParameter(request, "n", 10),
         q.split(" "));
-    } else if (call.getContact() != null) {
-      query = Contact.withId(Contact.class, call.getContact().id);
+    } else if (contact != null) {
+      query = Contact.withId(Contact.class, contact.id);
     } else if (phone != null && phone.length() >= 10) {
       query = Contact.withPhoneNumber(phone);
     } else {
@@ -79,7 +82,6 @@ public class Pop
         preferred[0] = e.preferred();
       }
     });
-
 
     final Business biz = Optionals.of(call.getBusiness()).orElseGet(Business.getDefault);
 

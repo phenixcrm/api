@@ -98,8 +98,6 @@ public class Pop
       .$("id", productLine.id)
       .$("abbreviation", productLine.getAbbreviation())
       .$("name", productLine.getName()));
-
-
     map.$("direction", call.getDirection());
     map.$("source", call.getSource());
     /* todo: implement referral tracking

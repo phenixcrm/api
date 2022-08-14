@@ -27,18 +27,18 @@ import static net.inetalliance.funky.StringFun.isNotEmpty;
 import static net.inetalliance.potion.Locator.forEach;
 
 public class ReminderHandler
-    implements JsonMessageHandler, Runnable {
+  implements JsonMessageHandler, Runnable {
 
   private static final Log log = Log.getInstance(ReminderHandler.class);
   public static ReminderHandler $;
   private final Map<Integer, JsonList> msgs;
   private final Lock lock;
   private final ScheduledExecutorService scheduler = Executors
-      .newSingleThreadScheduledExecutor((r)->{
-        var t =new Thread(r);
-        t.setDaemon(true);
-        return t;
-      });
+    .newSingleThreadScheduledExecutor((r) -> {
+      var t = new Thread(r);
+      t.setDaemon(true);
+      return t;
+    });
 
   ReminderHandler() {
     $ = this;
@@ -68,7 +68,7 @@ public class ReminderHandler
   }
 
   private void broadcast(Ticket ticket) {
-    if(ticket != null) {
+    if (ticket != null) {
       lock.lock();
       try {
         msgs.remove(ticket.id());
@@ -89,19 +89,21 @@ public class ReminderHandler
     }
     final Address billing = c.getBilling();
     if (billing != null && isNotEmpty(billing.getPhone()) && (shipping == null || !Objects
-        .equals(billing.getPhone(),
-            (shipping.getPhone())))) {
+      .equals(billing.getPhone(),
+        (shipping.getPhone())))) {
       dial.add(label("Billing", billing.getPhone()));
     }
     msgs.get(o.getAssignedTo().id)
-        .add(new JsonMap().$("id", o.id)
-            .$("reminder", o.getReminder())
-            .$("heat", o.getHeat())
-            .$("dial", dial)
-            .$("contact", of(o.getContact()).map(Surnamed::getFullName).orElse(""))
-            .$("business", o.getBusiness().getAbbreviation())
-            .$("productLine", o.getProductLine().getAbbreviation())
-            .$("amount", o.getAmount()));
+      .add(new JsonMap().$("id", o.id)
+        .$("reminder", o.getReminder())
+        .$("heat", o.getHeat())
+        .$("dial", dial)
+        .$("contact", of(o.getContact()).map(Surnamed::getFullName).orElse(""))
+        .$("business", o.getBusiness().getAbbreviation())
+        .$("productLine", JsonMap.$()
+          .$("name", o.getProductLine().getName())
+          .$("abbreviation", o.getProductLine().getAbbreviation()))
+        .$("amount", o.getAmount()));
   }
 
   @Override

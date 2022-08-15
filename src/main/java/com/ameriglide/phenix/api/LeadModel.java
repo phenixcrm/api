@@ -102,8 +102,6 @@ public class LeadModel
 
   }
 
-
-
   public static Query<Opportunity> buildSearchQuery(final Query<Opportunity> query,
                                                     String searchQuery) {
     searchQuery = searchQuery.replaceAll("[-()]", "");
@@ -141,6 +139,25 @@ public class LeadModel
     return json(o);
   }
 
+  protected Query<Opportunity> sort(Query<Opportunity> base, SortField f) {
+    return switch (f.field) {
+      case "productLine" -> Query.all(ProductLine.class)
+        .join(Opportunity.class, "productLine")
+        .and(base)
+        .orderBy("productLine.name", f.direction, false);
+      case "customer" -> Query.all(Contact.class)
+        .join(Opportunity.class, "contact")
+        .and(base)
+        .orderBy("contact.lastName", f.direction,false)
+        .orderBy("contact.firstName", ASCENDING,false);
+      case "state" -> Query.all(Contact.class)
+        .join(Opportunity.class, "contact")
+        .and(base)
+        .orderBy("shipping_state", f.direction,false);
+      default -> base.orderBy(f.field, f.direction);
+    };
+  }
+
   @Override
   public Query<Opportunity> all(final Class<Opportunity> type, final HttpServletRequest request) {
     final boolean support = request.getParameter("support") != null;
@@ -155,14 +172,15 @@ public class LeadModel
     }
     Query<Opportunity> query;
     if (support) {
-      query = isClosed.orderBy(sort.field, sort.direction);
+      query = isClosed;
     } else if (review) {
-      query = Query.all(Opportunity.class).orderBy(sort.field, sort.direction);
+      query = Query.all(Opportunity.class);
     } else if (digis) {
-      query = Opportunity.withSources(Set.of(Source.FORM, Source.SOCIAL)).orderBy(sort.field, sort.direction);
+      query = Opportunity.withSources(Set.of(Source.FORM, Source.SOCIAL));
     } else {
-      query = Opportunity.withAgent(loggedIn).orderBy(sort.field, sort.direction);
+      query = Opportunity.withAgent(loggedIn);
     }
+    query = sort(query, sort);
 
     final String[] pls = request.getParameterValues("pl");
     if (pls != null && pls.length > 0) {

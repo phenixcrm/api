@@ -16,10 +16,11 @@ import jakarta.servlet.http.HttpServletResponse;
 import net.inetalliance.log.Log;
 import net.inetalliance.potion.Locator;
 
+import java.time.LocalDateTime;
 import java.util.Objects;
 
 import static com.ameriglide.phenix.servlet.TwiMLServlet.asParty;
-import static java.time.LocalDateTime.now;
+import static com.ameriglide.phenix.types.CallDirection.INTERNAL;
 import static net.inetalliance.funky.Funky.of;
 import static net.inetalliance.funky.StringFun.isEmpty;
 import static net.inetalliance.funky.StringFun.isNotEmpty;
@@ -34,7 +35,7 @@ public class VoiceDial extends PhenixServlet {
 
     var agent = request.getParameter("agent");
     var number = request.getParameter("number");
-    CNAM.CallerIdSource cid  ;
+    CNAM.CallerIdSource cid;
 
     TwiMLServlet.Party called;
     if (isEmpty(agent)) {
@@ -47,24 +48,24 @@ public class VoiceDial extends PhenixServlet {
     }
     // create new Call with twilio
     var from = new Sip(asParty(Auth.getAgent(request)).sip());
-    var call =
-      new Call(Startup.router.call(from, "/twilio/voice/dial", request.getQueryString()).getSid());
     var callingAgent = Auth.getAgent(request);
-    call.setAgent(callingAgent);
-    call.setDirection(called.isAgent() ? CallDirection.INTERNAL : CallDirection.OUTBOUND);
-    call.setCreated(now());
-    call.setResolution(Resolution.ACTIVE);
     var lead = request.getParameter("lead");
+
+    var call = new Call();
+    call.setAgent(callingAgent);
+    call.setDirection(called.isAgent() ? INTERNAL : CallDirection.OUTBOUND);
+    call.setCreated(LocalDateTime.now());
+    call.setResolution(Resolution.ACTIVE);
     if (isNotEmpty(lead)) {
       var opp = $(new Opportunity(Integer.valueOf(lead)));
       if (opp == null) {
         throw new NotFoundException();
       }
       call.setOpportunity(opp);
-      var b = opp.getBusiness();
-      call.setBusiness(b);
+      call.setBusiness(opp.getBusiness());
       cid =
-        of($1(SkillQueue.withProduct(opp.getProductLine()).and(SkillQueue.withBusiness(b))))
+        of($1(SkillQueue.withProduct(opp.getProductLine())
+          .and(SkillQueue.withBusiness(opp.getBusiness()))))
           .stream()
           .filter(Objects::nonNull)
           .peek(call::setQueue)
@@ -78,8 +79,10 @@ public class VoiceDial extends PhenixServlet {
       cid = $1(VerifiedCallerId.isDefault);
     }
     cid.setPhoneNumber(call);
-    Locator.create("VoiceDial", call);
-    log.info("New API dial %s %s -> %s", call.sid, callingAgent.getSipUser(), called.endpoint());
+    call.sid = Startup.router.call(cid.getPhoneNumber(), from, "/twilio/voice/dial",
+      request.getQueryString()).getSid();
+    Locator.create("VoiceDial",call);
+    log.info("New API dial %s %s -> %s", call, callingAgent.getSipUser(), called.endpoint());
     response.sendError(HttpServletResponse.SC_NO_CONTENT);
   }
 

@@ -34,7 +34,10 @@ public class AgentModel extends ListableModel<Agent> {
     if(request.getParameter("sales") != null) {
       query = query.and(Agent.sales);
     }
-    return query.orderBy("lastName", ASCENDING).orderBy("firstName", ASCENDING);
+    return query
+      .or(Query.is(Agent.system()))
+      .orderBy("firstName", ASCENDING)
+      .orderBy("lastName", ASCENDING);
   }
 
   @Override

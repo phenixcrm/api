@@ -119,7 +119,6 @@ public class CallModel
             leads.add(new JsonMap().$("id", o.id)
               .$("stage", o.getHeat())
               .$("amount", o.getAmount())
-              .$("estimatedClose", o.getEstimatedClose())
               .$("saleDate", o.getSaleDate())
               .$("productLine", of(o.getProductLine()).map(ProductLine::getName).orElse(null))
               .$("created", o.getCreated())

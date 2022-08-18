@@ -14,7 +14,6 @@ import net.inetalliance.potion.query.Query;
 import net.inetalliance.types.json.Json;
 import net.inetalliance.types.json.JsonMap;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -85,7 +84,6 @@ public class OpportunityModel
     if ("0".equals(key.id)) {
       final var opp = new Opportunity();
       opp.setHeat(Heat.HOT);
-      opp.setEstimatedClose(LocalDate.now());
       opp.setAssignedTo(Auth.getAgent(request));
       final var callKey = request.getParameter("call");
       if (isEmpty(callKey)) {

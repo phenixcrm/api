@@ -188,6 +188,11 @@ public class CreateLead extends PhenixServlet {
       n.setNote("Customer submitted web form");
       create("CreateLead", n);
     }
+    var call = dispatch(product, opp, contact, q);
+    respond(response, new JsonMap().$("call", call.sid).$("opportunity", opp.id));
+  }
+
+  private static Call dispatch(ProductLine product, Opportunity opp, Contact contact, SkillQueue q) {
     var taskData = new JsonMap()
       .$("type", "sales")
       .$("product", product.getAbbreviation())
@@ -200,7 +205,7 @@ public class CreateLead extends PhenixServlet {
     call.setCreated(LocalDateTime.now());
     call.setDirection(CallDirection.VIRTUAL);
     call.setBusiness(q.getBusiness());
-    call.setSource(FORM);
+    call.setSource(opp.getSource());
     call.setResolution(Resolution.ACTIVE);
     call.setName("%s,%s".formatted(contact.getLastName(), contact.getFirstName()));
     call.setPhone(contact.getPhone());
@@ -209,7 +214,7 @@ public class CreateLead extends PhenixServlet {
     call.setOpportunity(opp);
     call.setZip(contact.getShipping().getPostalCode());
     create("CreateLead", call);
-    respond(response, new JsonMap().$("call", call.sid).$("opportunity", opp.id));
+    return call;
   }
 
   private static final Log log = new Log();

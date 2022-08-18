@@ -16,6 +16,7 @@ import net.inetalliance.potion.query.Query;
 import net.inetalliance.types.json.Json;
 import net.inetalliance.types.json.JsonMap;
 
+import static com.ameriglide.phenix.twilio.TaskRouter.toE164;
 import static net.inetalliance.funky.StringFun.isEmpty;
 import static net.inetalliance.funky.StringFun.isNotEmpty;
 import static net.inetalliance.potion.Locator.$1;
@@ -102,6 +103,8 @@ public class ContactModel
         } else if (lead) {
             return lead(contact);
         }
-        return super.toJson(request, contact);
+        var json = (JsonMap) super.toJson(request, contact);
+        json.$("phone",toE164(contact.getPhone()));
+        return json;
     }
 }

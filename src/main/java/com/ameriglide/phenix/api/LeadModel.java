@@ -20,10 +20,7 @@ import net.inetalliance.types.json.JsonList;
 import net.inetalliance.types.json.JsonMap;
 
 import java.io.IOException;
-import java.time.DayOfWeek;
-import java.time.Instant;
-import java.time.LocalDate;
-import java.time.ZonedDateTime;
+import java.time.*;
 import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.Set;
@@ -33,6 +30,7 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import static com.ameriglide.phenix.common.Opportunity.*;
+import static com.ameriglide.phenix.twilio.TaskRouter.toUS10;
 import static java.util.regex.Pattern.CASE_INSENSITIVE;
 import static java.util.regex.Pattern.compile;
 import static java.util.stream.Collectors.toList;
@@ -58,9 +56,17 @@ public class LeadModel
     final JsonMap json = Info.$(o).toJson(o);
     if (o.id != null) {
       final Contact c = o.getContact();
+      var q = Call.withContact(c);
+      int calls = Locator.count(q);
+      var contact = new JsonMap();
+      if (calls > 0) {
+        contact.$("lastContact", Locator.$$(q, Aggregate.MAX, LocalDateTime.class, "created"));
+        contact.$("firstContact", Locator.$$(q, Aggregate.MIN, LocalDateTime.class, "created"));
+      }
       var extra = new JsonMap()
-        .$("contact", new JsonMap()
-          .$("name", c.getFullName()))
+        .$("contact", contact
+          .$("name", c.getFullName())
+          .$("calls", calls))
         .$("state", c.getState() == null
           ? null
           : c.getState().getAbbreviation())
@@ -91,7 +97,7 @@ public class LeadModel
     final Contact contact = o.getContact();
     final String phone = contact.getPhone();
     if (isNotEmpty(phone)) {
-      final AreaCodeTime time = AreaCodeTime.getAreaCodeTime(phone);
+      final AreaCodeTime time = AreaCodeTime.getAreaCodeTime(toUS10(phone));
       if (time == null) {
         json.put("localTime", (Integer) null);
       } else {
@@ -148,12 +154,12 @@ public class LeadModel
       case "customer" -> Query.all(Contact.class)
         .join(Opportunity.class, "contact")
         .and(base)
-        .orderBy("contact.lastName", f.direction,false)
-        .orderBy("contact.firstName", ASCENDING,false);
+        .orderBy("contact.lastName", f.direction, false)
+        .orderBy("contact.firstName", ASCENDING, false);
       case "state" -> Query.all(Contact.class)
         .join(Opportunity.class, "contact")
         .and(base)
-        .orderBy("shipping_state", f.direction,false);
+        .orderBy("shipping_state", f.direction, false);
       default -> base.orderBy(f.field, f.direction);
     };
   }
@@ -176,7 +182,7 @@ public class LeadModel
     } else if (review) {
       query = Query.all(Opportunity.class);
     } else if (digis) {
-      query = Opportunity.withSources(Set.of(Source.FORM, Source.SOCIAL));
+      query = Opportunity.withSources(Set.of(Source.FORM, Source.SOCIAL, Source.REFERRAL));
     } else {
       query = Opportunity.withAgent(loggedIn);
     }

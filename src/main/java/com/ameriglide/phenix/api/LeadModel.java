@@ -72,8 +72,9 @@ public class LeadModel extends ListableModel<Opportunity> {
                     .$("productLine", new JsonMap()
                             .$("name", o.getProductLine().getName())
                             .$("abbreviation", o.getProductLine().getAbbreviation()))
-                    .$("assignedTo",
-                            new JsonMap().$("name", o.getAssignedTo().getFullName()).$("id", o.getAssignedTo().id))
+                    .$("assignedTo", new JsonMap()
+                            .$("name", o.getAssignedTo().getLastNameFirstInitial())
+                            .$("id", o.getAssignedTo().id))
                     .$("business", new JsonMap()
                             .$("name", o.getBusiness().getName())
                             .$("abbreviation", o.getBusiness().getAbbreviation()));
@@ -231,6 +232,12 @@ public class LeadModel extends ListableModel<Opportunity> {
                     .join(Opportunity.class, "contact")
                     .and(base)
                     .orderBy("shipping_state", f.direction, false);
+            case "assignedTo" -> Query
+                    .all(Agent.class)
+                    .join(Opportunity.class, "assignedTo")
+                    .and(base)
+                    .orderBy("agent.lastname", f.direction, false)
+                    .orderBy("agent.firstName", ASCENDING);
             default -> base.orderBy(f.field, f.direction);
         };
     }

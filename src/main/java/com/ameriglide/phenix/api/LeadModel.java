@@ -235,7 +235,7 @@ public class LeadModel extends ListableModel<Opportunity> {
             case "assignedTo" -> Query
                     .all(Agent.class)
                     .join(Opportunity.class, "assignedTo")
-                    .and(base)
+
                     .orderBy("agent.lastname", f.direction, false)
                     .orderBy("agent.firstName", ASCENDING);
             default -> base.orderBy(f.field, f.direction);

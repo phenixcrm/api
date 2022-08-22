@@ -8,21 +8,24 @@ import jakarta.servlet.annotation.WebListener;
 
 @WebListener
 public class Startup extends com.ameriglide.phenix.servlet.Startup {
-  public Startup() {
 
-  }
+    public Startup() {
 
-  @Override
-  public void contextInitialized(ServletContextEvent sce) {
-    super.contextInitialized(sce);
-    SessionHandler.init(router);
-    Events.handler = SessionHandler::new;
-  }
+    }
 
-  @Override
-  public void contextDestroyed(ServletContextEvent sce) {
-    super.contextDestroyed(sce);
-    HudHandler.shutdown();
-  }
+    @Override
+    public void contextInitialized(ServletContextEvent sce) {
+        super.contextInitialized(sce);
+        SessionHandler.init(router);
+        Events.handler = SessionHandler::new;
+
+    }
+
+    @Override
+    public void contextDestroyed(ServletContextEvent sce) {
+        super.contextDestroyed(sce);
+        HudHandler.shutdown();
+
+    }
 
 }

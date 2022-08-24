@@ -68,6 +68,7 @@ public class Auth extends HttpServlet {
     if(manager) {
       json.$("roles", JsonList.collect(Stream.of(new JsonString("manager"))));
     }
+    json.$("twilioApi", "https://api.twilio.com/2010-04-01/Accounts/%s".formatted(Startup.router.accountSid));
     return json;
   }
 

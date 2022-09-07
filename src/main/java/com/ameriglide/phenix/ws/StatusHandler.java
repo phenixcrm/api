@@ -50,7 +50,7 @@ public class StatusHandler extends PhenixServlet
         } else {
           throw new RuntimeException(String.format("Unknown activity, %s", current));
         }
-        var w = router.setActivity(ticket,newActivity);
+        var w = router.setActivity(ticket.sid(),newActivity);
         state.put("activity",w.getActivitySid());
         router.byAgent.put(w.getSid(),w.getAvailable());
       }

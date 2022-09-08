@@ -124,11 +124,7 @@ public class Model<T>
         if (isMultipart(request)) {
           final JsonMap propertyMap = data.getMap(property.field.getName());
           final String filename = propertyMap == null ? null : propertyMap.get("file");
-          final ValidationErrors uploadErrors = filename == null
-              ? new ValidationErrors()
-              : Validator
-                  .upload(request.getLocale(), property.toValidationProperty(), new File(filename),
-                      parse(propertyMap.get("contentType")));
+          final ValidationErrors uploadErrors = new ValidationErrors();  //todo: this doesn't check anything!
           if (uploadErrors.isEmpty()) {
             property.setIf(t, data);
           } else {

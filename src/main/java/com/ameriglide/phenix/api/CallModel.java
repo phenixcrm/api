@@ -2,7 +2,6 @@ package com.ameriglide.phenix.api;
 
 import com.ameriglide.phenix.Auth;
 import com.ameriglide.phenix.common.*;
-import com.ameriglide.phenix.core.Log;
 import com.ameriglide.phenix.core.Optionals;
 import com.ameriglide.phenix.model.Key;
 import com.ameriglide.phenix.model.ListableModel;
@@ -19,6 +18,7 @@ import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import net.inetalliance.funky.Funky;
+import net.inetalliance.log.Log;
 import net.inetalliance.potion.Locator;
 import net.inetalliance.potion.info.Info;
 import net.inetalliance.potion.query.Query;
@@ -79,14 +79,14 @@ public class CallModel
           .$("phone", split[1])
           .$("postalCode", split[2]));
       }
-      log.info(()->"Loaded %d simulated contacts from %s".formatted(simContacts.size(), "/callsim-contacts.json"));
+      log.info("Loaded %d simulated contacts from %s", simContacts.size(), "/callsim-contacts.json");
 
     } catch (IOException e) {
       throw new ServletException(e);
     }
   }
 
-  private static final Log log = new Log();
+  private static final Log log = Log.getInstance(CallModel.class);
 
   @Override
   public Json toJson(final HttpServletRequest request, Call call) {

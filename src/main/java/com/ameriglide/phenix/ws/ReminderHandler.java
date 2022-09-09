@@ -4,8 +4,8 @@ import com.ameriglide.phenix.common.Address;
 import com.ameriglide.phenix.common.Contact;
 import com.ameriglide.phenix.common.Opportunity;
 import com.ameriglide.phenix.common.Ticket;
-import com.ameriglide.phenix.core.Log;
 import jakarta.websocket.Session;
+import net.inetalliance.log.Log;
 import net.inetalliance.types.Surnamed;
 import net.inetalliance.types.json.JsonList;
 import net.inetalliance.types.json.JsonMap;
@@ -29,7 +29,7 @@ import static net.inetalliance.potion.Locator.forEach;
 public class ReminderHandler
   implements JsonMessageHandler, Runnable {
 
-  private static final Log log = new Log();
+  private static final Log log = Log.getInstance(ReminderHandler.class);
   public static ReminderHandler $;
   private final Map<Integer, JsonList> msgs;
   private final Lock lock;

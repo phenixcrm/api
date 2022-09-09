@@ -24,6 +24,7 @@ public class Startup extends com.ameriglide.phenix.servlet.Startup {
     @Override
     public void contextDestroyed(ServletContextEvent sce) {
         super.contextDestroyed(sce);
+        SessionHandler.destroy();
         HudHandler.shutdown();
 
     }

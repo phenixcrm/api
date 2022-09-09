@@ -2,6 +2,7 @@ package com.ameriglide.phenix.api;
 
 import com.ameriglide.phenix.Auth;
 import com.ameriglide.phenix.common.*;
+import com.ameriglide.phenix.core.Log;
 import com.ameriglide.phenix.servlet.PhenixServlet;
 import com.ameriglide.phenix.servlet.Startup;
 import com.ameriglide.phenix.servlet.TwiMLServlet;
@@ -13,7 +14,6 @@ import com.twilio.type.Sip;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import net.inetalliance.log.Log;
 import net.inetalliance.potion.Locator;
 
 import java.time.LocalDateTime;
@@ -30,61 +30,60 @@ import static net.inetalliance.potion.Locator.$1;
 @WebServlet({"/api/voice/dial", "/api/dial"})
 public class VoiceDial extends PhenixServlet {
 
-  @Override
-  protected void get(HttpServletRequest request, HttpServletResponse response) throws Exception {
+    private static final Log log = new Log();
 
-    var agent = request.getParameter("agent");
-    var number = request.getParameter("number");
-    CNAM.CallerIdSource cid;
+    @Override
+    protected void get(HttpServletRequest request, HttpServletResponse response) throws Exception {
 
-    TwiMLServlet.Party called;
-    if (isEmpty(agent)) {
-      if (isEmpty(number)) {
-        throw new IllegalArgumentException();
-      }
-      called = asParty(new PhoneNumber(number));
-    } else {
-      called = asParty($(new Agent(Integer.parseInt(agent))));
+        var agent = request.getParameter("agent");
+        var number = request.getParameter("number");
+        CNAM.CallerIdSource cid;
+
+        TwiMLServlet.Party called;
+        if (isEmpty(agent)) {
+            if (isEmpty(number)) {
+                throw new IllegalArgumentException();
+            }
+            called = asParty(new PhoneNumber(number));
+        } else {
+            called = asParty($(new Agent(Integer.parseInt(agent))));
+        }
+        // create new Call with twilio
+        var from = new Sip(asParty(Auth.getAgent(request)).sip());
+        var callingAgent = Auth.getAgent(request);
+        var lead = request.getParameter("lead");
+
+        var call = new Call();
+        call.setAgent(callingAgent);
+        call.setDirection(called.isAgent() ? INTERNAL:CallDirection.OUTBOUND);
+        call.setCreated(LocalDateTime.now());
+        call.setResolution(Resolution.ACTIVE);
+        if (isNotEmpty(lead)) {
+            var opp = $(new Opportunity(Integer.valueOf(lead)));
+            if (opp==null) {
+                throw new NotFoundException();
+            }
+            call.setOpportunity(opp);
+            call.setBusiness(opp.getBusiness());
+            cid = of($1(SkillQueue.withProduct(opp.getProductLine()).and(SkillQueue.withBusiness(opp.getBusiness()))))
+                    .stream()
+                    .filter(Objects::nonNull)
+                    .peek(call::setQueue)
+                    .map(q -> $1(VerifiedCallerId.withQueue(q)))
+                    .filter(Objects::nonNull)
+                    .findFirst()
+                    .orElseGet(() -> $1(VerifiedCallerId.isDefault));
+        } else if (called.isAgent()) {
+            cid = callingAgent;
+        } else {
+            cid = $1(VerifiedCallerId.isDefault);
+        }
+        cid.setPhoneNumber(call);
+        call.sid = Startup.router
+                .call(cid.getPhoneNumber(), from, "/twilio/voice/dial", request.getQueryString())
+                .getSid();
+        Locator.create("VoiceDial", call);
+        log.info(() -> "New API dial %s %s -> %s".formatted(call, callingAgent.getSipUser(), called.endpoint()));
+        response.sendError(HttpServletResponse.SC_NO_CONTENT);
     }
-    // create new Call with twilio
-    var from = new Sip(asParty(Auth.getAgent(request)).sip());
-    var callingAgent = Auth.getAgent(request);
-    var lead = request.getParameter("lead");
-
-    var call = new Call();
-    call.setAgent(callingAgent);
-    call.setDirection(called.isAgent() ? INTERNAL : CallDirection.OUTBOUND);
-    call.setCreated(LocalDateTime.now());
-    call.setResolution(Resolution.ACTIVE);
-    if (isNotEmpty(lead)) {
-      var opp = $(new Opportunity(Integer.valueOf(lead)));
-      if (opp == null) {
-        throw new NotFoundException();
-      }
-      call.setOpportunity(opp);
-      call.setBusiness(opp.getBusiness());
-      cid =
-        of($1(SkillQueue.withProduct(opp.getProductLine())
-          .and(SkillQueue.withBusiness(opp.getBusiness()))))
-          .stream()
-          .filter(Objects::nonNull)
-          .peek(call::setQueue)
-          .map(q -> $1(VerifiedCallerId.withQueue(q)))
-          .filter(Objects::nonNull)
-          .findFirst()
-          .orElseGet(() -> $1(VerifiedCallerId.isDefault));
-    } else if (called.isAgent()) {
-      cid = callingAgent;
-    } else {
-      cid = $1(VerifiedCallerId.isDefault);
-    }
-    cid.setPhoneNumber(call);
-    call.sid = Startup.router.call(cid.getPhoneNumber(), from, "/twilio/voice/dial",
-      request.getQueryString()).getSid();
-    Locator.create("VoiceDial",call);
-    log.info("New API dial %s %s -> %s", call, callingAgent.getSipUser(), called.endpoint());
-    response.sendError(HttpServletResponse.SC_NO_CONTENT);
-  }
-
-  private static final Log log = Log.getInstance(VoiceDial.class);
 }

@@ -54,9 +54,11 @@ public class Assignment extends PhenixServlet {
         .$("to", TwiMLServlet.asParty(agent).sip()));
     } else if(attributes.containsKey("Lead")) {
       var opp = Locator.$(new Opportunity(Integer.valueOf(attributes.get("Lead"))));
-      update(opp, "Assignment", copy -> {
-        copy.setAssignedTo(agent);
-      });
+      if(Agent.system().equals(opp.getAssignedTo())) {
+        update(opp, "Assignment", copy -> {
+          copy.setAssignedTo(agent);
+        });
+      }
       PhenixServlet.respond(response, new JsonMap().$("instruction","accept"));
       Startup.router.completeTask(task);
     }

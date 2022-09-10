@@ -54,6 +54,9 @@ public class Model<T>
   public Model() {
     this(Pattern.compile(".*/model/([^/]*)/?(.*)?"));
   }
+  static {
+    Validator.init();
+  }
 
   protected Model(final Pattern pattern) {
     this.pattern = pattern;

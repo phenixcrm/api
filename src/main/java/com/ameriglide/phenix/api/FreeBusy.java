@@ -17,7 +17,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 import static com.ameriglide.phenix.common.Opportunity.withAgent;
-import static net.inetalliance.funky.StringFun.isEmpty;
+import static com.ameriglide.phenix.core.Strings.isEmpty;
 import static net.inetalliance.potion.Locator.forEach;
 import static net.inetalliance.sql.OrderBy.Direction.ASCENDING;
 

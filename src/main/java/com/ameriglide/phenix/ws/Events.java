@@ -1,13 +1,14 @@
 package com.ameriglide.phenix.ws;
 
 import com.ameriglide.phenix.common.Ticket;
+import com.ameriglide.phenix.core.Iterables;
+import com.ameriglide.phenix.core.Log;
+import com.ameriglide.phenix.core.Optionals;
 import jakarta.servlet.http.HttpSession;
 import jakarta.websocket.*;
 import jakarta.websocket.server.HandshakeRequest;
 import jakarta.websocket.server.ServerEndpoint;
 import jakarta.websocket.server.ServerEndpointConfig;
-import net.inetalliance.funky.Funky;
-import net.inetalliance.log.Log;
 import net.inetalliance.types.json.Json;
 import net.inetalliance.types.json.JsonMap;
 
@@ -15,15 +16,15 @@ import java.io.IOException;
 import java.util.*;
 import java.util.function.Function;
 
-import static net.inetalliance.log.Log.getInstance;
 
 @ServerEndpoint(value = "/events", configurator = Events.Configurator.class)
 public class Events
   extends Endpoint {
 
-  private static final Log log = getInstance(Events.class);
+  private static final Log log = new Log();
   public static Function<Session, MessageHandler> handler = session ->
-    (MessageHandler.Whole<String>) message -> log.debug("session [%s] new message %s", session.getId(), message);
+    (MessageHandler.Whole<String>) message -> log.debug(()->"session [%s] new message %s".formatted(
+            session.getId(), message));
   private static final Map<Integer, List<Session>> sessions = Collections
     .synchronizedMap(new HashMap<>());
 
@@ -53,7 +54,7 @@ public class Events
           session.getBasicRemote().sendText(Json.ugly(new JsonMap().$("type", type).$("msg", msg)));
         }
       } catch (IOException e) {
-        log.debug("cannot write to closed session for %s", getTicket(session).principal());
+        log.debug(()->"cannot write to closed session for %s".formatted(getTicket(session).principal()));
       }
     }
   }
@@ -61,7 +62,7 @@ public class Events
   public static void broadcast(final String type, final Integer principal, final Json msg) {
     if (principal == null) {
       // tell everyone
-      sessions.values().stream().flatMap(Funky::stream)
+      sessions.values().stream().flatMap(Iterables::stream)
         .forEach(session -> send(session, type, msg));
     } else {
       // tell only the sockets for that agent
@@ -79,7 +80,7 @@ public class Events
     var ticket = getTicket(session);
     if (ticket != null) {
       sessions.computeIfAbsent(ticket.id(), u -> Collections.synchronizedList(new LinkedList<>())).add(session);
-      log.trace("%s connected", ticket.principal());
+      log.trace(()->"%s connected".formatted(ticket.principal()));
       session.addMessageHandler(handler.apply(session));
     }
   }
@@ -88,8 +89,8 @@ public class Events
   public void onClose(final Session session, final CloseReason closeReason) {
     var ticket = getTicket(session);
     if (ticket != null) {
-        Funky.of(sessions.get(ticket.id())).ifPresent(l -> l.remove(session));
-        log.trace("%s disconnected", ticket.principal());
+        Optionals.of(sessions.get(ticket.id())).ifPresent(l -> l.remove(session));
+        log.trace(()->"%s disconnected".formatted(ticket.principal()));
     }
   }
 

@@ -3,21 +3,22 @@ package com.ameriglide.phenix.api;
 import com.ameriglide.phenix.common.ProductLine;
 import com.ameriglide.phenix.common.ScriptNode;
 import com.ameriglide.phenix.common.ScriptRoot;
-import com.ameriglide.phenix.servlet.exception.BadRequestException;
-import com.ameriglide.phenix.servlet.exception.NotFoundException;
 import com.ameriglide.phenix.model.Key;
 import com.ameriglide.phenix.model.Listable;
 import com.ameriglide.phenix.model.TypeModel;
+import com.ameriglide.phenix.servlet.exception.BadRequestException;
+import com.ameriglide.phenix.servlet.exception.NotFoundException;
 import com.ameriglide.phenix.types.ScriptNodeType;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import net.inetalliance.funky.StringFun;
 import net.inetalliance.potion.Locator;
 import net.inetalliance.potion.info.Info;
 import net.inetalliance.potion.query.Query;
 import net.inetalliance.types.json.Json;
 import net.inetalliance.types.json.JsonMap;
 
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -92,6 +93,6 @@ public class ScriptRootModel
 
   @Override
   protected Key<ScriptRoot> getKey(final Matcher m) {
-    return Key.$(ScriptRoot.class, StringFun.utf8UrlDecode(m.group(2)));
+    return Key.$(ScriptRoot.class, URLDecoder.decode(m.group(2), StandardCharsets.UTF_8));
   }
 }

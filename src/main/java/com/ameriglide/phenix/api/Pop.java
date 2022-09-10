@@ -3,13 +3,12 @@ package com.ameriglide.phenix.api;
 import com.ameriglide.phenix.Auth;
 import com.ameriglide.phenix.common.*;
 import com.ameriglide.phenix.core.Optionals;
+import com.ameriglide.phenix.core.Strings;
 import com.ameriglide.phenix.model.Key;
 import com.ameriglide.phenix.model.TypeModel;
 import com.ameriglide.phenix.twilio.TaskRouter;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServletRequest;
-import net.inetalliance.funky.Funky;
-import net.inetalliance.funky.StringFun;
 import net.inetalliance.potion.query.Query;
 import net.inetalliance.potion.query.Search;
 import net.inetalliance.types.geopolitical.Country;
@@ -20,8 +19,9 @@ import net.inetalliance.types.json.JsonMap;
 import java.util.Comparator;
 import java.util.regex.Pattern;
 
+import static com.ameriglide.phenix.core.Strings.isNotEmpty;
+import static com.ameriglide.phenix.core.Strings.titlecase;
 import static com.ameriglide.phenix.types.CallDirection.OUTBOUND;
-import static net.inetalliance.funky.StringFun.titleCase;
 import static net.inetalliance.potion.Locator.forEach;
 
 
@@ -62,7 +62,7 @@ public class Pop
     var contact = Optionals.of(call.getOpportunity())
       .map(Opportunity::getContact)
       .orElseGet(call::getContact);
-    if (StringFun.isNotEmpty(q)) {
+    if (isNotEmpty(q)) {
       query = new Search<>(Contact.class, getParameter(request, "n", 10),
         q.split(" "));
     } else if (contact != null) {
@@ -118,17 +118,17 @@ public class Pop
       map.$("phone", phone);
       if (call.getDirection() != OUTBOUND) {
         String[] split = call.getName().split("[ ,]", 2);
-        map.$("lastName", titleCase(split[0]));
+        map.$("lastName", titlecase(split[0]));
         if (split.length == 2) {
-          map.$("firstName", titleCase(split[1]));
+          map.$("firstName", titlecase(split[1]));
         }
-        Funky.of(call.getState())
-          .or(() -> Funky.of(AreaCodeTime.getAreaCodeTime(phone))
+        Optionals.of(call.getState())
+          .or(() -> Optionals.of(AreaCodeTime.getAreaCodeTime(phone))
             .map(AreaCodeTime::getUsState))
           .ifPresent(s -> map.$("state", s));
       }
-      map.$("city", StringFun.titleCase(call.getCity()));
-      map.$("country", Funky.of(call.getCountry()).orElse(Country.UNITED_STATES));
+      map.$("city", Strings.titlecase(call.getCity()));
+      map.$("country", Optionals.of(call.getCountry()).orElse(Country.UNITED_STATES));
       map.$("postalCode", call.getZip());
     }
     return map;

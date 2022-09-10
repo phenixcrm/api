@@ -3,6 +3,8 @@ package com.ameriglide.phenix.api;
 import com.ameriglide.phenix.common.Call;
 import com.ameriglide.phenix.common.Leg;
 import com.ameriglide.phenix.common.Opportunity;
+import com.ameriglide.phenix.core.Optionals;
+import com.ameriglide.phenix.core.Strings;
 import com.ameriglide.phenix.model.Listable;
 import com.ameriglide.phenix.servlet.PhenixServlet;
 import com.ameriglide.phenix.servlet.exception.BadRequestException;
@@ -10,7 +12,6 @@ import com.ameriglide.phenix.servlet.exception.NotFoundException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import net.inetalliance.funky.Funky;
 import net.inetalliance.potion.Locator;
 import net.inetalliance.potion.info.Info;
 import net.inetalliance.potion.query.Query;
@@ -36,7 +37,7 @@ public class CallHistoryModel extends PhenixServlet {
 
   @Override
   protected void get(HttpServletRequest request, HttpServletResponse response) throws Exception {
-    var opp = Funky.matcher(id).apply(request.getRequestURI())
+    var opp = Strings.matcher(id).apply(request.getRequestURI())
       .map(m -> m.group(1))
       .map(Integer::parseInt)
       .map(Opportunity::new)
@@ -64,14 +65,14 @@ public class CallHistoryModel extends PhenixServlet {
           .$("direction")
           .$("transcription");
         Info.$(call).fill(call, json);
-        Funky.of(call.getBusiness())
+        Optionals.of(call.getBusiness())
           .ifPresent(b -> json.$("business",
             JsonMap
               .$()
               .$("name", b.getName())
               .$("abbreviation", b.getAbbreviation())));
         json.$(call.getDirection() == OUTBOUND ? "to" : "from", call.getRemoteCaller().toDisplayName());
-        Funky.of(call.getAgent())
+        Optionals.of(call.getAgent())
           .ifPresent(a -> json.$(call.getDirection() == OUTBOUND ? "from" : "to", a.getFullName()));
         final JsonList talkList = new JsonList();
         json.put("talkTime", talkList);

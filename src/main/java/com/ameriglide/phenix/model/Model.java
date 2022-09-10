@@ -1,16 +1,16 @@
 package com.ameriglide.phenix.model;
 
 import com.ameriglide.phenix.Auth;
+import com.ameriglide.phenix.core.Classes;
+import com.ameriglide.phenix.core.Log;
+import com.ameriglide.phenix.core.Optionals;
+import com.ameriglide.phenix.core.Strings;
 import com.ameriglide.phenix.servlet.PhenixServlet;
 import com.ameriglide.phenix.servlet.exception.*;
 import jakarta.servlet.ServletConfig;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import net.inetalliance.funky.ClassFun;
-import net.inetalliance.funky.Funky;
-import net.inetalliance.funky.StringFun;
-import net.inetalliance.log.Log;
 import net.inetalliance.potion.Locator;
 import net.inetalliance.potion.info.Info;
 import net.inetalliance.potion.info.Property;
@@ -32,15 +32,13 @@ import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import static com.ameriglide.phenix.core.Strings.isEmpty;
+import static com.ameriglide.phenix.core.Strings.isNotEmpty;
 import static jakarta.servlet.http.HttpServletResponse.SC_BAD_REQUEST;
 import static jakarta.servlet.http.HttpServletResponse.SC_INTERNAL_SERVER_ERROR;
 import static java.util.Collections.singleton;
-import static net.inetalliance.funky.StringFun.isEmpty;
-import static net.inetalliance.funky.StringFun.isNotEmpty;
 import static net.inetalliance.potion.Locator.read;
 import static net.inetalliance.potion.Locator.types;
-import static net.inetalliance.types.util.LocalizedMessages.$M;
-import static net.inetalliance.types.util.LocalizedMessages.add;
 import static net.inetalliance.types.www.ContentType.MULTIPART_FORMDATA;
 import static net.inetalliance.types.www.ContentType.parse;
 
@@ -48,7 +46,7 @@ public class Model<T>
     extends PhenixServlet {
 
   private static final JsonMap emptyMap = new JsonMap();
-  private static final transient Log log = Log.getInstance(Model.class);
+  private static final Log log = new Log();
   protected final Pattern pattern;
   private final File temporaryStorage = new File("/tmp");
   private File repository;
@@ -84,7 +82,7 @@ public class Model<T>
       setProperties(request, data, t, errors);
       if (isNotEmpty(key.id)) {
         final Property<T, ?> keyProperty = key.info.keys().findFirst().orElseThrow();
-        keyProperty.field.set(t, ClassFun.convert(keyProperty.type, key.id));
+        keyProperty.field.set(t, Classes.convert(keyProperty.type, key.id));
       }
       final Locale locale = request.getLocale();
       errors.add(Validator.create(locale, t));
@@ -102,7 +100,8 @@ public class Model<T>
         } catch (UniqueKeyError ue) {
           final String name = key.info.keys().findFirst().orElseThrow().field.getName();
           errors.put(name,
-              singleton($M(locale, "validation.uniqueKey", $M(locale, key.info.type), name)));
+              singleton(Validator.messages.get(locale, "validation.uniqueKey", Validator.messages.get(locale,
+                      key.info.type.getSimpleName()), name)));
           response.setStatus(SC_BAD_REQUEST);
           return errors.toJsonMap();
         }
@@ -138,7 +137,7 @@ public class Model<T>
   }
 
   public static String getRemoteUser(final HttpServletRequest request) {
-    return Funky.of(Auth.getTicket(request)).map(t->t.agent().getName()).orElse("");
+    return Optionals.of(Auth.getTicket(request)).map(t->t.agent().getName()).orElse("");
   }
 
   private static boolean isMultipart(final HttpServletRequest request) {
@@ -175,7 +174,6 @@ public class Model<T>
   public void init(final ServletConfig config)
       throws ServletException {
     super.init(config);
-    add(Locale.US, Model.class.getResource("/modelMessages.xml"));
 
   }
 
@@ -192,7 +190,7 @@ public class Model<T>
     }
     try {
       final Key<T> key = getKey(request);
-      log.trace("Model GET %s", key);
+      log.trace(()->"Model GET %s".formatted( key));
       if (isEmpty(key.id)) {
         respond(response, getAll(request));
       } else {
@@ -222,7 +220,7 @@ public class Model<T>
     try {
       final Key<T> key = getKey(request);
       if (key != null) {
-        log.trace("Model POST %s", key);
+        log.trace(()->"Model POST %s".formatted(key));
         respond(response, create(key, request, response));
       }
     } catch (PhenixServletException e) {
@@ -245,7 +243,7 @@ public class Model<T>
         if (isEmpty(key.id)) {
           throw new ForbiddenException(); // not allowing delete of all objects at this time
         } else {
-          log.trace("Model DELETE %s", key);
+          log.trace(()->"Model DELETE %s".formatted(key));
           final T t = lookup(key, request);
           if (!isDeleteAuthorized(request, t)) {
             throw new ForbiddenException();
@@ -300,7 +298,7 @@ public class Model<T>
         if (isEmpty(key.id)) {
           response.sendError(SC_BAD_REQUEST, "PUT called without an id");
         } else {
-          log.trace("Model PUT %s", key);
+          log.trace(()->"Model PUT %s".formatted(key));
           final T t = lookup(key, request);
           if (t == null) {
             throw new NotFoundException("Cannot find %s with key %s", key.type.getSimpleName(),
@@ -392,7 +390,7 @@ public class Model<T>
     final String typeName = matcher.group(1);
     final Class<T> type = (Class<T>) types.get(typeName);
     if (type == null) {
-      log.warning("Could not find persistent object type %s", typeName);
+      log.warn(()->"Could not find persistent object type %s".formatted(typeName));
     }
     return type;
   }
@@ -400,7 +398,7 @@ public class Model<T>
 
   private JsonMap parseUrlEncoded(final HttpServletRequest request)
       throws IOException {
-    String body = StringFun.readToString(request.getInputStream());
+    String body = Strings.readToString(request.getInputStream());
     if (body.endsWith("\n")) {
       body = body.substring(0, body.length() - 1);
     }

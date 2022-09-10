@@ -2,6 +2,7 @@ package com.ameriglide.phenix.api;
 
 import com.ameriglide.phenix.Auth;
 import com.ameriglide.phenix.common.*;
+import com.ameriglide.phenix.core.Log;
 import com.ameriglide.phenix.core.Optionals;
 import com.ameriglide.phenix.model.Key;
 import com.ameriglide.phenix.model.ListableModel;
@@ -17,8 +18,6 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import net.inetalliance.funky.Funky;
-import net.inetalliance.log.Log;
 import net.inetalliance.potion.Locator;
 import net.inetalliance.potion.info.Info;
 import net.inetalliance.potion.query.Query;
@@ -38,6 +37,8 @@ import java.util.List;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+import static com.ameriglide.phenix.core.Optionals.of;
+import static com.ameriglide.phenix.core.Strings.isEmpty;
 import static com.ameriglide.phenix.types.CallDirection.INTERNAL;
 import static com.ameriglide.phenix.types.CallDirection.QUEUE;
 import static com.ameriglide.phenix.types.Resolution.ACTIVE;
@@ -46,8 +47,6 @@ import static java.lang.String.format;
 import static java.lang.System.currentTimeMillis;
 import static java.util.regex.Pattern.compile;
 import static java.util.stream.Collectors.toSet;
-import static net.inetalliance.funky.Funky.of;
-import static net.inetalliance.funky.StringFun.isEmpty;
 import static net.inetalliance.potion.Locator.*;
 import static net.inetalliance.sql.OrderBy.Direction.ASCENDING;
 import static net.inetalliance.sql.OrderBy.Direction.DESCENDING;
@@ -79,14 +78,14 @@ public class CallModel
           .$("phone", split[1])
           .$("postalCode", split[2]));
       }
-      log.info("Loaded %d simulated contacts from %s", simContacts.size(), "/callsim-contacts.json");
+      log.info(()->"Loaded %d simulated contacts from %s".formatted(simContacts.size(), "/callsim-contacts.json"));
 
     } catch (IOException e) {
       throw new ServletException(e);
     }
   }
 
-  private static final Log log = Log.getInstance(CallModel.class);
+  private static final Log log = new Log();
 
   @Override
   public Json toJson(final HttpServletRequest request, Call call) {
@@ -209,8 +208,7 @@ public class CallModel
   public JsonMap create(final Key<Call> key, final HttpServletRequest request,
                         final HttpServletResponse response,
                         final JsonMap data) {
-    if (Funky.isTrue(data.getBoolean("simulated"))) {
-
+    if (Optionals.of(data.getBoolean("simulated")).orElse(false)) {
       final Agent manager = Auth.getAgent(request);
       if (!Auth.isTeamLeader(request)) {
         throw new ForbiddenException("%s tried to create a simulated call",
@@ -271,7 +269,7 @@ public class CallModel
     map.$("todo", call.isTodo());
     switch (call.getDirection()) {
       case OUTBOUND, QUEUE, VIRTUAL -> {
-        final Business business = Optionals.of(call.getBusiness()).orElseGet(Business.getDefault);
+        final Business business = of(call.getBusiness()).orElseGet(Business.getDefault);
         map.$("business",
           new JsonMap().$("name", business.getName()).$("id", business.id));
         if (call.getQueue() != null) {

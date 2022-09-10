@@ -16,7 +16,7 @@ import net.inetalliance.sql.DbVendor;
 import net.inetalliance.sql.Namer;
 import net.inetalliance.types.json.Json;
 
-import static net.inetalliance.funky.StringFun.isNotEmpty;
+import static com.ameriglide.phenix.core.Strings.isNotEmpty;
 import static net.inetalliance.sql.OrderBy.Direction.ASCENDING;
 
 @WebServlet("/api/objection/*")

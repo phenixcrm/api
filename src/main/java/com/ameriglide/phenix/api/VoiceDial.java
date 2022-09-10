@@ -2,6 +2,8 @@ package com.ameriglide.phenix.api;
 
 import com.ameriglide.phenix.Auth;
 import com.ameriglide.phenix.common.*;
+import com.ameriglide.phenix.core.Log;
+import com.ameriglide.phenix.core.Optionals;
 import com.ameriglide.phenix.servlet.PhenixServlet;
 import com.ameriglide.phenix.servlet.Startup;
 import com.ameriglide.phenix.servlet.TwiMLServlet;
@@ -13,17 +15,15 @@ import com.twilio.type.Sip;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import net.inetalliance.log.Log;
 import net.inetalliance.potion.Locator;
 
 import java.time.LocalDateTime;
 import java.util.Objects;
 
+import static com.ameriglide.phenix.core.Strings.isEmpty;
+import static com.ameriglide.phenix.core.Strings.isNotEmpty;
 import static com.ameriglide.phenix.servlet.TwiMLServlet.asParty;
 import static com.ameriglide.phenix.types.CallDirection.INTERNAL;
-import static net.inetalliance.funky.Funky.of;
-import static net.inetalliance.funky.StringFun.isEmpty;
-import static net.inetalliance.funky.StringFun.isNotEmpty;
 import static net.inetalliance.potion.Locator.$;
 import static net.inetalliance.potion.Locator.$1;
 
@@ -64,7 +64,7 @@ public class VoiceDial extends PhenixServlet {
       call.setOpportunity(opp);
       call.setBusiness(opp.getBusiness());
       cid =
-        of($1(SkillQueue.withProduct(opp.getProductLine())
+        Optionals.of($1(SkillQueue.withProduct(opp.getProductLine())
           .and(SkillQueue.withBusiness(opp.getBusiness()))))
           .stream()
           .filter(Objects::nonNull)
@@ -82,9 +82,9 @@ public class VoiceDial extends PhenixServlet {
     call.sid = Startup.router.call(cid.getPhoneNumber(), from, "/twilio/voice/dial",
       request.getQueryString()).getSid();
     Locator.create("VoiceDial",call);
-    log.info("New API dial %s %s -> %s", call, callingAgent.getSipUser(), called.endpoint());
+    log.info(()->"New API dial %s %s -> %s".formatted(call, callingAgent.getSipUser(), called.endpoint()));
     response.sendError(HttpServletResponse.SC_NO_CONTENT);
   }
 
-  private static final Log log = Log.getInstance(VoiceDial.class);
+  private static final Log log = new Log();
 }

@@ -2,6 +2,7 @@ package com.ameriglide.phenix.api;
 
 import com.ameriglide.phenix.common.*;
 import com.ameriglide.phenix.core.Log;
+import com.ameriglide.phenix.core.Optionals;
 import com.ameriglide.phenix.core.Strings;
 import com.ameriglide.phenix.servlet.PhenixServlet;
 import com.ameriglide.phenix.servlet.Startup;
@@ -13,7 +14,6 @@ import com.ameriglide.phenix.types.Resolution;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import net.inetalliance.funky.Funky;
 import net.inetalliance.potion.Locator;
 import net.inetalliance.sql.Aggregate;
 import net.inetalliance.types.Currency;
@@ -29,7 +29,8 @@ import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 import static com.ameriglide.phenix.common.Source.*;
-import static net.inetalliance.funky.StringFun.*;
+import static com.ameriglide.phenix.core.Strings.isEmpty;
+import static com.ameriglide.phenix.core.Strings.isNotEmpty;
 import static net.inetalliance.potion.Locator.*;
 
 @WebServlet("/api/createLead")
@@ -37,9 +38,9 @@ public class CreateLead extends PhenixServlet {
   void updateContact(final JsonMap data, Contact contact, final String phone, final String email) {
     contact.setPhone(phone);
     contact.setEmail(email);
-    contact.setFirstName(titleCase(data.get("first")));
-    contact.setLastName(titleCase(data.get("last")));
-    var shipping = Funky.of(contact.getShipping()).orElseGet(() -> {
+    contact.setFirstName(Strings.titlecase(data.get("first")));
+    contact.setLastName(Strings.titlecase(data.get("last")));
+    var shipping = Optionals.of(contact.getShipping()).orElseGet(() -> {
       contact.setShipping(new Address());
       return contact.getShipping();
     });

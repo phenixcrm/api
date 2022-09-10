@@ -2,10 +2,10 @@ package com.ameriglide.phenix.ws;
 
 import com.ameriglide.phenix.common.Agent;
 import com.ameriglide.phenix.common.Call;
+import com.ameriglide.phenix.core.Log;
 import com.ameriglide.phenix.servlet.PhenixServlet;
 import com.ameriglide.phenix.twilio.TaskRouter;
 import jakarta.websocket.Session;
-import net.inetalliance.log.Log;
 import net.inetalliance.types.json.Json;
 import net.inetalliance.types.json.JsonMap;
 
@@ -16,15 +16,16 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 
-import static java.util.concurrent.TimeUnit.*;
-import static net.inetalliance.funky.StringFun.isNotEmpty;
+import static com.ameriglide.phenix.core.Strings.isNotEmpty;
+import static java.util.concurrent.TimeUnit.MINUTES;
+import static java.util.concurrent.TimeUnit.SECONDS;
 import static net.inetalliance.potion.Locator.forEach;
 
 public class HudHandler
   implements Runnable, JsonMessageHandler {
 
   private static final Map<Integer, HudStatus> status;
-  private static final Log log = Log.getInstance(HudHandler.class);
+  private static final Log log = new Log();
 
   static {
     status = new HashMap<>();
@@ -66,18 +67,14 @@ public class HudHandler
       switch (action) {
         case SUBSCRIBE -> {
           subscribers.add(session);
-          if(log.isDebugEnabled()) {
-            log.debug("Added HUD subscription for %s, #:%d", Events.getTicket(session).agent().getSipUser(),
-              subscribers.size());
-          }
+            log.debug(()->"Added HUD subscription for %s, #:%d".formatted( Events.getTicket(session).agent().getSipUser(),
+              subscribers.size()));
           return hud;
         }
         case UNSUBSCRIBE -> {
           subscribers.remove(session);
-          if(log.isDebugEnabled()) {
-            log.debug("Removed HUD subscription for %s, #:%d", Events.getTicket(session).agent().getSipUser(),
-              subscribers.size());
-          }
+            log.debug(()->"Removed HUD subscription for %s, #:%d".formatted(Events.getTicket(session).agent().getSipUser(),
+              subscribers.size()));
         }
       }
     } catch (IllegalArgumentException e) {
@@ -93,7 +90,7 @@ public class HudHandler
 
   @Override
   public void run() {
-    log.debug("HUD update started");
+    log.debug(()->"HUD update started");
     try {
       for (var value : status.values()) {
         value.direction = null;
@@ -114,13 +111,13 @@ public class HudHandler
       if (!current.equals(hud)) {
         hud.clear();
         hud.putAll(current);
-        log.info("Hud changed, broadcasting updates");
+        log.info(()->"Hud changed, broadcasting updates");
         broadcast(new JsonMap().$("type", "hud").$("msg", this.hud));
       }
     } catch(Throwable t) {
       log.error(t);
     }
-    log.debug("HUD update finished");
+    log.debug(()->"HUD update finished");
   }
 
   private void updateCalls() {
@@ -162,7 +159,7 @@ public class HudHandler
         });
       }
       if (!latch.await(1, SECONDS)) {
-        log.warning("slow status broadcast");
+        log.warn(()->"slow status broadcast");
       }
     } catch (InterruptedException e) {
       // oh well, we'll get 'em next time

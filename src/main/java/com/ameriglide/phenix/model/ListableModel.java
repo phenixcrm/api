@@ -1,7 +1,7 @@
 package com.ameriglide.phenix.model;
 
+import com.ameriglide.phenix.core.Strings;
 import jakarta.servlet.http.HttpServletRequest;
-import net.inetalliance.funky.StringFun;
 import net.inetalliance.potion.info.Info;
 import net.inetalliance.potion.obj.IdPo;
 import net.inetalliance.potion.query.Query;
@@ -19,7 +19,7 @@ public class ListableModel<T>
 
   protected ListableModel(final Class<T> type) {
     this(type, Pattern.compile(
-        "/(?:api|reporting)/" + StringFun.camel(type.getSimpleName()) + "(?:/(" + getKeyPattern(
+        "/(?:api|reporting)/" + Strings.camel(type.getSimpleName()) + "(?:/(" + getKeyPattern(
             type) + "))?"));
   }
 

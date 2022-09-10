@@ -9,8 +9,6 @@ import com.ameriglide.phenix.ws.ReminderHandler;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import net.inetalliance.funky.Funky;
-import net.inetalliance.funky.StringFun;
 import net.inetalliance.potion.Locator;
 import net.inetalliance.potion.info.Info;
 import net.inetalliance.potion.query.*;
@@ -33,13 +31,13 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import static com.ameriglide.phenix.common.Opportunity.*;
+import static com.ameriglide.phenix.core.Strings.isEmpty;
+import static com.ameriglide.phenix.core.Strings.isNotEmpty;
 import static com.ameriglide.phenix.twilio.TaskRouter.toUS10;
 import static java.util.regex.Pattern.CASE_INSENSITIVE;
 import static java.util.regex.Pattern.compile;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toSet;
-import static net.inetalliance.funky.StringFun.isEmpty;
-import static net.inetalliance.funky.StringFun.isNotEmpty;
 import static net.inetalliance.sql.OrderBy.Direction.ASCENDING;
 import static net.inetalliance.sql.OrderBy.Direction.DESCENDING;
 
@@ -152,7 +150,7 @@ public class LeadModel extends ListableModel<Opportunity> {
         boolean onlySold = false;
 
         final String heat = request.getParameter("h");
-        if (StringFun.isNotEmpty(heat)) {
+        if (isNotEmpty(heat)) {
             switch (heat) {
                 case "CLOSED" -> query = query.and(isClosed);
                 case "SOLD" -> {
@@ -248,7 +246,7 @@ public class LeadModel extends ListableModel<Opportunity> {
         searchQuery = or.matcher(searchQuery).replaceAll("|");
         final String[] terms = space.split(searchQuery);
         final SortedQuery<Opportunity> delegate = query
-                .and(new Query<>(Opportunity.class, Funky.unsupported(),
+                .and(new Query<>(Opportunity.class, (p)-> {throw new UnsupportedOperationException();},
                         (namer, table) -> new ColumnWhere(table, "contact", namer.name(Contact.class), "id")))
                 .orderBy("combined_rank", DESCENDING, false)
                 .and(new Search<>(Opportunity.class, terms).or(

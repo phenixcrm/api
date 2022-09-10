@@ -1,7 +1,8 @@
 package com.ameriglide.phenix.model;
 
-import net.inetalliance.funky.StringFun;
 
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -16,6 +17,6 @@ public class TypeModel<T> extends Model<T> {
 
   @Override
   protected Key<T> getKey(final Matcher m) {
-    return Key.$(type, StringFun.utf8UrlDecode(m.group(1)));
+    return Key.$(type, URLDecoder.decode((m.group(1)), StandardCharsets.UTF_8));
   }
 }

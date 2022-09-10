@@ -1,17 +1,17 @@
 package com.ameriglide.phenix.api;
 
-import com.ameriglide.phenix.servlet.Startup;
 import com.ameriglide.phenix.common.Agent;
 import com.ameriglide.phenix.common.Call;
 import com.ameriglide.phenix.common.Leg;
 import com.ameriglide.phenix.common.Opportunity;
+import com.ameriglide.phenix.core.Log;
 import com.ameriglide.phenix.servlet.PhenixServlet;
+import com.ameriglide.phenix.servlet.Startup;
 import com.ameriglide.phenix.servlet.TwiMLServlet;
 import com.ameriglide.phenix.ws.Events;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import net.inetalliance.log.Log;
 import net.inetalliance.potion.Locator;
 import net.inetalliance.types.json.JsonMap;
 
@@ -31,7 +31,8 @@ public class Assignment extends PhenixServlet {
     if(callSid == null) {
       callSid = task;
     }
-    log.info("ASSIGN %s %s", callSid, attributes.get("caller"), agent.getFullName());
+    var finalCallSid = callSid;
+    log.info(()->"ASSIGN %s %s to %s".formatted(finalCallSid, attributes.get("caller"), agent.getFullName()));
     var call = Locator.$(new Call(callSid));
     update(call,"Assignment",copy -> {
       copy.setAgent(agent);
@@ -65,5 +66,5 @@ public class Assignment extends PhenixServlet {
     Events.sendToLatest("pop",agent.id,new JsonMap().$("callId",callSid));
   }
 
-  private static final Log log = Log.getInstance(Assignment.class);
+  private static final Log log = new Log();
 }

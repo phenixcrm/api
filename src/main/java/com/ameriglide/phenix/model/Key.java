@@ -1,11 +1,12 @@
 package com.ameriglide.phenix.model;
 
-import net.inetalliance.funky.StringFun;
 import net.inetalliance.potion.info.Info;
 import net.inetalliance.types.json.JsonMap;
 
 import java.util.Objects;
 import java.util.function.Function;
+
+import static com.ameriglide.phenix.core.Strings.isEmpty;
 
 public class Key<T> {
 
@@ -44,7 +45,7 @@ public class Key<T> {
 
   @Override
   public String toString() {
-    return StringFun.isEmpty(id) ? type.getSimpleName()
+    return isEmpty(id) ? type.getSimpleName()
         : String.format("%s/%s", type.getSimpleName(), id);
   }
 }

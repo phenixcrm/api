@@ -1,24 +1,25 @@
 package com.ameriglide.phenix.api;
 
+import com.ameriglide.phenix.core.Functions;
+import com.ameriglide.phenix.core.Strings;
+import com.ameriglide.phenix.servlet.PhenixServlet;
 import com.ameriglide.phenix.servlet.exception.BadRequestException;
 import com.ameriglide.phenix.servlet.exception.NotFoundException;
-import com.ameriglide.phenix.servlet.PhenixServlet;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import net.inetalliance.funky.StringFun;
 import net.inetalliance.potion.Locator;
 import net.inetalliance.types.Named;
 import net.inetalliance.types.json.JsonList;
 import net.inetalliance.types.json.JsonMap;
 import net.inetalliance.types.localized.Localized;
 
+import java.net.URLDecoder;
 import java.util.EnumSet;
 import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import static net.inetalliance.funky.Funky.memoize;
 
 @WebServlet("/api/enum/*")
 public class EnumModel
@@ -33,7 +34,7 @@ public class EnumModel
   static {
     named = arg -> ((Named) arg).getName();
     localized = arg -> ((Localized) arg).getLocalizedName().toString();
-    vanilla = memoize(32, (Enum<?> arg) -> StringFun.titleCase(arg.name().replace('_', ' ')));
+    vanilla = Functions.memoize((Enum<?> arg) -> Strings.titlecase(arg.name().replace('_', ' ')),32);
   }
 
   @SuppressWarnings("unchecked")
@@ -41,7 +42,7 @@ public class EnumModel
       throws Exception {
     final Matcher matcher = pattern.matcher(request.getRequestURI());
     if (matcher.find()) {
-      final String[] types = StringFun.utf8UrlDecode(matcher.group(1)).split("[+]");
+      final String[] types = URLDecoder.decode(matcher.group(1), java.nio.charset.StandardCharsets.UTF_8).split("[+]");
       final JsonMap result = new JsonMap();
       for (final String typeName : types) {
         final Class<? extends Enum<?>> type = (Class<? extends Enum<?>>) Locator.types.get(typeName);

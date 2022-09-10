@@ -10,9 +10,7 @@ public class PingHandler
 
   @Override
   public JsonMap onMessage(final Session session, final JsonMap msg) {
-    if (log.isTraceEnabled()) {
-      log.trace("%s pinged us", Events.getTicket(session).principal());
-    }
+    log.trace(()->"%s pinged us".formatted(Events.getTicket(session).principal()));
     return null;
   }
 }

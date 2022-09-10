@@ -4,14 +4,14 @@ import com.ameriglide.phenix.common.Agent;
 import com.ameriglide.phenix.common.JumpcloudOrg;
 import com.ameriglide.phenix.common.Team;
 import com.ameriglide.phenix.common.Ticket;
+import com.ameriglide.phenix.core.Log;
+import com.ameriglide.phenix.core.Optionals;
 import com.ameriglide.phenix.servlet.Startup;
 import com.ameriglide.phenix.servlet.exception.NotFoundException;
 import com.ameriglide.phenix.servlet.exception.UnauthorizedException;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.*;
-import net.inetalliance.funky.Funky;
-import net.inetalliance.log.Log;
 import net.inetalliance.potion.Locator;
 import net.inetalliance.potion.info.Info;
 import net.inetalliance.types.json.Json;
@@ -30,17 +30,16 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
+import static com.ameriglide.phenix.core.Strings.isEmpty;
 import static jakarta.servlet.http.HttpServletResponse.*;
 import static java.lang.String.format;
 import static javax.naming.Context.*;
-import static net.inetalliance.funky.StringFun.isEmpty;
-import static net.inetalliance.log.Log.getInstance;
 import static net.inetalliance.potion.Locator.$;
 
 @WebServlet({"/login", "/logout"})
 public class Auth extends HttpServlet {
 
-  private static final Log log = getInstance(Auth.class);
+  private static final Log log = new Log();
   public Auth() {
     super();
   }
@@ -117,11 +116,11 @@ public class Auth extends HttpServlet {
         ctx.close();
       }
     } catch (CommunicationException comEx) {
-      log.warning("Directory not reachable", comEx);
+      log.warn(()->"Directory not reachable",comEx);
     } catch (AuthenticationException authEx) {
-      log.warning("Password incorrect", authEx);
+      log.warn(()->"Password incorrect", authEx);
     } catch (NamingException nameEx) {
-      log.warning("Naming error", nameEx);
+      log.warn(()->"Naming error",nameEx);
     }
     return null;
 
@@ -133,7 +132,7 @@ public class Auth extends HttpServlet {
 
   @Override
   protected void doGet(HttpServletRequest request, HttpServletResponse response) {
-    Funky.of(getTicket(request)).ifPresent(t -> {
+    Optionals.of(getTicket(request)).ifPresent(t -> {
       try {
         respond(response, toJson(t.agent()));
       } catch (ServletException e) {
@@ -147,11 +146,11 @@ public class Auth extends HttpServlet {
 
   @Override
   protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
-    log.trace("POST start");
+    log.trace(()->"POST start");
     final Matcher matcher = logout.matcher(request.getRequestURI());
     if (matcher.matches()) {
       final HttpSession session = request.getSession();
-      log.debug("logging out %s", session.getId());
+      log.debug(()->"logging out %s".formatted(session.getId()));
       session.removeAttribute("authorized");
       session.invalidate();
       final Cookie cookie = new Cookie("authToken", "");
@@ -169,7 +168,7 @@ public class Auth extends HttpServlet {
           var sudoUser = sudoMatcher.group(1);
           var sudoTicket = login(sudoUser,domain,sudoMatcher.group(2));
           if(sudoTicket == null) {
-            log.error("invalid sudo login %s for %s", sudoUser, principal);
+            log.error(()->"invalid sudo login %s for %s".formatted(sudoUser, principal));
             response.sendError(SC_FORBIDDEN, "Access Denied");
           } else {
             if (sudoTicket.agent().isSuperUser()) {
@@ -177,7 +176,7 @@ public class Auth extends HttpServlet {
               setTicket(request, principalTicket);
               respond(response, toJson(principalTicket.agent()));
             } else {
-              log.error("forbidden sudo attempt %s for %s", sudoUser, principal);
+              log.error(()->"forbidden sudo attempt %s for %s".formatted( sudoUser, principal));
               response.sendError(SC_FORBIDDEN, "Go Away");
             }
           }
@@ -186,7 +185,7 @@ public class Auth extends HttpServlet {
         synchronized (session) {
           var ticket = login(principal, domain, password);
           if (ticket == null) {
-            log.info("password login failed for %s", session.getId());
+            log.info(()->"password login failed for %s".formatted(session.getId()));
             response.sendError(SC_FORBIDDEN, "Access Denied");
           } else {
             setTicket(request,ticket);

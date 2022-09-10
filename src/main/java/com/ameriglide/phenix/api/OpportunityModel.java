@@ -17,8 +17,9 @@ import net.inetalliance.types.json.JsonMap;
 import java.time.LocalDateTime;
 import java.util.List;
 
-import static net.inetalliance.funky.StringFun.isEmpty;
-import static net.inetalliance.funky.StringFun.isNotEmpty;
+import static com.ameriglide.phenix.core.Strings.isEmpty;
+import static com.ameriglide.phenix.core.Strings.isNotEmpty;
+
 
 @WebServlet("/api/opportunity/*")
 public class OpportunityModel

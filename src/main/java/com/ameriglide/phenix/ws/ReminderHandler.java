@@ -4,8 +4,9 @@ import com.ameriglide.phenix.common.Address;
 import com.ameriglide.phenix.common.Contact;
 import com.ameriglide.phenix.common.Opportunity;
 import com.ameriglide.phenix.common.Ticket;
+import com.ameriglide.phenix.core.Log;
+import com.ameriglide.phenix.core.Optionals;
 import jakarta.websocket.Session;
-import net.inetalliance.log.Log;
 import net.inetalliance.types.Surnamed;
 import net.inetalliance.types.json.JsonList;
 import net.inetalliance.types.json.JsonMap;
@@ -21,15 +22,14 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
 import static com.ameriglide.phenix.common.Opportunity.needsReminding;
+import static com.ameriglide.phenix.core.Strings.isNotEmpty;
 import static java.util.concurrent.TimeUnit.MINUTES;
-import static net.inetalliance.funky.Funky.of;
-import static net.inetalliance.funky.StringFun.isNotEmpty;
 import static net.inetalliance.potion.Locator.forEach;
 
 public class ReminderHandler
   implements JsonMessageHandler, Runnable {
 
-  private static final Log log = Log.getInstance(ReminderHandler.class);
+  private static final Log log = new Log();
   public static ReminderHandler $;
   private final Map<Integer, JsonList> msgs;
   private final Lock lock;
@@ -98,7 +98,7 @@ public class ReminderHandler
         .$("reminder", o.getReminder())
         .$("heat", o.getHeat())
         .$("dial", dial)
-        .$("contact", of(o.getContact()).map(Surnamed::getFullName).orElse(""))
+        .$("contact", Optionals.of(o.getContact()).map(Surnamed::getFullName).orElse(""))
         .$("business", o.getBusiness().getAbbreviation())
         .$("productLine", JsonMap.$()
           .$("name", o.getProductLine().getName())

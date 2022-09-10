@@ -4,21 +4,21 @@ import com.ameriglide.phenix.Auth;
 import com.ameriglide.phenix.common.Call;
 import com.ameriglide.phenix.common.Contact;
 import com.ameriglide.phenix.common.Opportunity;
+import com.ameriglide.phenix.core.Log;
 import com.ameriglide.phenix.model.Key;
 import com.ameriglide.phenix.model.ListableModel;
 import com.ameriglide.phenix.servlet.exception.BadRequestException;
 import com.ameriglide.phenix.servlet.exception.NotFoundException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServletRequest;
-import net.inetalliance.log.Log;
 import net.inetalliance.potion.Locator;
 import net.inetalliance.potion.query.Query;
 import net.inetalliance.types.json.Json;
 import net.inetalliance.types.json.JsonMap;
 
+import static com.ameriglide.phenix.core.Strings.isEmpty;
+import static com.ameriglide.phenix.core.Strings.isNotEmpty;
 import static com.ameriglide.phenix.twilio.TaskRouter.toE164;
-import static net.inetalliance.funky.StringFun.isEmpty;
-import static net.inetalliance.funky.StringFun.isNotEmpty;
 import static net.inetalliance.potion.Locator.$1;
 import static net.inetalliance.sql.OrderBy.Direction.DESCENDING;
 
@@ -30,7 +30,7 @@ public class ContactModel
         super(Contact.class);
     }
 
-    private static final Log log = Log.getInstance(ContactModel.class);
+    private static final Log log = new Log();
 
     private static JsonMap summary(final Contact contact) {
         return new JsonMap().$("id", contact.id).$("name", contact.getFullName());
@@ -53,7 +53,7 @@ public class ContactModel
                 .withContact(contact)
                 .orderBy("created", DESCENDING));
         if (lead == null) {
-            log.error("trying to lookup most recent lead for %d, but no leads found", contact.id);
+            log.error(()->"trying to lookup most recent lead for %d, but no leads found".formatted(contact.id));
             throw new NotFoundException();
         }
         return new JsonMap().$("id", contact.id).$("lead", lead.id);

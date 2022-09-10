@@ -3,7 +3,8 @@ package com.ameriglide.phenix.model;
 import jakarta.servlet.http.HttpServletRequest;
 import net.inetalliance.potion.query.Query;
 
-import static net.inetalliance.funky.StringFun.isEmpty;
+import static com.ameriglide.phenix.core.Strings.isEmpty;
+
 
 public interface Searchable<T>
     extends Listable<T> {

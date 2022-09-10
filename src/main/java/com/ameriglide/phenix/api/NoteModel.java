@@ -3,17 +3,18 @@ package com.ameriglide.phenix.api;
 import com.ameriglide.phenix.Auth;
 import com.ameriglide.phenix.common.Note;
 import com.ameriglide.phenix.common.Opportunity;
-import com.ameriglide.phenix.servlet.exception.NotFoundException;
 import com.ameriglide.phenix.model.Key;
 import com.ameriglide.phenix.model.ListableModel;
+import com.ameriglide.phenix.servlet.exception.NotFoundException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServletRequest;
-import net.inetalliance.funky.StringFun;
 import net.inetalliance.potion.Locator;
 import net.inetalliance.potion.query.Query;
 import net.inetalliance.types.json.Json;
 import net.inetalliance.types.json.JsonMap;
 
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -26,7 +27,7 @@ public class NoteModel extends ListableModel<Note> {
 
   @Override
   protected Key<Note> getKey(Matcher m) {
-    return Key.$(type, StringFun.utf8UrlDecode(m.group(2)));
+    return Key.$(type, URLDecoder.decode(m.group(2), StandardCharsets.UTF_8));
   }
 
   @Override

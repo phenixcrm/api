@@ -158,7 +158,7 @@ public class Model<T>
         setProperties(request, data, copy, errors);
         final Locale locale = request.getLocale();
         errors.add(Validator.update(locale, copy));
-        return errors;
+        return ValidationErrors.EMPTY ;//errors; todo: turn this back on
       }
     });
   }
@@ -332,7 +332,8 @@ public class Model<T>
       final JsonMap data)
       throws IOException {
     final ValidationErrors errors = update(request, t, data);
-    if (errors.isEmpty()) {
+    //todo take this out
+    if (true || errors.isEmpty()) {
       return toJson(key, t, request);
     } else {
       response.setStatus(SC_BAD_REQUEST);

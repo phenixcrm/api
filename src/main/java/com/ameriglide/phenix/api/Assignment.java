@@ -53,9 +53,12 @@ public class Assignment extends PhenixServlet {
             "TaskSid=%s&ReservationSid=%s&Assignment=%s".formatted(task, reservation, callSid)).toString())
         .$("statusCallbackUrl", Startup.router.getAbsolutePath("/twilio/voice/callAgent", null).toString())
         .$("to", TwiMLServlet.asParty(agent).sip()));
-    } else if(attributes.containsKey("Lead")) {
-      var opp = Locator.$(new Opportunity(Integer.valueOf(attributes.get("Lead"))));
-      if(Agent.system().equals(opp.getAssignedTo())) {
+    } else {
+      var opp = attributes.containsKey("Lead") ?
+              Locator.$(new Opportunity(Integer.valueOf(attributes.get("Lead")))) : call.getOpportunity();
+      if(opp == null) {
+        log.error(()->"Could not find opp for assignment: %s".formatted(attributes));
+      }  else if(Agent.system().equals(opp.getAssignedTo())) {
         update(opp, "Assignment", copy -> {
           copy.setAssignedTo(agent);
         });

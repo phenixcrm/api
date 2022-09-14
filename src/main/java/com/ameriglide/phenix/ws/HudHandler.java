@@ -126,7 +126,7 @@ public class HudHandler
       var agentStatus = status.computeIfAbsent(a.id,k-> new HudStatus());
       agentStatus.direction = call.getDirection();
       agentStatus.callId = call.sid;
-      agentStatus.available = router.byAgent.get(a.getSid());
+      agentStatus.available = router.byAgent.getOrDefault(a.getSid(),false);
 
     }));
   }

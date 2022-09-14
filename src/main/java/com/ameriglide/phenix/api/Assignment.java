@@ -44,14 +44,14 @@ public class Assignment extends PhenixServlet {
     Locator.create("Assignment",leg);
     if(attributes.containsKey("VoiceCall")) {
       Startup.router.conference(callSid, task, reservation);
+      var qs = "TaskSid=%s&ReservationSid=%s&Assignment=%s".formatted(task, reservation, callSid);
       PhenixServlet.respond(response, new JsonMap()
         .$("instruction", "call")
         .$("timeout", 15)
         .$("record", "record-from-answer")
         .$("url",
-          Startup.router.getAbsolutePath("/twilio/voice/callAgent",
-            "TaskSid=%s&ReservationSid=%s&Assignment=%s".formatted(task, reservation, callSid)).toString())
-        .$("statusCallbackUrl", Startup.router.getAbsolutePath("/twilio/voice/callAgent", null).toString())
+          Startup.router.getAbsolutePath("/twilio/voice/callAgent", qs).toString())
+        .$("statusCallbackUrl", Startup.router.getAbsolutePath("/twilio/voice/callAgent", qs).toString())
         .$("to", TwiMLServlet.asParty(agent).sip()));
     } else {
       var opp = attributes.containsKey("Lead") ?

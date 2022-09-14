@@ -2,8 +2,8 @@ package com.ameriglide.phenix.ws;
 
 import com.ameriglide.phenix.common.Agent;
 import com.ameriglide.phenix.common.Call;
+import com.ameriglide.phenix.core.ExecutorServices;
 import com.ameriglide.phenix.core.Log;
-import com.ameriglide.phenix.servlet.PhenixServlet;
 import com.ameriglide.phenix.twilio.TaskRouter;
 import jakarta.websocket.Session;
 import net.inetalliance.types.json.Json;
@@ -47,8 +47,8 @@ public class HudHandler
   private final TaskRouter router;
 
   public static void shutdown() {
-    PhenixServlet.shutdown("HUD scheduling",scheduler);
-    PhenixServlet.shutdown("HUD notification", service);
+    ExecutorServices.shutdown("HUD scheduling",scheduler);
+    ExecutorServices.shutdown("HUD notification", service);
 
   }
 

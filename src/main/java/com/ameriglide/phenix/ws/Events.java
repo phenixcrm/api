@@ -45,7 +45,7 @@ public class Events
       log.trace(()->Json.pretty(event));
       var response = SessionHandler.getHandler(type).onMessage(sessions.get(agentId).get(0),event);
       if(response != null) {
-        sendToLatest(type, agentId, response);
+        broadcast(type, agentId, response);
       }
     });
   }

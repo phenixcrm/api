@@ -1,5 +1,7 @@
 package com.ameriglide.phenix.ws;
 
+import com.ameriglide.phenix.Startup;
+import com.ameriglide.phenix.common.Agent;
 import com.ameriglide.phenix.common.Ticket;
 import com.ameriglide.phenix.core.Iterables;
 import com.ameriglide.phenix.core.Log;
@@ -9,6 +11,7 @@ import jakarta.websocket.*;
 import jakarta.websocket.server.HandshakeRequest;
 import jakarta.websocket.server.ServerEndpoint;
 import jakarta.websocket.server.ServerEndpointConfig;
+import net.inetalliance.potion.Locator;
 import net.inetalliance.types.json.Json;
 import net.inetalliance.types.json.JsonMap;
 
@@ -25,8 +28,7 @@ public class Events
   public static Function<Session, MessageHandler> handler = session ->
     (MessageHandler.Whole<String>) message -> log.debug(()->"session [%s] new message %s".formatted(
             session.getId(), message));
-  private static final Map<Integer, List<Session>> sessions = Collections
-    .synchronizedMap(new HashMap<>());
+  private static final Map<Integer, List<Session>> sessions = Collections.synchronizedMap(new HashMap<>());
 
   public static Ticket getTicket(final Session session) {
     return (Ticket) ((HttpSession) session.getUserProperties().get(HttpSession.class.getName()))
@@ -34,6 +36,18 @@ public class Events
   }
 
   public static void init() {
+    log.info(()->"watching the events topic");
+    Startup.router.getTopic("events").addListener(JsonMap.class, (channel, msg) -> {
+     var agentId = msg.getInteger("agent");
+     var type = msg.get("type");
+     var event = msg.getMap("event");
+      log.debug(()->"new %s event for %s".formatted( type, Locator.$(new Agent(agentId)).getFullName()));
+      log.trace(()->Json.pretty(event));
+      var response = SessionHandler.getHandler(type).onMessage(sessions.get(agentId).get(0),event);
+      if(response != null) {
+        sendToLatest(type, agentId, response);
+      }
+    });
   }
 
   public static void destroy() {

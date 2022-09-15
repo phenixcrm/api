@@ -54,6 +54,14 @@ public class StatusHandler extends PhenixServlet
         state.put("activity",w.getActivitySid());
         router.byAgent.put(w.getSid(),w.getAvailable());
       }
+      case ABSENT -> {
+        router.byAgent.put(ticket.sid(),false);
+        if (!state.get("activity").equals(router.unavailable.getSid())) {
+          state.put("activity",router.unavailable.getSid());
+          return state;
+        }
+        return null;
+      }
       default -> throw new IllegalArgumentException();
     }
     return state;
@@ -71,7 +79,8 @@ public class StatusHandler extends PhenixServlet
     status.clear();
   } private enum Action {
     PAUSE,
-    FORWARD
+    FORWARD,
+    ABSENT
   }
 
   @Override

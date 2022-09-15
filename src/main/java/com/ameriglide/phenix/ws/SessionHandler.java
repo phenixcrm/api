@@ -36,7 +36,7 @@ public record SessionHandler(Session session)
     Events.destroy();
   }
 
-  private static JsonMessageHandler getHandler(final String type) {
+  public static JsonMessageHandler getHandler(final String type) {
     return handlers.computeIfAbsent(type, key -> (session, msg) -> {
       log.warn(()->"received message of unknown type %s: %s".formatted(key, Json.pretty(msg)));
       return null;

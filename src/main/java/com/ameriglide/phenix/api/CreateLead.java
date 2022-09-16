@@ -152,6 +152,7 @@ public class CreateLead extends PhenixServlet {
         case 26 -> 15; // IVPLs
         case 10040 -> 3; // pool lifts
         case 10041 -> 16; // curved stair lifts
+        case 69->13; // sprockets
         default -> 17; // when all else fails, set to undetermined
       }));
     Opportunity opp;
@@ -178,8 +179,8 @@ public class CreateLead extends PhenixServlet {
       opp.setBusiness(q.getBusiness());
       opp.setHeat(Heat.HOT);
       opp.setProductLine(q.getProduct());
-      opp.setAmount(Locator.$$(Opportunity.withProductLine(q.getProduct())
-        .and(Opportunity.isSold), Aggregate.AVG, Currency.class, "amount"));
+      opp.setAmount(Optionals.of(Locator.$$(Opportunity.withProductLine(q.getProduct())
+        .and(Opportunity.isSold), Aggregate.AVG, Currency.class, "amount")).orElse(Currency.ZERO));
       create("CreateLead", opp);
     } else {
       var n = new Note();

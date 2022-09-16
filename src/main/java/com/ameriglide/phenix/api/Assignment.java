@@ -58,7 +58,7 @@ public class Assignment extends PhenixServlet {
               Locator.$(new Opportunity(Integer.valueOf(attributes.get("Lead")))) : call.getOpportunity();
       if(opp == null) {
         log.error(()->"Could not find opp for assignment: %s".formatted(attributes));
-      }  else if(Agent.system().equals(opp.getAssignedTo())) {
+      }  else if(Agent.system().id.equals(opp.getAssignedTo().id)) {
         update(opp, "Assignment", copy -> {
           copy.setAssignedTo(agent);
         });

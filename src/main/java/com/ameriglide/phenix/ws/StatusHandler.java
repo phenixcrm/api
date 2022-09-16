@@ -53,6 +53,7 @@ public class StatusHandler extends PhenixServlet
         var w = router.setActivity(ticket.sid(),newActivity);
         state.put("activity",w.getActivitySid());
         router.byAgent.put(w.getSid(),w.getAvailable());
+        HudHandler.
       }
       case ABSENT -> {
         router.byAgent.put(ticket.sid(),false);

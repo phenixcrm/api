@@ -17,7 +17,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 
 import static com.ameriglide.phenix.core.Strings.isNotEmpty;
-import static java.util.concurrent.TimeUnit.MINUTES;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static net.inetalliance.potion.Locator.forEach;
 
@@ -30,6 +29,7 @@ public class HudHandler
   static {
     status = new HashMap<>();
   }
+
 
   private final JsonMap hud;
   private final Set<Session> subscribers;
@@ -56,7 +56,7 @@ public class HudHandler
     this.router = router;
     subscribers = Collections.synchronizedSet(new HashSet<>(8));
     hud = new JsonMap(true);
-    scheduler.scheduleWithFixedDelay(this, 0, 5, MINUTES);
+    scheduler.scheduleWithFixedDelay(this, 0, 3, SECONDS);
 
   }
 

@@ -31,8 +31,11 @@ public class Events
   private static final Map<Integer, List<Session>> sessions = Collections.synchronizedMap(new HashMap<>());
 
   public static Ticket getTicket(final Session session) {
-    return (Ticket) ((HttpSession) session.getUserProperties().get(HttpSession.class.getName()))
-      .getAttribute("ticket");
+    var http = (HttpSession) session.getUserProperties().get(HttpSession.class.getName());
+    if(http == null) {
+      return null;
+    }
+    return (Ticket) http .getAttribute("ticket");
   }
 
   public static void init() {
@@ -115,7 +118,9 @@ public class Events
     public void modifyHandshake(final ServerEndpointConfig config, final HandshakeRequest request,
                                 final HandshakeResponse response) {
       final HttpSession session = (HttpSession) request.getHttpSession();
-      config.getUserProperties().put(HttpSession.class.getName(), session);
+      if(session != null) {
+        config.getUserProperties().put(HttpSession.class.getName(), session);
+      }
     }
   }
 

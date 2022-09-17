@@ -177,7 +177,7 @@ public class CreateLead extends PhenixServlet {
         opp.setSource(FORM);
       }
       opp.setBusiness(q.getBusiness());
-      opp.setHeat(Heat.HOT);
+      opp.setHeat(Heat.QUOTED);
       opp.setProductLine(q.getProduct());
       opp.setAmount(Optionals.of(Locator.$$(Opportunity.withProductLine(q.getProduct())
         .and(Opportunity.isSold), Aggregate.AVG, Currency.class, "amount")).orElse(Currency.ZERO));

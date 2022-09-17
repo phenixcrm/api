@@ -84,7 +84,7 @@ public class OpportunityModel
   protected Opportunity lookup(final Key<Opportunity> key, final HttpServletRequest request) {
     if ("0".equals(key.id)) {
       final var opp = new Opportunity();
-      opp.setHeat(Heat.HOT);
+      opp.setHeat(Heat.QUOTED);
       opp.setAssignedTo(Auth.getAgent(request));
       final var callKey = request.getParameter("call");
       if (isEmpty(callKey)) {

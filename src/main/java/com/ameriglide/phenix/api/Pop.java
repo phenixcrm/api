@@ -19,8 +19,7 @@ import net.inetalliance.types.json.JsonMap;
 import java.util.Comparator;
 import java.util.regex.Pattern;
 
-import static com.ameriglide.phenix.core.Strings.isNotEmpty;
-import static com.ameriglide.phenix.core.Strings.titlecase;
+import static com.ameriglide.phenix.core.Strings.*;
 import static com.ameriglide.phenix.types.CallDirection.OUTBOUND;
 import static net.inetalliance.potion.Locator.forEach;
 
@@ -118,16 +117,16 @@ public class Pop
       map.$("phone", phone);
       if (call.getDirection() != OUTBOUND) {
         String[] split = call.getName().split("[ ,]", 2);
-        map.$("lastName", titlecase(split[0]));
+        map.$("lastName", initialCapital(split[0]));
         if (split.length == 2) {
-          map.$("firstName", titlecase(split[1]));
+          map.$("firstName", initialCapital(split[1]));
         }
         Optionals.of(call.getState())
           .or(() -> Optionals.of(AreaCodeTime.getAreaCodeTime(phone))
             .map(AreaCodeTime::getUsState))
           .ifPresent(s -> map.$("state", s));
       }
-      map.$("city", Strings.titlecase(call.getCity()));
+      map.$("city", Strings.initialCapital(call.getCity()));
       map.$("country", Optionals.of(call.getCountry()).orElse(Country.UNITED_STATES));
       map.$("postalCode", call.getZip());
     }

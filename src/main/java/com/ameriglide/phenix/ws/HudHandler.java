@@ -90,7 +90,7 @@ public class HudHandler
 
   @Override
   public void run() {
-    log.debug(()->"HUD update started");
+    log.trace(()->"HUD update started");
     try {
       for (var value : status.values()) {
         value.direction = null;
@@ -117,7 +117,7 @@ public class HudHandler
     } catch(Throwable t) {
       log.error(t);
     }
-    log.debug(()->"HUD update finished");
+    log.trace(()->"HUD update finished");
   }
 
   private void updateCalls() {

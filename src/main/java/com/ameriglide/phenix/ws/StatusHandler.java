@@ -1,8 +1,8 @@
 package com.ameriglide.phenix.ws;
 
-import com.ameriglide.phenix.twilio.TaskRouter;
+import com.ameriglide.phenix.api.Hud;
 import com.ameriglide.phenix.servlet.PhenixServlet;
-import com.twilio.rest.taskrouter.v1.workspace.Activity;
+import com.ameriglide.phenix.twilio.TaskRouter;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.websocket.Session;
@@ -12,22 +12,11 @@ public class StatusHandler extends PhenixServlet
     implements JsonMessageHandler {
   private final TaskRouter router;
 
-  private final JsonMap status;
 
   public StatusHandler(TaskRouter router) {
     super();
     this.router = router;
-    status = new JsonMap();
-    refresh();
 
-  }
-  private void refresh() {
-    synchronized(status) {
-      router.getWorkers().forEach(w -> ((JsonMap)status.computeIfAbsent(w.getSid(), s->new JsonMap()))
-        .$("sid", w.getSid())
-        .$("name", w.getFriendlyName())
-        .$("activity", w.getActivitySid()));
-    }
   }
 
   @Override
@@ -36,30 +25,15 @@ public class StatusHandler extends PhenixServlet
     if(ticket == null) {
       return null;
     }
-    var state = status.getMap(ticket.sid());
+    var state = Hud.byAgent.get(ticket.id());
+    boolean available = state.getBoolean("available");
     switch(Action.valueOf(map.get("action").toUpperCase())) {
       case PAUSE -> {
-        var current = router.bySid.get(state.get("activity"));
-        final Activity newActivity;
-        if(router.available.equals(current)) {
-          newActivity = router.unavailable;
-        } else if (router.unavailable.equals(current)) {
-         newActivity = router.available;
-        } else if (router.offline.equals(current)) {
-         newActivity = router.available;
-        } else {
-          throw new RuntimeException(String.format("Unknown activity, %s", current));
-        }
-        var w = router.setActivity(ticket.sid(),newActivity);
-        state.put("activity",w.getActivitySid());
-        router.byAgent.put(w.getSid(),w.getAvailable());
+        router.setActivity(ticket.sid(), available ? router.unavailable : router.available);
+        router.byAgent.put(ticket.sid(),!available);
       }
       case ABSENT -> {
         router.byAgent.put(ticket.sid(),false);
-        if (!state.get("activity").equals(router.unavailable.getSid())) {
-          state.put("activity",router.unavailable.getSid());
-          return state;
-        }
         return null;
       }
       default -> throw new IllegalArgumentException();
@@ -71,12 +45,11 @@ public class StatusHandler extends PhenixServlet
   @Override
   public JsonMap onConnect(final Session session) {
     var ticket = Events.getTicket(session);
-    return ticket == null ? null : status.getMap(ticket.sid());
+    return ticket == null ? null : Hud.byAgent.get(ticket.id());
   }
 
   @Override
   public void destroy() {
-    status.clear();
   } private enum Action {
     PAUSE,
     FORWARD,
@@ -85,6 +58,6 @@ public class StatusHandler extends PhenixServlet
 
   @Override
   protected void get(HttpServletRequest request, HttpServletResponse response) throws Exception {
-    respond(response,status);
+    respond(response,Hud.map);
   }
 }

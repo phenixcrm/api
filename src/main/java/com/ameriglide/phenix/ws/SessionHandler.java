@@ -1,5 +1,6 @@
 package com.ameriglide.phenix.ws;
 
+import com.ameriglide.phenix.Startup;
 import com.ameriglide.phenix.twilio.TaskRouter;
 import jakarta.websocket.MessageHandler;
 import jakarta.websocket.Session;
@@ -27,7 +28,8 @@ public record SessionHandler(Session session)
     handlers.put("status", new StatusHandler(router));
     handlers.put("reminder", new ReminderHandler());
     handlers.put("ping", new PingHandler());
-    handlers.put("hud", new HudHandler(router));
+    Startup.hud = new HudHandler();
+    handlers.put("hud", Startup.hud);
 
   }
 

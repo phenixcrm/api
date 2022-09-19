@@ -2,6 +2,7 @@ package com.ameriglide.phenix.ws;
 
 import com.ameriglide.phenix.api.Hud;
 import com.ameriglide.phenix.core.Log;
+import com.ameriglide.phenix.core.Optionals;
 import com.ameriglide.phenix.servlet.PhenixServlet;
 import com.ameriglide.phenix.twilio.TaskRouter;
 import jakarta.servlet.http.HttpServletRequest;
@@ -30,17 +31,20 @@ public class StatusHandler extends PhenixServlet
       return null;
     }
     var state = Hud.byAgent.get(ticket.id());
-    boolean available = state!=null && state.getBoolean("available") != null && state.getBoolean("available");
+    boolean available = Optionals.of(state.getBoolean("available")).orElse(false);
     switch(Action.valueOf(map.get("action").toUpperCase())) {
       case PAUSE -> {
         router.setActivity(ticket.sid(), available ? router.unavailable : router.available);
         router.byAgent.put(ticket.sid(),!available);
         state.put("available",!available);
-        log.info(()->"%s switched to %s".formatted(ticket.agent().getFullName(), available ? "unavailable" : "available"));
+        log.info(()->"%s switched to %s".formatted(ticket.agent().getFullName(), available ? "unavailable" :
+                "available"));
       }
       case ABSENT -> {
-        router.byAgent.put(ticket.sid(),false);
-        log.info(()->"%s missed a task and was marked absent".formatted(ticket.agent().getFullName()));
+        Boolean prev = router.byAgent.put(ticket.sid(), false);
+        if(prev !=null && prev) {
+          log.info(() -> "%s missed a task and was marked absent".formatted(ticket.agent().getFullName()));
+        }
       }
       default -> throw new IllegalArgumentException();
     }

@@ -44,9 +44,13 @@ public abstract class JsonCronServlet extends PhenixServlet implements Runnable 
 
     @Override
     public synchronized void run() {
-        String oldContent = content;
-        content = Json.pretty(produce());
-        afterProduce(oldContent, content);
+        try {
+            String oldContent = content;
+            content = Json.pretty(produce());
+            afterProduce(oldContent, content);
+        } catch (Throwable t) {
+            log.error(t);
+        }
     }
 
     protected abstract Json produce();

@@ -30,7 +30,7 @@ public class StatusHandler extends PhenixServlet
       return null;
     }
     var state = Hud.byAgent.get(ticket.id());
-    boolean available = state.getBoolean("available");
+    boolean available = state!=null && state.getBoolean("available") != null && state.getBoolean("available");
     switch(Action.valueOf(map.get("action").toUpperCase())) {
       case PAUSE -> {
         router.setActivity(ticket.sid(), available ? router.unavailable : router.available);

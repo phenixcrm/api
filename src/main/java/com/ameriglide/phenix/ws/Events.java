@@ -30,6 +30,12 @@ public class Events
             session.getId(), message));
   private static final Map<Integer, List<Session>> sessions = Collections.synchronizedMap(new HashMap<>());
 
+  @Override
+  public void onError(final Session session, final Throwable thr) {
+    super.onError(session, thr);
+    log.error(()->"session error",thr);
+  }
+
   public static Ticket getTicket(final Session session) {
     var http = (HttpSession) session.getUserProperties().get(HttpSession.class.getName());
     if(http == null) {

@@ -21,6 +21,7 @@ public class StatusHandler extends PhenixServlet
 
   }
 
+
   @Override
   public JsonMap onMessage(final Session session, final JsonMap map) {
     var ticket = Events.getTicket(session);

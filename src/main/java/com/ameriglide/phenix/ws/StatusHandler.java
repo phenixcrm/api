@@ -35,6 +35,7 @@ public class StatusHandler extends PhenixServlet
       case PAUSE -> {
         router.setActivity(ticket.sid(), available ? router.unavailable : router.available);
         router.byAgent.put(ticket.sid(),!available);
+        state.put("available",!available);
         log.info(()->"%s switched to %s".formatted(ticket.agent().getFullName(), available ? "unavailable" : "available"));
       }
       case ABSENT -> {

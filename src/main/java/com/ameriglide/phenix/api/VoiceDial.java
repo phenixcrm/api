@@ -9,7 +9,6 @@ import com.ameriglide.phenix.servlet.PhenixServlet;
 import com.ameriglide.phenix.servlet.Startup;
 import com.ameriglide.phenix.servlet.TwiMLServlet;
 import com.ameriglide.phenix.servlet.exception.NotFoundException;
-import com.ameriglide.phenix.types.CallDirection;
 import com.ameriglide.phenix.types.Resolution;
 import com.twilio.type.PhoneNumber;
 import com.twilio.type.Sip;
@@ -25,6 +24,7 @@ import static com.ameriglide.phenix.core.Strings.isEmpty;
 import static com.ameriglide.phenix.core.Strings.isNotEmpty;
 import static com.ameriglide.phenix.servlet.TwiMLServlet.asParty;
 import static com.ameriglide.phenix.types.CallDirection.INTERNAL;
+import static com.ameriglide.phenix.types.CallDirection.OUTBOUND;
 import static net.inetalliance.potion.Locator.$;
 import static net.inetalliance.potion.Locator.$1;
 
@@ -58,7 +58,7 @@ public class VoiceDial extends PhenixServlet {
 
             var call = new Call();
             call.setAgent(callingAgent);
-            call.setDirection(called.isAgent() ? INTERNAL:CallDirection.OUTBOUND);
+            call.setDirection(called.isAgent() ? INTERNAL:OUTBOUND);
             call.setCreated(LocalDateTime.now());
             call.setResolution(Resolution.ACTIVE);
             if (isNotEmpty(lead)) {
@@ -95,7 +95,21 @@ public class VoiceDial extends PhenixServlet {
         } else {
             log.info(() -> "Transfering call %s %s->%s ".formatted(transfer, callingAgent.getFullName(),
                     called.endpoint()));
-            Startup.router.transfer(transfer, called.agent());
+            var call = Locator.$(new Call(transfer));
+            if(call == null) {
+                log.error(()->"Could not transfer unknown call %s".formatted(transfer));
+                throw new NotFoundException();
+            }
+            if(call.getDirection() == OUTBOUND) {
+                var leg = call.getActiveLeg();
+                if (leg==null) {
+                    log.error(() -> "Transferred call %s has no active leg".formatted(transfer));
+                    throw new NotFoundException();
+                }
+                Startup.router.transfer(leg.sid, called.agent());
+            } else {
+                Startup.router.transfer(transfer, called.agent());
+            }
         }
     }
 }

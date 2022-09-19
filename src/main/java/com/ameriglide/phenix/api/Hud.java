@@ -61,9 +61,7 @@ public class Hud extends JsonCronServlet {
             teamJson.$("name", team.getName()).$("id", team.id);
             var members = new JsonList();
             teamJson.$("members", members);
-            forEach(TeamMember.withTeam(team).and(Agent.isActive), agent -> {
-                members.add(byAgent.get(agent.id));
-            });
+            forEach(TeamMember.withTeam(team).and(Agent.isActive), agent -> members.add(byAgent.get(agent.id)));
         });
         map.clear();
         map.putAll(json);

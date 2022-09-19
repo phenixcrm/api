@@ -7,7 +7,6 @@ import com.ameriglide.phenix.common.TeamMember;
 import com.ameriglide.phenix.core.Log;
 import com.ameriglide.phenix.core.Optionals;
 import com.ameriglide.phenix.model.JsonCronServlet;
-import com.ameriglide.phenix.servlet.Startup;
 import io.jsonwebtoken.lang.Objects;
 import jakarta.servlet.annotation.WebServlet;
 import net.inetalliance.potion.query.Query;
@@ -35,6 +34,17 @@ public class Hud extends JsonCronServlet {
         super(2, TimeUnit.SECONDS);
     }
 
+    public static JsonMap toStatusMap(Agent a, Call c) {
+        return new JsonMap()
+                .$("id",a.id)
+                .$("firstName",a.getFirstName())
+                .$("lastName",a.getLastName())
+                .$("call", Optionals
+                        .of(c)
+                        .map(call -> JsonMap.$().$("sid", call.sid).$("direction", call.getDirection()))
+                        .orElse(null));
+    }
+
     @Override
     protected Json produce() {
         var json = new JsonMap();
@@ -42,7 +52,9 @@ public class Hud extends JsonCronServlet {
         json.put("teams", teams);
         var calls = new HashMap<Integer, Call>();
         forEach(Call.isActiveVoiceCall, call -> call.getActiveAgents().forEach(a -> calls.put(a.id, call)));
-
+        forEach(Agent.isActive, agent -> {
+            byAgent.put(agent.id,toStatusMap(agent,calls.get(agent.id)));
+        });
         forEach(Query.all(Team.class), team -> {
             var teamJson = new JsonMap();
             teams.add(teamJson);
@@ -50,17 +62,7 @@ public class Hud extends JsonCronServlet {
             var members = new JsonList();
             teamJson.$("members", members);
             forEach(TeamMember.withTeam(team).and(Agent.isActive), agent -> {
-                JsonMap agentStatus = new JsonMap()
-                        .$("id", agent.id)
-                        .$("firstName", agent.getFirstName())
-                        .$("lastName", agent.getLastName())
-                        .$("call", Optionals
-                                .of(calls.get(agent.id))
-                                .map(call -> JsonMap.$().$("sid", call.sid).$("direction", call.getDirection()))
-                                .orElse(null))
-                        .$("available", Startup.router.byAgent.getOrDefault(agent.getSid(), false));
-                members.add(agentStatus);
-                byAgent.put(agent.id,agentStatus);
+                members.add(byAgent.get(agent.id));
             });
         });
         map.clear();

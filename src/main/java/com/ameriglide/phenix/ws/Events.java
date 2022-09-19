@@ -113,7 +113,8 @@ public class Events
     var ticket = getTicket(session);
     if (ticket != null) {
         Optionals.of(sessions.get(ticket.id())).ifPresent(l -> l.remove(session));
-        log.trace(()->"%s disconnected".formatted(ticket.principal()));
+        log.trace(()->"%s disconnected (%s - %s)".formatted(ticket.principal(),closeReason.getCloseCode(),
+                closeReason.getReasonPhrase()));
     }
   }
 

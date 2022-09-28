@@ -54,9 +54,6 @@ public class Model<T>
   public Model() {
     this(Pattern.compile(".*/model/([^/]*)/?(.*)?"));
   }
-  static {
-    Validator.init();
-  }
 
   protected Model(final Pattern pattern) {
     this.pattern = pattern;
@@ -88,7 +85,7 @@ public class Model<T>
         keyProperty.field.set(t, Classes.convert(keyProperty.type, key.id));
       }
       final Locale locale = request.getLocale();
-      errors.add(Validator.create(locale, t));
+      errors.add(Validator.instance.get().create(locale, t));
       if (errors.isEmpty()) {
         try {
           final String user = getRemoteUser(request);
@@ -157,7 +154,7 @@ public class Model<T>
         final JsonMap externalMap = new JsonMap();
         setProperties(request, data, copy, errors);
         final Locale locale = request.getLocale();
-        errors.add(Validator.update(locale, copy));
+        errors.add(Validator.instance.get().update(locale, copy));
         return ValidationErrors.EMPTY ;//errors; todo: turn this back on
       }
     });
@@ -184,7 +181,6 @@ public class Model<T>
     return Query.all(type);
   }
 
-  @SuppressWarnings("unchecked")
   @Override
   protected void get(final HttpServletRequest request, final HttpServletResponse response)
       throws Exception {

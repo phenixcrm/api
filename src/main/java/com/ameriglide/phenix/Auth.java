@@ -16,7 +16,6 @@ import net.inetalliance.potion.Locator;
 import net.inetalliance.potion.info.Info;
 import net.inetalliance.types.json.Json;
 import net.inetalliance.types.json.JsonList;
-import net.inetalliance.types.json.JsonString;
 import net.inetalliance.types.www.ContentType;
 
 import javax.naming.AuthenticationException;
@@ -28,7 +27,6 @@ import java.io.IOException;
 import java.util.Hashtable;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.stream.Stream;
 
 import static com.ameriglide.phenix.core.Strings.isEmpty;
 import static jakarta.servlet.http.HttpServletResponse.*;
@@ -64,8 +62,14 @@ public class Auth extends HttpServlet {
     var manager = a.isSuperUser() || Locator.count(Team.withManager(a))>0;
     var json  = Info.$(Agent.class).toJson($(a))
       .$("sipSecret", Startup.router.getSipSecret(a));
+    var roles = new JsonList();
+    json.$("roles",roles);
+
     if(manager) {
-      json.$("roles", JsonList.collect(Stream.of(new JsonString("manager"))));
+      roles.add("manager");
+    }
+    if(a.isSuperUser()) {
+      roles.add("superuser");
     }
     json.$("twilioApi", "https://api.twilio.com/2010-04-01/Accounts/%s".formatted(Startup.router.accountSid));
     return json;

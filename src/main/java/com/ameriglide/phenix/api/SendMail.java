@@ -36,15 +36,15 @@ public class SendMail extends PhenixServlet {
                 .orElseGet(() -> new JsonMap().$("email", agent.getEmail()).$("name", agent.getFullName()))));
         var to = email.getList("to");
         if (to!=null) {
-            to.stream().map(j -> (JsonMap) j).map(SendMail::toAddress).forEach(msg::addTo);
+            to.stream().map(JsonMap.class::cast).map(SendMail::toAddress).forEach(msg::addTo);
         }
         var cc = email.getList("cc");
         if (cc!=null) {
-            cc.stream().map(j -> (JsonMap) j).map(SendMail::toAddress).forEach(msg::addCc);
+            cc.stream().map(JsonMap.class::cast).map(SendMail::toAddress).forEach(msg::addCc);
         }
         var bcc = email.getList("bcc");
         if (bcc!=null) {
-            bcc.stream().map(j -> (JsonMap) j).map(SendMail::toAddress).forEach(msg::addBcc);
+            bcc.stream().map(JsonMap.class::cast).map(SendMail::toAddress).forEach(msg::addBcc);
         }
         msg.setSubject(email.get("subject"));
         var html = email.get("body");

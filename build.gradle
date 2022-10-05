@@ -19,7 +19,8 @@ dependencies {
             'jakarta.servlet:jakarta.servlet-api:5.0.0',
             'jakarta.websocket:jakarta.websocket-api:2.0.0',
             'com.twilio.sdk:twilio:8.36.0',
-            'jakarta.mail:jakarta.mail-api:2.1.0',
+            'org.eclipse.angus:angus-mail:1.0.0',
+						'org.eclipse.angus:providers:1.0.0',
             'org.redisson:redisson:3.17.6',
             'io.github.cdimascio:dotenv-java:2.2.4'
     )

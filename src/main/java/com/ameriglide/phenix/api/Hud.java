@@ -63,7 +63,7 @@ public class Hud extends JsonCronServlet {
                 .$("id", a.id)
                 .$("firstName", a.getFirstName())
                 .$("lastName", a.getLastName())
-                .$("available", Startup.router.byAgent.getOrDefault(a.getSid(),false))
+                .$("available", a.getSid()!=null && Startup.router.byAgent.getOrDefault(a.getSid(), false))
                 .$("call", Optionals
                         .of(c)
                         .map(call -> JsonMap.$().$("sid", call.sid).$("direction", call.getDirection()))

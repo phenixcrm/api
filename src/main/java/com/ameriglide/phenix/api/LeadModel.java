@@ -5,6 +5,7 @@ import com.ameriglide.phenix.common.*;
 import com.ameriglide.phenix.model.Key;
 import com.ameriglide.phenix.model.ListableModel;
 import com.ameriglide.phenix.servlet.exception.ForbiddenException;
+import com.ameriglide.phenix.ws.Events;
 import com.ameriglide.phenix.ws.ReminderHandler;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServletRequest;
@@ -278,7 +279,7 @@ public class LeadModel extends ListableModel<Opportunity> {
             return super.update(key, request, response, opportunity, data);
         } finally {
             if (data.containsKey("reminder") && ReminderHandler.$!=null) {
-                ReminderHandler.$.onConnect(Ticket.$(opportunity.getAssignedTo()));
+                ReminderHandler.$.onConnect(Events.getTicket(opportunity.getAssignedTo()));
             }
         }
     }

@@ -25,7 +25,9 @@ public record SessionHandler(Session session)
 
   public static void init(final TaskRouter router) {
     Events.init();
-    handlers.put("status", new StatusHandler(router));
+    var status = new StatusHandler(router);
+    handlers.put("status", status);
+    handlers.put("pop", new PopHandler(status));
     handlers.put("reminder", new ReminderHandler());
     handlers.put("ping", new PingHandler());
     Startup.hud = new HudHandler();

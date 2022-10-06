@@ -36,6 +36,9 @@ public class Events extends Endpoint {
     }
 
     public static Ticket getTicket(final Session session) {
+        if(session == null) {
+            return null;
+        }
         var http = (HttpSession) session.getUserProperties().get(HttpSession.class.getName());
         if (http==null) {
             return null;
@@ -49,10 +52,15 @@ public class Events extends Endpoint {
             var agentId = msg.getInteger("agent");
             var type = msg.get("type");
             var event = msg.getMap("event");
-            log.debug(() -> "new %s event for %s".formatted(type, Locator.$(new Agent(agentId)).getFullName()));
+            log.debug(() -> "new %s event for %s".formatted(type,
+                    agentId==null ? "twilio":Locator.$(new Agent(agentId)).getFullName()));
             log.trace(() -> Json.pretty(event));
-            var response = SessionHandler.getHandler(type).onMessage(sessions.get(agentId).get(0), event);
+            var response = SessionHandler
+                    .getHandler(type)
+                    .onMessage(Optionals.of(sessions.get(agentId)).map(sessions -> sessions.get(0)).orElse(null),
+                            event);
             if (response!=null) {
+                log.trace(() -> "Broadcasting response %s".formatted(response));
                 broadcast(type, agentId, response);
             }
         });
@@ -60,9 +68,11 @@ public class Events extends Endpoint {
 
     public static void broadcast(final String type, final Integer principal, final Json msg) {
         if (principal==null) {
+            log.trace(() -> "broadcasting [%s] from %d, msg: %s".formatted(type, principal, msg));
             // tell everyone
             sessions.values().stream().flatMap(Iterables::stream).forEach(session -> send(session, type, msg));
         } else {
+            log.trace(() -> "shallowcasting [%s] from %d, msg: %s".formatted(type, principal, msg));
             // tell only the sockets for that agent
             sessions
                     .computeIfAbsent(principal, a -> Collections.synchronizedList(new LinkedList<>()))

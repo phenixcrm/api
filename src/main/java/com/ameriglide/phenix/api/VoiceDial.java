@@ -50,14 +50,14 @@ public class VoiceDial extends PhenixServlet {
         } else {
             called = asParty($(new Agent(Integer.parseInt(agent))));
         }
-        var callingAgent = Auth.getAgent(request);
+        var dialingAgent = Auth.getAgent(request);
         if (Strings.isEmpty(transfer)) {
             // create new Call with twilio
             var from = new Sip(asParty(Auth.getAgent(request)).sip());
             var lead = request.getParameter("lead");
 
             var call = new Call();
-            call.setAgent(callingAgent);
+            call.setAgent(dialingAgent);
             call.setDirection(called.isAgent() ? INTERNAL:OUTBOUND);
             call.setCreated(LocalDateTime.now());
             call.setResolution(Resolution.ACTIVE);
@@ -80,7 +80,7 @@ public class VoiceDial extends PhenixServlet {
                         .findFirst()
                         .orElseGet(() -> $1(VerifiedCallerId.isDefault));
             } else if (called.isAgent()) {
-                cid = callingAgent;
+                cid = dialingAgent;
             } else {
                 cid = $1(VerifiedCallerId.isDefault);
             }
@@ -90,26 +90,24 @@ public class VoiceDial extends PhenixServlet {
                     .getSid();
             Locator.create("VoiceDial", call);
             log.info(
-                    () -> "New API dial %s %s -> %s".formatted(call.sid, callingAgent.getSipUser(), called.endpoint()));
+                    () -> "New API dial %s %s -> %s".formatted(call.sid, dialingAgent.getSipUser(), called.endpoint()));
             response.sendError(HttpServletResponse.SC_NO_CONTENT);
         } else {
-            log.info(() -> "Transfering call %s %s->%s ".formatted(transfer, callingAgent.getFullName(),
+            log.info(() -> "Transfering call %s %s->%s ".formatted(transfer, dialingAgent.getFullName(),
                     called.endpoint()));
             var call = Locator.$(new Call(transfer));
-            if(call == null) {
-                log.error(()->"Could not transfer unknown call %s".formatted(transfer));
+            if (call==null) {
+                log.error(() -> "Could not transfer unknown call %s".formatted(transfer));
                 throw new NotFoundException();
             }
-            if(call.getDirection() == OUTBOUND) {
-                var leg = call.getActiveLeg();
-                if (leg==null) {
-                    log.error(() -> "Transferred call %s has no active leg".formatted(transfer));
-                    throw new NotFoundException();
-                }
-                Startup.router.transfer(leg.sid, called.agent());
-            } else {
-                Startup.router.transfer(transfer, called.agent());
-            }
+            var leg = call.getActiveLeg();
+
+            var transferSid = switch (call.getDirection()) {
+                case INTERNAL -> dialingAgent.equals(call.getAgent()) ? call.sid : leg.sid;
+                case OUTBOUND -> leg.sid;
+                default -> call.sid;
+            };
+            Startup.router.transfer(transferSid, called);
         }
     }
 }

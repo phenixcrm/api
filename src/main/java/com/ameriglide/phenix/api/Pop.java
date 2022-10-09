@@ -9,6 +9,7 @@ import com.ameriglide.phenix.model.TypeModel;
 import com.ameriglide.phenix.twilio.TaskRouter;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServletRequest;
+import net.inetalliance.potion.Locator;
 import net.inetalliance.potion.query.Query;
 import net.inetalliance.potion.query.Search;
 import net.inetalliance.types.geopolitical.Country;
@@ -32,96 +33,108 @@ public class Pop extends TypeModel<Call> {
     super(Call.class, Pattern.compile("/api/pop/(.*)"));
   }
 
+  protected static JsonMap toJson(Contact contact, Agent agent) {
+    return toJson(contact, agent, new Path());
+  }
+
   @Override
   protected Json toJson(final Key<Call> key, final Call call, final HttpServletRequest request) {
     final Query<Contact> query;
     final var q = request.getParameter("q");
     final var phone = TaskRouter.toE164(call.getPhone());
-    var contact = Optionals.of(call.getOpportunity()).map(Opportunity::getContact).orElseGet(call::getContact);
+    var selectedContact = Optionals.of(call.getOpportunity()).map(Opportunity::getContact).orElseGet(call::getContact);
     if (isNotEmpty(q)) {
       query = new Search<>(Contact.class, getParameter(request, "n", 10), q.split(" "));
-    } else if (contact!=null) {
-      query = Contact.withId(Contact.class, contact.id);
+    } else if (selectedContact!=null) {
+      query = Contact.withId(Contact.class, selectedContact.id);
     } else if (phone!=null && phone.length() >= 10) {
       query = Contact.withPhoneNumber(phone);
     } else {
       query = Query.none(Contact.class);
     }
-    final Opportunity[] preferred = new Opportunity[1];
+    var contactId = request.getParameter("contact");
+    var path = new Path();
+    if (isNotEmpty(contactId) && !"new".equals(contactId)) {
+      path.contact = Locator.$(new Contact(Integer.parseInt(contactId)));
+    }
+    var leadId = request.getParameter("lead");
+    if (isNotEmpty(leadId) && !"new".equals(leadId)) {
+      path.lead = Locator.$(new Opportunity(Integer.parseInt(leadId)));
+    }
     var loggedIn = Auth.getAgent(request);
-    final JsonList contacts = new JsonList(1);
+    final var contacts = new JsonList(1);
+    if (path.contact!=null) {
+      contacts.add(toJson(path.contact, loggedIn, path));
+    }
+    var onlyPath = getParameter(request, "path", false);
+    if (onlyPath && path.isComplete()) {
+      return path.toJson();
+    }
     forEach(query, c -> {
-      ContactJson e = toJson(c, loggedIn);
-      contacts.add(e.json());
-      if (e.preferred()!=null) {
-        preferred[0] = e.preferred();
+      if (path.contact == null || !path.contact.id.equals(c.id)) {
+        contacts.add(toJson(c, loggedIn, path));
       }
     });
+    if (onlyPath) {
+      return path.toJson();
+    }
 
-    final Business biz = Optionals.of(call.getBusiness()).orElseGet(Business.getDefault);
-
-    final JsonMap map = new JsonMap().$("contacts", contacts).$("business", biz.id)
-
-      .$("path", new JsonMap()
-        .$("contact", preferred[0]==null ? "new":preferred[0].getContact().id.toString())
-        .$("lead", preferred[0]==null ? "new":preferred[0].id.toString()));
     var productLine = call.findProductLine();
-    map.$("productLine", productLine.id);
+    final Business biz = Optionals.of(call.getBusiness()).orElseGet(Business.getDefault);
+    var contact = new JsonMap();
+    var shipping = new JsonMap();
+    contact.$("shipping", shipping);
+    var lead = new JsonMap();
+    var json = new JsonMap();
 
-    map.$("direction", call.getDirection());
-    map.$("source", call.getSource());
-
-    map.$("extra", new JsonMap()
+    json
+      .$("defaults", new JsonMap().$("contact", contact).$("lead", lead))
+      .$("direction", call.getDirection())
+      .$("source", call.getSource())
       .$("business", new JsonMap().$("id", biz.id).$("name", biz.getName()))
+      .$("contacts", contacts)
       .$("productLine", new JsonMap()
         .$("id", productLine.id)
         .$("abbreviation", productLine.getAbbreviation())
-        .$("name", productLine.getName())));
-    /* todo: implement referral tracking
-    if (call.getSource() != null && call.getSource() == Source.REFERRAL) {
-      final Queue queue = call.getQueue();
-      if(queue != null) {
-        final Affiliate affiliate = queue.getAffiliate();
-        if(affiliate == null) {
-          log.error("queue %s is referral, but has no affiliate", queue.key);
+        .$("name", productLine.getName()));
+    lead.$("heat", Heat.NEW);
+    lead.$("business", biz.id);
+    lead.$("productLine", productLine.id).$("source", call.getSource());
 
-        } else {
-          map.$("referrer", affiliate.getDomain());
-        }
-      }
-    }
-       */
     if (phone!=null) {
-      map.$("phone", phone);
+      contact.$("phone", phone);
       if (call.getDirection()!=OUTBOUND) {
         var name = call.getName();
-        if (Strings.isNotEmpty(name)) {
+        if (isNotEmpty(name)) {
           String[] split = name.split("[ ,]", 2);
-          map.$("lastName", initialCapital(split[0]));
+          contact.$("lastName", initialCapital(split[0]));
           if (split.length==2) {
-            map.$("firstName", initialCapital(split[1]));
+            contact.$("firstName", initialCapital(split[1]));
           }
         }
         Optionals
           .of(call.getState())
           .or(() -> Optionals.of(AreaCodeTime.getAreaCodeTime(phone)).map(AreaCodeTime::getUsState))
-          .ifPresent(s -> map.$("state", s));
+          .ifPresent(s -> shipping.$("state", s));
       }
-      map.$("city", Strings.initialCapital(call.getCity()));
-      map.$("country", Optionals.of(call.getCountry()).orElse(Country.UNITED_STATES));
-      map.$("postalCode", call.getZip());
+      shipping.$("city", Strings.initialCapital(call.getCity()));
+      shipping.$("country", Optionals.of(call.getCountry()).orElse(Country.UNITED_STATES));
+      shipping.$("postalCode", call.getZip());
     }
-    return map;
+    return json;
   }
 
-  protected static ContactJson toJson(Contact contact, Agent agent) {
+  protected static JsonMap toJson(Contact contact, Agent agent, Path overallBest) {
     final JsonList list = new JsonList(1);
     var json = new JsonMap().$("id", contact.id).$("name", contact.getFullName()).$("leads", list);
-    var preferred = new Opportunity[1];
     var matchQuality = matchQuality(agent);
+    var contactBest = new Path(contact);
     forEach(Opportunity.withContact(contact), opp -> {
-      if (matchQuality.compare(opp, preferred[0]) > 0) {
-        preferred[0] = opp;
+      if (matchQuality.compare(opp, overallBest.lead) > 0) {
+        overallBest.lead = opp;
+      }
+      if(matchQuality.compare(opp,contactBest.lead) > 0) {
+        contactBest.lead = opp;
       }
       var notes = new JsonList();
       forEach(Note.withOpportunity(opp), n -> {
@@ -134,10 +147,9 @@ public class Pop extends TypeModel<Call> {
       });
       var extra = new JsonMap();
       extra.$("productLine", new JsonMap().$("id", opp.getProductLine().id).$("name", opp.getProductLine().getName()));
-      extra.$("agent",
+      extra.$("assignedTo",
         new JsonMap().$("id", opp.getAssignedTo().id).$("name", opp.getAssignedTo().getFirstNameLastInitial()));
       extra.$("business", new JsonMap().$("id", opp.getBusiness().id).$("name", opp.getBusiness().getName()));
-
       list.add(new JsonMap()
         .$("id", opp.id)
         .$("created", opp.getCreated())
@@ -145,15 +157,22 @@ public class Pop extends TypeModel<Call> {
         .$("source", opp.getSource())
         .$("heat", opp.getHeat())
         .$("productLine", opp.getProductLine().id)
-        .$("agent", opp.getAssignedTo().id)
+        .$("assignedTo", opp.getAssignedTo().id)
         .$("business", opp.getBusiness().id)
         .$("extra", extra));
     });
-    return new ContactJson(json, preferred[0]);
+    json.$("path",contactBest.toJson());
+    return json;
   }
 
   private static Comparator<Opportunity> matchQuality(Agent loggedIn) {
     return (a, b) -> {
+      if (a==null) {
+        if (b==null) {
+          return 0;
+        }
+        return -1;
+      }
       if (b==null) {
         return 1;
       }
@@ -172,11 +191,32 @@ public class Pop extends TypeModel<Call> {
     };
   }
 
-  record ContactJson(JsonMap json, Opportunity preferred) {
-    void addPreferred() {
-      if (preferred!=null) {
-        json.$("preferred", preferred.id);
-      }
+  protected static class Path {
+    Opportunity lead;
+    Contact contact;
+
+    Path() {
+    }
+
+    public Path(final Contact contact, final Opportunity lead) {
+      this.contact = contact;
+      this.lead = lead;
+    }
+
+    public Path(final Contact contact) {
+      this(contact,null);
+    }
+
+    boolean isComplete() {
+      return contact!=null && lead!=null;
+    }
+
+    public Json toJson() {
+      return JsonMap
+        .$()
+        .$("lead", lead==null ? "new":lead.id.toString())
+        .$("contact", contact==null ? "new":contact.id.toString())
+        .$("script",1);
     }
   }
 

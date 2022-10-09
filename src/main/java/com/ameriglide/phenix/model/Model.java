@@ -24,7 +24,6 @@ import net.inetalliance.types.json.JsonMap;
 import net.inetalliance.validation.ValidationErrors;
 import net.inetalliance.validation.Validator;
 
-import java.io.File;
 import java.io.IOException;
 import java.util.Locale;
 import java.util.function.Consumer;
@@ -42,33 +41,21 @@ import static net.inetalliance.potion.Locator.types;
 import static net.inetalliance.types.www.ContentType.MULTIPART_FORMDATA;
 import static net.inetalliance.types.www.ContentType.parse;
 
-public class Model<T>
-    extends PhenixServlet {
+public class Model<T> extends PhenixServlet {
 
   private static final JsonMap emptyMap = new JsonMap();
   private static final Log log = new Log();
   protected final Pattern pattern;
-  private final File temporaryStorage = new File("/tmp");
-  private File repository;
-
-  public Model() {
-    this(Pattern.compile(".*/model/([^/]*)/?(.*)?"));
-  }
 
   protected Model(final Pattern pattern) {
     this.pattern = pattern;
   }
 
-  public <K extends Key<T>> JsonMap createObject(final K key,
-                                                                                    final HttpServletRequest request,
-                                                                                    final HttpServletResponse response, final JsonMap data,
-                                                                                    final Function<T, JsonMap> toJson) {
+  public <K extends Key<T>> JsonMap createObject(final K key, final HttpServletRequest request,
+                                                 final HttpServletResponse response, final JsonMap data,
+                                                 final Function<T, JsonMap> toJson) {
     return createObject(key, request, response, data, toJson, t -> {
     });
-  }
-
-  protected void setDefaults(final T t, final HttpServletRequest request, JsonMap data) {
-
   }
 
   public <K extends Key<T>> JsonMap createObject(final K key, final HttpServletRequest request,
@@ -78,7 +65,7 @@ public class Model<T>
       final T t = key.info.type.getDeclaredConstructor().newInstance();
       final ValidationErrors errors = new ValidationErrors();
       final JsonMap externalMap = new JsonMap();
-      setDefaults(t,request,data);
+      setDefaults(t, request, data);
       setProperties(request, data, t, errors);
       if (isNotEmpty(key.id)) {
         final Property<T, ?> keyProperty = key.info.keys().findFirst().orElseThrow();
@@ -99,30 +86,32 @@ public class Model<T>
           return toJson.apply(t);
         } catch (UniqueKeyError ue) {
           final String name = key.info.keys().findFirst().orElseThrow().field.getName();
-          errors.put(name,
-              singleton(Validator.messages.get(locale, "validation.uniqueKey", Validator.messages.get(locale,
-                      key.info.type.getSimpleName()), name)));
+          errors.put(name, singleton(Validator.messages.get(locale, "validation.uniqueKey",
+            Validator.messages.get(locale, key.info.type.getSimpleName()), name)));
           response.setStatus(SC_BAD_REQUEST);
           return errors.toJsonMap();
         }
       } else {
         response.setStatus(SC_BAD_REQUEST);
-        return onError(key, data, errors.toJsonMap());
+        return onError(request, key, data, errors.toJsonMap());
       }
     } catch (Exception e) {
       throw new RuntimeException(e);
     }
   }
 
-  private static <T> void setProperties(final HttpServletRequest request, final JsonMap data,
-      final T t,
-      final ValidationErrors errors) {
+  protected void setDefaults(final T t, final HttpServletRequest request, JsonMap data) {
+
+  }
+
+  private static <T> void setProperties(final HttpServletRequest request, final JsonMap data, final T t,
+                                        final ValidationErrors errors) {
     final Info<T> info = Info.$(t);
     info.properties().filter(p -> !p.isGenerated()).forEach(property -> {
       if (property instanceof SubObjectProperty && ((SubObjectProperty) property).external) {
         if (isMultipart(request)) {
           final JsonMap propertyMap = data.getMap(property.field.getName());
-          final String filename = propertyMap == null ? null : propertyMap.get("file");
+          final String filename = propertyMap==null ? null:propertyMap.get("file");
           final ValidationErrors uploadErrors = new ValidationErrors();  //todo: this doesn't check anything!
           if (uploadErrors.isEmpty()) {
             property.setIf(t, data);
@@ -137,33 +126,15 @@ public class Model<T>
   }
 
   public static String getRemoteUser(final HttpServletRequest request) {
-    return Optionals.of(Auth.getTicket(request)).map(t->t.agent().getName()).orElse("");
+    return Optionals.of(Auth.getTicket(request)).map(t -> t.agent().getName()).orElse("");
+  }
+
+  protected JsonMap onError(final HttpServletRequest request, Key<T> key, JsonMap data, JsonMap errors) {
+    return errors;
   }
 
   private static boolean isMultipart(final HttpServletRequest request) {
-    return parse(request.getContentType()) == MULTIPART_FORMDATA;
-  }
-
-  public static <T> ValidationErrors update(final HttpServletRequest request, final T t,
-      final JsonMap data) {
-    return Locator.update(t, getRemoteUser(request), new Function<>() {
-      final ValidationErrors errors = new ValidationErrors();
-
-      @Override
-      public ValidationErrors apply(final T copy) {
-        final JsonMap externalMap = new JsonMap();
-        setProperties(request, data, copy, errors);
-        final Locale locale = request.getLocale();
-        errors.add(Validator.instance.get().update(locale, copy));
-        return ValidationErrors.EMPTY ;//errors; todo: turn this back on
-      }
-    });
-  }
-
-  private static Json toJson(final HttpServletResponse response, final Throwable e)
-      throws IOException {
-    response.setStatus(SC_INTERNAL_SERVER_ERROR);
-    return Json.Factory.$(e);
+    return parse(request.getContentType())==MULTIPART_FORMDATA;
   }
 
   public Pattern getPattern() {
@@ -171,8 +142,7 @@ public class Model<T>
   }
 
   @Override
-  public void init(final ServletConfig config)
-      throws ServletException {
+  public void init(final ServletConfig config) throws ServletException {
     super.init(config);
 
   }
@@ -182,19 +152,18 @@ public class Model<T>
   }
 
   @Override
-  protected void get(final HttpServletRequest request, final HttpServletResponse response)
-      throws Exception {
-    if (requireAuthentication() && !isAuthenticated(request)) {
+  protected void get(final HttpServletRequest request, final HttpServletResponse response) throws Exception {
+    if (requireAuthentication() && isNotAuthenticated(request)) {
       throw new UnauthorizedException();
     }
     try {
       final Key<T> key = getKey(request);
-      log.trace(()->"Model GET %s".formatted( key));
+      log.trace(() -> "Model GET %s".formatted(key));
       if (isEmpty(key.id)) {
         respond(response, getAll(request));
       } else {
         final T t = lookup(key, request);
-        if (t == null) {
+        if (t==null) {
           throw new NotFoundException();
         } else if (isReadAuthorized(request, t)) {
           respond(response, toJson(key, t, request));
@@ -211,15 +180,14 @@ public class Model<T>
   }
 
   @Override
-  protected void post(final HttpServletRequest request, final HttpServletResponse response)
-      throws Exception {
-    if (requireAuthentication() && !isAuthenticated(request)) {
+  protected void post(final HttpServletRequest request, final HttpServletResponse response) throws Exception {
+    if (requireAuthentication() && isNotAuthenticated(request)) {
       throw new UnauthorizedException();
     }
     try {
       final Key<T> key = getKey(request);
-      if (key != null) {
-        log.trace(()->"Model POST %s".formatted(key));
+      if (key!=null) {
+        log.trace(() -> "Model POST %s".formatted(key));
         respond(response, create(key, request, response));
       }
     } catch (PhenixServletException e) {
@@ -231,18 +199,17 @@ public class Model<T>
   }
 
   @Override
-  protected void delete(final HttpServletRequest request, final HttpServletResponse response)
-      throws Exception {
-    if (requireAuthentication() && !isAuthenticated(request)) {
+  protected void delete(final HttpServletRequest request, final HttpServletResponse response) throws Exception {
+    if (requireAuthentication() && isNotAuthenticated(request)) {
       throw new UnauthorizedException();
     }
     try {
       final Key<T> key = getKey(request);
-      if (key != null) {
+      if (key!=null) {
         if (isEmpty(key.id)) {
           throw new ForbiddenException(); // not allowing delete of all objects at this time
         } else {
-          log.trace(()->"Model DELETE %s".formatted(key));
+          log.trace(() -> "Model DELETE %s".formatted(key));
           final T t = lookup(key, request);
           if (!isDeleteAuthorized(request, t)) {
             throw new ForbiddenException();
@@ -259,7 +226,7 @@ public class Model<T>
   }
 
   protected T lookup(final Key<T> key, final HttpServletRequest request) {
-    return "new".equals(key.id) ? getDefaults(key, request) : key.info.lookup(key.id);
+    return "new".equals(key.id) ? getDefaults(key, request):key.info.lookup(key.id);
   }
 
   protected boolean isDeleteAuthorized(final HttpServletRequest request, final T t) {
@@ -267,7 +234,7 @@ public class Model<T>
   }
 
   protected Json delete(final HttpServletRequest request, final T object) {
-    if (object != null) {
+    if (object!=null) {
       Locator.delete(getRemoteUser(request), object);
     }
     return emptyMap;
@@ -286,22 +253,20 @@ public class Model<T>
   }
 
   @Override
-  protected void put(final HttpServletRequest request, final HttpServletResponse response)
-      throws Exception {
-    if (requireAuthentication() && !isAuthenticated(request)) {
+  protected void put(final HttpServletRequest request, final HttpServletResponse response) throws Exception {
+    if (requireAuthentication() && isNotAuthenticated(request)) {
       throw new UnauthorizedException();
     }
     try {
       final Key<T> key = getKey(request);
-      if (key != null) {
+      if (key!=null) {
         if (isEmpty(key.id)) {
           response.sendError(SC_BAD_REQUEST, "PUT called without an id");
         } else {
-          log.trace(()->"Model PUT %s".formatted(key));
+          log.trace(() -> "Model PUT %s".formatted(key));
           final T t = lookup(key, request);
-          if (t == null) {
-            throw new NotFoundException("Cannot find %s with key %s", key.type.getSimpleName(),
-                key.id);
+          if (t==null) {
+            throw new NotFoundException("Cannot find %s with key %s", key.type.getSimpleName(), key.id);
           }
           read(t);
           if (!isUpdateAuthorized(request, t)) {
@@ -323,29 +288,38 @@ public class Model<T>
     return isAuthorized(request, t);
   }
 
-  protected Json update(final Key<T> key, final HttpServletRequest request,
-      final HttpServletResponse response, final T t,
-      final JsonMap data)
-      throws IOException {
+  protected Json update(final Key<T> key, final HttpServletRequest request, final HttpServletResponse response,
+                        final T t, final JsonMap data) throws IOException {
     final ValidationErrors errors = update(request, t, data);
-    //todo take this out
-    if (true || errors.isEmpty()) {
+    if (errors.isEmpty()) {
       return toJson(key, t, request);
     } else {
       response.setStatus(SC_BAD_REQUEST);
-      return onError(key,data,errors.toJsonMap());
+      return onError(request, key, data, errors.toJsonMap());
     }
   }
-  protected JsonMap onError(Key<T> key, JsonMap data, JsonMap errors) {
-    return errors;
+
+  public static <T> ValidationErrors update(final HttpServletRequest request, final T t, final JsonMap data) {
+    return Locator.update(t, getRemoteUser(request), new Function<>() {
+      final ValidationErrors errors = new ValidationErrors();
+
+      @Override
+      public ValidationErrors apply(final T copy) {
+        final JsonMap externalMap = new JsonMap();
+        setProperties(request, data, copy, errors);
+        final Locale locale = request.getLocale();
+        errors.add(Validator.instance.get().update(locale, copy));
+        return ValidationErrors.EMPTY;//errors; todo: turn this back on
+      }
+    });
   }
 
   protected boolean requireAuthentication() {
     return false;
   }
 
-  protected boolean isAuthenticated(final HttpServletRequest request) {
-    return false;
+  protected boolean isNotAuthenticated(final HttpServletRequest request) {
+    return true;
   }
 
   protected Key<T> getKey(final HttpServletRequest request) {
@@ -358,46 +332,47 @@ public class Model<T>
     }
   }
 
-  private Json create(final Key<T> key, final HttpServletRequest request,
-      final HttpServletResponse response)
-      throws Throwable {
+  private Json create(final Key<T> key, final HttpServletRequest request, final HttpServletResponse response) throws
+    Throwable {
     final JsonMap data = parseData(request);
     return create(key, request, response, data);
+  }
+
+  private static Json toJson(final HttpServletResponse response, final Throwable e) {
+    response.setStatus(SC_INTERNAL_SERVER_ERROR);
+    return Json.Factory.$(e);
   }
 
   protected Key<T> getKey(final Matcher m) {
     return Key.$(getType(m), m.group(2));
   }
 
-  private JsonMap parseData(final HttpServletRequest request)
-      throws ServletException, IOException {
+  private JsonMap parseData(final HttpServletRequest request) throws ServletException, IOException {
     return switch (parse(request.getContentType())) {
       case MULTIPART_FORMDATA -> throw new ServletException(new UnsupportedOperationException());
       case URL_ENCODED -> parseUrlEncoded(request);
-      default-> JsonMap.parse(request.getInputStream());
+      default -> JsonMap.parse(request.getInputStream());
     };
   }
 
-  public JsonMap create(final Key<T> key, final HttpServletRequest request,
-      final HttpServletResponse response,
-      final JsonMap data) {
+  public JsonMap create(final Key<T> key, final HttpServletRequest request, final HttpServletResponse response,
+                        final JsonMap data) {
     return createObject(key, request, response, data, arg -> (JsonMap) toJson(key, arg, request),
-        arg -> postCreate(arg, request, response));
+      arg -> postCreate(arg, request, response));
   }
 
   @SuppressWarnings("unchecked")
   private Class<T> getType(final Matcher matcher) {
     final String typeName = matcher.group(1);
     final Class<T> type = (Class<T>) types.get(typeName);
-    if (type == null) {
-      log.warn(()->"Could not find persistent object type %s".formatted(typeName));
+    if (type==null) {
+      log.warn(() -> "Could not find persistent object type %s".formatted(typeName));
     }
     return type;
   }
 
 
-  private JsonMap parseUrlEncoded(final HttpServletRequest request)
-      throws IOException {
+  private JsonMap parseUrlEncoded(final HttpServletRequest request) throws IOException {
     String body = Strings.readToString(request.getInputStream());
     if (body.endsWith("\n")) {
       body = body.substring(0, body.length() - 1);
@@ -412,11 +387,10 @@ public class Model<T>
   }
 
   protected Json toJson(final Key<T> key, final T t, final HttpServletRequest request) {
-    return t == null ? Json.NULL : Info.$(t).toJson(t);
+    return t==null ? Json.NULL:Info.$(t).toJson(t);
   }
 
-  protected void postCreate(final T t, final HttpServletRequest request,
-      final HttpServletResponse response) {
+  protected void postCreate(final T t, final HttpServletRequest request, final HttpServletResponse response) {
 
   }
 
@@ -434,12 +408,7 @@ public class Model<T>
     return isAuthorized(request, t);
   }
 
-  protected Query<T> lookup(final Class<T> type, final HttpServletRequest request) {
-    return Query.all(type);
-  }
-
-  public SortedQuery<T> orderBy(final Query<T> query, final String column,
-      final OrderBy.Direction direction) {
+  public SortedQuery<T> orderBy(final Query<T> query, final String column, final OrderBy.Direction direction) {
     return query.orderBy(column, direction);
   }
 
@@ -447,11 +416,4 @@ public class Model<T>
     throw new BadRequestException("Must implement search()");
   }
 
-  /**
-   * Can optionally be overridden differently from toJson() to provide additional values in list
-   * calls
-   */
-  protected Json toListJson(final Key<T> key, final T object, final HttpServletRequest request) {
-    return toJson(key, object, request);
-  }
 }

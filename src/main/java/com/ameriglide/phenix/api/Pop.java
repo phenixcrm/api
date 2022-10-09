@@ -76,6 +76,7 @@ public class Pop extends TypeModel<Call> {
       }
     });
     if (onlyPath) {
+      path.complete();
       return path.toJson();
     }
 
@@ -217,6 +218,12 @@ public class Pop extends TypeModel<Call> {
         .$("lead", lead==null ? "new":lead.id.toString())
         .$("contact", contact==null ? "new":contact.id.toString())
         .$("script",1);
+    }
+
+    public void complete() {
+      if(contact == null && lead != null) {
+        contact = lead.getContact();
+      }
     }
   }
 

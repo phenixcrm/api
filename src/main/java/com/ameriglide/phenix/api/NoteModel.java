@@ -38,21 +38,11 @@ public class NoteModel extends ListableModel<Note> {
     note.setCreated(LocalDateTime.now());
   }
 
-  @Override
-  protected Json toJson(Key<Note> key, Note note, HttpServletRequest request) {
-    var author = note.getAuthor();
-    return new JsonMap()
-      .$("id",note.id)
-      .$("author", author == null ? "Unknown" : author.getFullName())
-      .$("created", note.getCreated())
-      .$("note", note.getNote());
-  }
-
   protected Opportunity getOpportunity(final HttpServletRequest request) {
     var m = pattern.matcher(request.getRequestURI());
-    if(m.matches()) {
+    if (m.matches()) {
       var o = Locator.$(new Opportunity(Integer.valueOf(m.group(1))));
-      if (o == null) {
+      if (o==null) {
         throw new NotFoundException();
       }
       return o;
@@ -64,5 +54,20 @@ public class NoteModel extends ListableModel<Note> {
   @Override
   public Query<Note> all(Class<Note> type, HttpServletRequest request) {
     return Note.withOpportunity(getOpportunity(request));
+  }
+
+  @Override
+  protected Json toJson(final Key<Note> key, final Note note, final HttpServletRequest request) {
+    return toJson(request, note);
+  }
+
+  @Override
+  public Json toJson(final HttpServletRequest request, final Note note) {
+    var author = note.getAuthor();
+    return new JsonMap()
+      .$("id", note.id)
+      .$("author", author==null ? "Unknown":author.getFullName())
+      .$("created", note.getCreated())
+      .$("note", note.getNote());
   }
 }

@@ -78,12 +78,10 @@ public class LeadModel extends ListableModel<Opportunity> {
       var notes = new JsonList();
       extra.$("notes", notes);
       var n = Locator.$1(Note.withOpportunity(o));
-      var a = n.getAuthor();
-      notes.add(new JsonMap()
-        .$("id", n.id)
-        .$("note", n.getNote())
-        .$("author", a==null ? "Unknown":a.getFullName())
-        .$("created", n.getCreated()));
+      if(n != null) {
+        var a = n.getAuthor();
+        notes.add(new JsonMap().$("id", n.id).$("note", n.getNote()).$("author", a==null ? "Unknown":a.getFullName()).$("created", n.getCreated()));
+      }
       json.put("extra", extra);
     }
     final Contact contact = o.getContact();

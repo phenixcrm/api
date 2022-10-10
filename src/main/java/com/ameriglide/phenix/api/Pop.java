@@ -41,7 +41,7 @@ public class Pop extends TypeModel<Call> {
   protected Json toJson(final Key<Call> key, final Call call, final HttpServletRequest request) {
     final Query<Contact> query;
     final var q = request.getParameter("q");
-    final var phone = TaskRouter.toE164(call.getPhone());
+    final var phone = TaskRouter.toE164(call.getRemoteCaller().getPhone());
     var selectedContact = Optionals.of(call.getOpportunity()).map(Opportunity::getContact).orElseGet(call::getContact);
     if (isNotEmpty(q)) {
       query = new Search<>(Contact.class, getParameter(request, "n", 10), q.split(" "));

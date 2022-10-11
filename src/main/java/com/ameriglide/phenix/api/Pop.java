@@ -125,9 +125,18 @@ public class Pop extends TypeModel<Call> {
     return json;
   }
 
+  private static String getContactLabel(Contact c) {
+    var f = c.getFirstName();
+    var l = c.getLastName();
+    if(Strings.isEmpty(l)) {
+      return f;
+    }
+    return "%s %s".formatted(f,l);
+  }
+
   protected static JsonMap toJson(Contact contact, Agent agent, Path overallBest) {
     final JsonList list = new JsonList(1);
-    var json = new JsonMap().$("id", contact.id).$("name", contact.getFullName()).$("leads", list);
+    var json = new JsonMap().$("id", contact.id).$("name", getContactLabel(contact)).$("leads", list);
     var matchQuality = matchQuality(agent);
     var contactBest = new Path(contact);
     forEach(Opportunity.withContact(contact), opp -> {

@@ -25,135 +25,134 @@ import static java.util.Collections.emptyList;
 @ServerEndpoint(value = "/events", configurator = Events.Configurator.class)
 public class Events extends Endpoint {
 
-    private static final Log log = new Log();
-    private static final Map<Integer, List<Session>> sessions = Collections.synchronizedMap(new HashMap<>());
-    public static Function<Session, MessageHandler> handler =
-            session -> (MessageHandler.Whole<String>) message -> log.debug(
-            () -> "session [%s] new message %s".formatted(session.getId(), message));
+  private static final Log log = new Log();
+  private static final Map<Integer, List<Session>> sessions = Collections.synchronizedMap(new HashMap<>());
+  public static Function<Session, MessageHandler> handler =
+    session -> (MessageHandler.Whole<String>) message -> log.debug(
+    () -> "session [%s] new message %s".formatted(session.getId(), message));
 
-    public static Ticket getTicket(final Agent agent) {
-        return sessions.getOrDefault(agent.id, emptyList()).stream().findFirst().map(Events::getTicket).orElse(null);
+  public static Ticket getTicket(final Agent agent) {
+    return sessions.getOrDefault(agent.id, emptyList()).stream().findFirst().map(Events::getTicket).orElse(null);
+  }
+
+  public static Ticket getTicket(final Session session) {
+    if (session==null) {
+      return null;
     }
+    var http = (HttpSession) session.getUserProperties().get(HttpSession.class.getName());
+    if (http==null) {
+      return null;
+    }
+    return (Ticket) http.getAttribute("ticket");
+  }
 
-    public static Ticket getTicket(final Session session) {
-        if(session == null) {
-            return null;
+  public static void init() {
+    log.info(() -> "watching the events topic");
+    Startup.router.getTopic("events").addListener(JsonMap.class, (channel, msg) -> {
+      var agentId = msg.getInteger("agent");
+      var type = msg.get("type");
+      var event = msg.getMap("event");
+      log.debug(() -> "new %s event for %s".formatted(type,
+        agentId==null ? "twilio":Locator.$(new Agent(agentId)).getFullName()));
+      log.trace(() -> Json.pretty(event));
+      var response = SessionHandler
+        .getHandler(type)
+        .onMessage(Optionals.of(sessions.get(agentId)).map(sessions -> sessions.get(0)).orElse(null), event);
+      if (response!=null) {
+        log.trace(() -> "Broadcasting response %s".formatted(response));
+        broadcast(type, agentId, response);
+      }
+    });
+  }
+
+  public static void broadcast(final String type, final Integer principal, final Json msg) {
+    if (principal==null) {
+      log.trace(() -> "broadcasting [%s] from %d, msg: %s".formatted(type, principal, msg));
+      // tell everyone
+      sessions.values().stream().flatMap(Iterables::stream).forEach(session -> send(session, type, msg));
+    } else {
+      log.trace(() -> "shallowcasting [%s] from %d, msg: %s".formatted(type, principal, msg));
+      // tell only the sockets for that agent
+      sessions
+        .computeIfAbsent(principal, a -> Collections.synchronizedList(new LinkedList<>()))
+        .forEach(session -> send(session, type, msg));
+    }
+  }
+
+  public static void send(final Session session, final String type, final Json msg) {
+    if (msg!=null) {
+      try {
+        if (session.isOpen()) {
+          session.getBasicRemote().sendText(Json.ugly(new JsonMap().$("type", type).$("msg", msg)));
         }
-        var http = (HttpSession) session.getUserProperties().get(HttpSession.class.getName());
-        if (http==null) {
-            return null;
-        }
-        return (Ticket) http.getAttribute("ticket");
+      } catch (IOException e) {
+        log.debug(() -> "cannot write to closed session for %s".formatted(getTicket(session).principal()));
+      }
     }
+  }
 
-    public static void init() {
-        log.info(() -> "watching the events topic");
-        Startup.router.getTopic("events").addListener(JsonMap.class, (channel, msg) -> {
-            var agentId = msg.getInteger("agent");
-            var type = msg.get("type");
-            var event = msg.getMap("event");
-            log.debug(() -> "new %s event for %s".formatted(type,
-                    agentId==null ? "twilio":Locator.$(new Agent(agentId)).getFullName()));
-            log.trace(() -> Json.pretty(event));
-            var response = SessionHandler
-                    .getHandler(type)
-                    .onMessage(Optionals.of(sessions.get(agentId)).map(sessions -> sessions.get(0)).orElse(null),
-                            event);
-            if (response!=null) {
-                log.trace(() -> "Broadcasting response %s".formatted(response));
-                broadcast(type, agentId, response);
-            }
-        });
-    }
+  public static void destroy() {
+    sessions.clear();
+  }
 
-    public static void broadcast(final String type, final Integer principal, final Json msg) {
-        if (principal==null) {
-            log.trace(() -> "broadcasting [%s] from %d, msg: %s".formatted(type, principal, msg));
-            // tell everyone
-            sessions.values().stream().flatMap(Iterables::stream).forEach(session -> send(session, type, msg));
-        } else {
-            log.trace(() -> "shallowcasting [%s] from %d, msg: %s".formatted(type, principal, msg));
-            // tell only the sockets for that agent
-            sessions
-                    .computeIfAbsent(principal, a -> Collections.synchronizedList(new LinkedList<>()))
-                    .forEach(session -> send(session, type, msg));
-        }
+  public static void sendToLatest(final String type, final Integer agent, final Json msg) {
+    final var sessions = Events.sessions.getOrDefault(agent, emptyList());
+    if (!sessions.isEmpty()) {
+      send(sessions.get(sessions.size() - 1), type, msg);
     }
+  }
 
-    public static void send(final Session session, final String type, final Json msg) {
-        if (msg!=null) {
-            try {
-                if (session.isOpen()) {
-                    session.getBasicRemote().sendText(Json.ugly(new JsonMap().$("type", type).$("msg", msg)));
-                }
-            } catch (IOException e) {
-                log.debug(() -> "cannot write to closed session for %s".formatted(getTicket(session).principal()));
-            }
-        }
-    }
+  public static Map<TimeZone, Set<Ticket>> getActiveAgents() {
+    return sessions
+      .values()
+      .stream()
+      .map(l -> l.iterator().next())
+      .map(Events::getTicket)
+      .reduce(new HashMap<>(), (map, ticket) -> {
+        map.computeIfAbsent(ticket.getTimeZone(), t -> new HashSet<>()).add(ticket);
+        return map;
+      }, (result, partial) -> {
+        result.putAll(partial);
+        return result;
+      });
+  }
 
-    public static void destroy() {
-        sessions.clear();
+  @Override
+  public void onOpen(final Session session, final EndpointConfig config) {
+    var ticket = getTicket(session);
+    if (ticket!=null) {
+      sessions.computeIfAbsent(ticket.id(), u -> Collections.synchronizedList(new LinkedList<>())).add(session);
+      log.trace(() -> "%s connected".formatted(ticket.principal()));
+      session.addMessageHandler(handler.apply(session));
     }
+  }
 
-    public static void sendToLatest(final String type, final Integer agent, final Json msg) {
-        final var sessions = Events.sessions.getOrDefault(agent, emptyList());
-        if (!sessions.isEmpty()) {
-            send(sessions.get(sessions.size() - 1), type, msg);
-        }
+  @Override
+  public void onClose(final Session session, final CloseReason closeReason) {
+    var ticket = getTicket(session);
+    if (ticket!=null) {
+      Optionals.of(sessions.get(ticket.id())).ifPresent(l -> l.remove(session));
+      log.trace(() -> "%s disconnected (%s - %s)".formatted(ticket.principal(), closeReason.getCloseCode(),
+        closeReason.getReasonPhrase()));
     }
+  }
 
-    public static Map<TimeZone, Set<Ticket>> getActiveAgents() {
-        return sessions
-                .values()
-                .stream()
-                .map(l -> l.iterator().next())
-                .map(Events::getTicket)
-                .reduce(new HashMap<>(), (map, ticket) -> {
-                    map.computeIfAbsent(ticket.timeZone(), t -> new HashSet<>()).add(ticket);
-                    return map;
-                }, (result, partial) -> {
-                    result.putAll(partial);
-                    return result;
-                });
-    }
+  @Override
+  public void onError(final Session session, final Throwable thr) {
+    super.onError(session, thr);
+    log.error(() -> "session error", thr);
+  }
+
+  public static class Configurator extends ServerEndpointConfig.Configurator {
 
     @Override
-    public void onOpen(final Session session, final EndpointConfig config) {
-        var ticket = getTicket(session);
-        if (ticket!=null) {
-            sessions.computeIfAbsent(ticket.id(), u -> Collections.synchronizedList(new LinkedList<>())).add(session);
-            log.trace(() -> "%s connected".formatted(ticket.principal()));
-            session.addMessageHandler(handler.apply(session));
-        }
+    public void modifyHandshake(final ServerEndpointConfig config, final HandshakeRequest request,
+                                final HandshakeResponse response) {
+      final HttpSession session = (HttpSession) request.getHttpSession();
+      if (session!=null) {
+        config.getUserProperties().put(HttpSession.class.getName(), session);
+      }
     }
-
-    @Override
-    public void onClose(final Session session, final CloseReason closeReason) {
-        var ticket = getTicket(session);
-        if (ticket!=null) {
-            Optionals.of(sessions.get(ticket.id())).ifPresent(l -> l.remove(session));
-            log.trace(() -> "%s disconnected (%s - %s)".formatted(ticket.principal(), closeReason.getCloseCode(),
-                    closeReason.getReasonPhrase()));
-        }
-    }
-
-    @Override
-    public void onError(final Session session, final Throwable thr) {
-        super.onError(session, thr);
-        log.error(() -> "session error", thr);
-    }
-
-    public static class Configurator extends ServerEndpointConfig.Configurator {
-
-        @Override
-        public void modifyHandshake(final ServerEndpointConfig config, final HandshakeRequest request,
-                                    final HandshakeResponse response) {
-            final HttpSession session = (HttpSession) request.getHttpSession();
-            if (session!=null) {
-                config.getUserProperties().put(HttpSession.class.getName(), session);
-            }
-        }
-    }
+  }
 
 }

@@ -14,18 +14,18 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import net.inetalliance.potion.Locator;
 import net.inetalliance.potion.info.Info;
-import net.inetalliance.potion.query.Query;
 import net.inetalliance.types.json.Json;
 import net.inetalliance.types.json.JsonList;
 import net.inetalliance.types.json.JsonMap;
 
+import java.sql.SQLException;
 import java.time.Duration;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import static com.ameriglide.phenix.types.CallDirection.OUTBOUND;
 import static net.inetalliance.potion.Locator.forEach;
 import static net.inetalliance.sql.OrderBy.Direction.ASCENDING;
-import static net.inetalliance.sql.OrderBy.Direction.DESCENDING;
 
 @WebServlet("/api/callHistory/*")
 public class CallHistoryModel extends PhenixServlet {
@@ -37,60 +37,69 @@ public class CallHistoryModel extends PhenixServlet {
 
   @Override
   protected void get(HttpServletRequest request, HttpServletResponse response) throws Exception {
-    var opp = Strings.matcher(id).apply(request.getRequestURI())
+    var opp = Strings
+      .matcher(id)
+      .apply(request.getRequestURI())
       .map(m -> m.group(1))
       .map(Integer::parseInt)
       .map(Opportunity::new)
       .map(Locator::$)
       .orElseThrow(() -> new BadRequestException("request must match /api/callHistory/(.*)"));
-    if (opp == null) {
+    if (opp==null) {
       throw new NotFoundException();
     }
     var contact = opp.getContact();
-    respond(response, Listable.$(Call.class, new Listable<>() {
-      @Override
-      public Query<Call> all(Class<Call> type, HttpServletRequest request) {
-        return Call.withContact(contact).orderBy("created", DESCENDING);
-      }
+    var numbers = Call.getPhoneNumbers(contact);
 
-      @Override
-      public Json toJson(HttpServletRequest request, Call call) {
-        new JsonMap();
-        var json = JsonMap
-          .$()
-          .$("sid")
-          .$("recordingSid")
-          .$("resolution")
-          .$("created")
-          .$("direction")
-          .$("transcription");
-        Info.$(call).fill(call, json);
-        Optionals.of(call.getBusiness())
-          .ifPresent(b -> json.$("business",
-            JsonMap
-              .$()
-              .$("name", b.getName())
-              .$("abbreviation", b.getAbbreviation())));
-        json.$(call.getDirection() == OUTBOUND ? "to" : "from", call.getRemoteCaller().toDisplayName());
-        Optionals.of(call.getAgent())
-          .ifPresent(a -> json.$(call.getDirection() == OUTBOUND ? "from" : "to", a.getFullName()));
-        final JsonList talkList = new JsonList();
-        json.put("talkTime", talkList);
-        forEach(Leg.withCall(call).orderBy("created", ASCENDING), segment -> {
-          final JsonMap talkMap = new JsonMap();
-          if (segment.getAgent() != null) {
-            talkMap.put("agent", segment.getAgent().getLastNameFirstInitial());
-          }
-          if (segment.getAnswered() != null && segment.getTalkTime() != null) {
-            talkMap.put("talkTime", format(segment.getTalkTime()));
-          }
-          talkList.add(talkMap);
-        });
-        return json;
+    var params = numbers.stream().map(n -> "?").collect(Collectors.joining(","));
+    var q = "SELECT Call.* FROM Call INNER JOIN Leg ON Leg.call=Call.sid "
+      + "WHERE Call.contact=? OR (Call.direction = 'OUTBOUND' AND leg.phone in ("+ params
+      + ")) OR (Call.direction IN ('QUEUE','VIRTUAL','INBOUND') and call.phone in (" + params + "))";
+    var calls = new JsonList();
+    Locator.jdbc.executeQuery(q, stmt -> {
+      try {
+        stmt.setInt(1, contact.id);
+        int i = 2;
+        var n = numbers.size();
+        for (String number : numbers) {
+          stmt.setString(i, number);
+          stmt.setString(i + n, number);
+          i++;
+        }
+      } catch (SQLException e) {
+        throw new RuntimeException(e);
       }
-    }, request));
-
+    }, resultSet -> {
+      Locator.read(Call.class, call -> calls.add(toJson(request, call))).apply(resultSet);
+    });
+    respond(response, Listable.formatResult(calls));
   }
+
+
+  public Json toJson(HttpServletRequest request, Call call) {
+    new JsonMap();
+    var json = JsonMap.$().$("sid").$("recordingSid").$("resolution").$("created").$("direction").$("transcription");
+    Info.$(call).fill(call, json);
+    Optionals
+      .of(call.getBusiness())
+      .ifPresent(b -> json.$("business", JsonMap.$().$("name", b.getName()).$("abbreviation", b.getAbbreviation())));
+    json.$(call.getDirection()==OUTBOUND ? "to":"from", call.getRemoteCaller().toDisplayName());
+    Optionals.of(call.getAgent()).ifPresent(a -> json.$(call.getDirection()==OUTBOUND ? "from":"to", a.getFullName()));
+    final JsonList talkList = new JsonList();
+    json.put("talkTime", talkList);
+    forEach(Leg.withCall(call).orderBy("created", ASCENDING), segment -> {
+      final JsonMap talkMap = new JsonMap();
+      if (segment.getAgent()!=null) {
+        talkMap.put("agent", segment.getAgent().getLastNameFirstInitial());
+      }
+      if (segment.getAnswered()!=null && segment.getTalkTime()!=null) {
+        talkMap.put("talkTime", format(segment.getTalkTime()));
+      }
+      talkList.add(talkMap);
+    });
+    return json;
+  }
+
 
   private String format(long seconds) {
     var duration = Duration.ofSeconds(seconds);
@@ -111,7 +120,7 @@ public class CallHistoryModel extends PhenixServlet {
     if (s > 0) {
       string.append(s).append("s ");
     }
-    return string.length() > 0 ? string.substring(0, string.length() - 1) : "";
+    return string.length() > 0 ? string.substring(0, string.length() - 1):"";
 
   }
 }

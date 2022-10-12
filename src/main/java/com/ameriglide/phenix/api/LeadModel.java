@@ -19,10 +19,7 @@ import net.inetalliance.types.json.JsonList;
 import net.inetalliance.types.json.JsonMap;
 
 import java.io.IOException;
-import java.time.DayOfWeek;
-import java.time.Instant;
-import java.time.LocalDate;
-import java.time.ZonedDateTime;
+import java.time.*;
 import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.Set;
@@ -341,6 +338,11 @@ public class LeadModel extends ListableModel<Opportunity> {
     };
 
     abstract public DateTimeInterval toInterval();
+  }
+
+  @Override
+  protected void setDefaults(final Opportunity opportunity, final HttpServletRequest request, final JsonMap data) {
+    data.put("created", LocalDateTime.now());
   }
 
   public record SortField(String field, OrderBy.Direction direction) {

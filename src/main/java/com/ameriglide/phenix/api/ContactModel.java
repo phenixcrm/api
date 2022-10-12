@@ -17,6 +17,8 @@ import net.inetalliance.types.json.Json;
 import net.inetalliance.types.json.JsonMap;
 
 import java.util.HashMap;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 import static com.ameriglide.phenix.core.Strings.isEmpty;
 import static com.ameriglide.phenix.core.Strings.isNotEmpty;
@@ -45,15 +47,15 @@ public class ContactModel extends ListableModel<Contact> {
     }
     if (!refer.isEmpty()) {
       var loggedIn = Auth.getAgent(request);
-      var paths = new JsonMap();
-      errors.put("refer", paths);
-      refer.forEach((field, contact) -> {
+      return refer.entrySet().stream().collect(Collectors.toMap(Map.Entry::getKey, e -> {
         var path = new Pop.Path();
-        path.contact = contact;
+        path.contact = e.getValue();
         Pop.toJson(path.contact, loggedIn, path);
-        paths.put(field, path.toJson());
-      });
-
+        return path.toJson();
+      }, (a, b) -> {
+        ((JsonMap) a).putAll((JsonMap) b);
+        return a;
+      }, JsonMap::new));
     }
     return errors;
   }

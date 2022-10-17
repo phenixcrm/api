@@ -1,30 +1,30 @@
 plugins {
-		id 'com.github.johnrengelman.shadow' version '7.1.2'
-    id 'war'
+  id 'com.github.johnrengelman.shadow' version '7.1.2'
+  id 'war'
 }
 description = 'Phénix objects shared between modules'
 
 dependencies {
-    implementation(
-            project(':common'),
-            project(':core'),
-            'net.inetalliance:potion:6.1-SNAPSHOT',
-            'net.inetalliance:types:2.0-SNAPSHOT',
-            'net.inetalliance:util:2.0-SNAPSHOT',
-            'net.inetalliance:cli:2.0-SNAPSHOT',
-            'net.inetalliance:sql:2.0-SNAPSHOT',
-            'net.inetalliance:validation:2.0-SNAPSHOT',
-            'org.apache.commons:commons-csv:1.9.0',
-            'org.postgresql:postgresql:42.5.0',
-            'jakarta.servlet:jakarta.servlet-api:5.0.0',
-            'jakarta.websocket:jakarta.websocket-api:2.0.0',
-            'com.twilio.sdk:twilio:8.36.0',
-            'org.eclipse.angus:angus-mail:1.0.0',
-						'org.eclipse.angus:providers:1.0.0',
-            'org.redisson:redisson:3.17.6',
-            'io.github.cdimascio:dotenv-java:2.2.4'
-    )
-    runtimeOnly (
-            'org.slf4j:slf4j-simple:1.7.36'
-    )
+  implementation(
+    project(':common'),
+    project(':core'),
+    project(':potion'),
+    project(':validation'),
+    project(':types'),
+    project(':util'),
+    project(':cli'),
+    project(':sql'),
+    'org.apache.commons:commons-csv:1.9.0',
+    'org.postgresql:postgresql:42.5.0',
+    'jakarta.servlet:jakarta.servlet-api:5.0.0',
+    'jakarta.websocket:jakarta.websocket-api:2.0.0',
+    'com.twilio.sdk:twilio:9.0.0',
+    'org.eclipse.angus:angus-mail:1.0.0',
+    'org.eclipse.angus:providers:1.0.0',
+    'org.redisson:redisson:3.17.7',
+    'io.github.cdimascio:dotenv-java:2.2.4'
+  )
+  runtimeOnly(
+    'org.slf4j:slf4j-simple:1.7.36'
+  )
 }

@@ -1,6 +1,5 @@
 package com.ameriglide.phenix.ws;
 
-import com.ameriglide.phenix.Startup;
 import com.ameriglide.phenix.common.Agent;
 import com.ameriglide.phenix.common.Ticket;
 import com.ameriglide.phenix.core.Iterables;
@@ -19,6 +18,7 @@ import java.io.IOException;
 import java.util.*;
 import java.util.function.Function;
 
+import static com.ameriglide.phenix.servlet.Startup.topics;
 import static java.util.Collections.emptyList;
 
 
@@ -48,7 +48,7 @@ public class Events extends Endpoint {
 
   public static void init() {
     log.info(() -> "watching the events topic");
-    Startup.router.getTopic("events").addListener(JsonMap.class, (channel, msg) -> {
+    topics.events().addListener(JsonMap.class, (channel, msg) -> {
       var agentId = msg.getInteger("agent");
       var type = msg.get("type");
       var event = msg.getMap("event");
@@ -57,7 +57,11 @@ public class Events extends Endpoint {
       log.trace(() -> Json.pretty(event));
       var response = SessionHandler
         .getHandler(type)
-        .onMessage(Optionals.of(sessions.get(agentId)).map(sessions -> sessions.get(0)).orElse(null), event);
+        .onMessage(Optionals
+          .of(sessions.get(agentId))
+          .filter(sessions -> !sessions.isEmpty())
+          .map(sessions -> sessions.get(sessions.size() - 1))
+          .orElse(null), event);
       if (response!=null) {
         log.trace(() -> "Broadcasting response %s".formatted(response));
         broadcast(type, agentId, response);
@@ -93,13 +97,6 @@ public class Events extends Endpoint {
 
   public static void destroy() {
     sessions.clear();
-  }
-
-  public static void sendToLatest(final String type, final Integer agent, final Json msg) {
-    final var sessions = Events.sessions.getOrDefault(agent, emptyList());
-    if (!sessions.isEmpty()) {
-      send(sessions.get(sessions.size() - 1), type, msg);
-    }
   }
 
   public static Map<TimeZone, Set<Ticket>> getActiveAgents() {

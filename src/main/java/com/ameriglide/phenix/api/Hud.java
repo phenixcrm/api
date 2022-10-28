@@ -60,7 +60,6 @@ public class Hud extends PhenixServlet {
     var newJson = new JsonMap().$("teams", teams).$("agents", agents);
     var newRaw = Json.ugly(newJson);
     if (!Objects.nullSafeEquals(raw, newRaw)) {
-
       raw = newRaw;
       json = newJson;
     }

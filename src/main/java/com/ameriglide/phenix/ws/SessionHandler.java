@@ -13,11 +13,10 @@ import java.util.concurrent.ConcurrentHashMap;
 import static com.ameriglide.phenix.ws.Events.send;
 import static net.inetalliance.util.shell.Shell.log;
 
-public record SessionHandler(Session session)
-  implements MessageHandler.Whole<String> {
+public record SessionHandler(Session session) implements MessageHandler.Whole<String> {
 
-  public static Hud hud;
   private static final Map<String, JsonMessageHandler> handlers = new ConcurrentHashMap<>();
+  public static Hud hud;
 
   public SessionHandler(final Session session) {
     this.session = session;
@@ -31,20 +30,13 @@ public record SessionHandler(Session session)
     handlers.put("pop", new PopHandler(status));
     handlers.put("reminder", new ReminderHandler());
     handlers.put("ping", new PingHandler());
-    handlers.put("hud", new HudHandler(hud));
+    handlers.put("hud", new HudHandler());
 
   }
 
   public static void destroy() {
     handlers.values().forEach(JsonMessageHandler::destroy);
     Events.destroy();
-  }
-
-  public static JsonMessageHandler getHandler(final String type) {
-    return handlers.computeIfAbsent(type, key -> (session, msg) -> {
-      log.warn(()->"received message of unknown type %s: %s".formatted(key, Json.pretty(msg)));
-      return null;
-    });
   }
 
   @Override
@@ -54,4 +46,12 @@ public record SessionHandler(Session session)
     send(session, type, getHandler(type).onMessage(session, msg.getMap("msg")));
 
   }
+
+  public static JsonMessageHandler getHandler(final String type) {
+    return handlers.computeIfAbsent(type, key -> (session, msg) -> {
+      log.warn(() -> "received message of unknown type %s: %s".formatted(key, Json.pretty(msg)));
+      return null;
+    });
+  }
+
 }

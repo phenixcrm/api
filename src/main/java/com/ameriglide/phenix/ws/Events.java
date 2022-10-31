@@ -55,17 +55,7 @@ public class Events extends Endpoint {
       log.debug(() -> "new %s event for %s".formatted(type,
         agentId==null ? "twilio":Locator.$(new Agent(agentId)).getFullName()));
       log.trace(() -> Json.pretty(event));
-      var response = SessionHandler
-        .getHandler(type)
-        .onMessage(Optionals
-          .of(sessions.get(agentId))
-          .filter(sessions -> !sessions.isEmpty())
-          .map(sessions -> sessions.get(sessions.size() - 1))
-          .orElse(null), event);
-      if (response!=null) {
-        log.trace(() -> "Broadcasting response %s".formatted(response));
-        broadcast(type, agentId, response);
-      }
+      SessionHandler.getHandler(type).onAsyncMessage(sessions.get(agentId),event);
     });
   }
 

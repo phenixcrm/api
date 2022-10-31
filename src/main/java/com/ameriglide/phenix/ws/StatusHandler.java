@@ -1,18 +1,23 @@
 package com.ameriglide.phenix.ws;
 
 import com.ameriglide.phenix.Auth;
+import com.ameriglide.phenix.common.AgentStatus;
 import com.ameriglide.phenix.common.ws.Action;
 import com.ameriglide.phenix.core.Log;
 import com.ameriglide.phenix.servlet.PhenixServlet;
+import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.websocket.Session;
 import net.inetalliance.types.json.Json;
 import net.inetalliance.types.json.JsonMap;
 
+import java.util.List;
+
 import static com.ameriglide.phenix.servlet.Startup.router;
 import static com.ameriglide.phenix.servlet.Startup.shared;
 
+@WebServlet("/api/status")
 public class StatusHandler extends PhenixServlet implements JsonMessageHandler {
   private static final Log log = new Log();
 
@@ -20,6 +25,10 @@ public class StatusHandler extends PhenixServlet implements JsonMessageHandler {
   public StatusHandler() {
     super();
 
+  }
+
+  @Override
+  public void destroy() {
   }
 
   @Override
@@ -40,17 +49,26 @@ public class StatusHandler extends PhenixServlet implements JsonMessageHandler {
   }
 
   @Override
-  public JsonMap onConnect(final Session session) {
-    var ticket = Events.getTicket(session);
-    return ticket==null ? null:shared.availability().get(ticket.id()).toJson();
+  public void onAsyncMessage(final List<Session> sessions, final JsonMap msg) {
+    var ticket = Events.getTicket(sessions.get(0));
+    var status = shared.availability().computeIfAbsent(ticket.id(), id -> new AgentStatus(ticket.agent()));
+    Events.broadcast("status", ticket.id(), status.withAvailability(msg.getBoolean("available")).toJson());
   }
 
   @Override
-  public void destroy() {
+  public JsonMap onConnect(final Session session) {
+    var ticket = Events.getTicket(session);
+    return ticket==null ? null:shared
+      .availability()
+      .computeIfAbsent(ticket.id(), id -> new AgentStatus((ticket.agent())))
+      .toJson();
   }
 
   @Override
   protected void get(HttpServletRequest request, HttpServletResponse response) throws Exception {
-    respond(response, shared.availability().get(Auth.getAgent(request).id).toJson());
+    var agent = Auth.getAgent(request);
+    respond(response, shared.availability().computeIfAbsent(agent.id, id -> new AgentStatus(agent)).toJson());
   }
+
+
 }

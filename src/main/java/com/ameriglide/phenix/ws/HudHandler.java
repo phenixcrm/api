@@ -1,6 +1,5 @@
 package com.ameriglide.phenix.ws;
 
-import com.ameriglide.phenix.api.Hud;
 import com.ameriglide.phenix.core.ExecutorServices;
 import com.ameriglide.phenix.core.Log;
 import jakarta.websocket.Session;
@@ -8,10 +7,7 @@ import net.inetalliance.types.json.Json;
 import net.inetalliance.types.json.JsonMap;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -27,11 +23,9 @@ public class HudHandler implements JsonMessageHandler {
     return t;
   });
   private final Set<Session> subscribers;
-  private final Hud hud;
 
-  HudHandler(Hud hud) {
+  HudHandler() {
     subscribers = Collections.synchronizedSet(new HashSet<>(8));
-    this.hud = hud;
 
   }
 
@@ -49,7 +43,7 @@ public class HudHandler implements JsonMessageHandler {
           log.debug(
             () -> "Added HUD subscription for %s, #:%d".formatted(Events.getTicket(session).agent().getSipUser(),
               subscribers.size()));
-          return hud.json;
+          return SessionHandler.hud.json;
         }
         case UNSUBSCRIBE -> {
           subscribers.remove(session);
@@ -71,6 +65,18 @@ public class HudHandler implements JsonMessageHandler {
   private void broadcast(final JsonMap msg) {
     broadcast(Json.ugly(msg));
 
+  }
+
+  @Override
+  public void onAsyncMessage(final List<Session> sessions, final JsonMap jsonMsg) {
+    var msg = Json.ugly(jsonMsg);
+    sessions.parallelStream().forEach(session-> {
+      try {
+        session.getBasicRemote().sendText(msg);
+      } catch (IOException e) {
+        log.warn(e);
+      }
+    });
   }
 
   private void broadcast(final String msg) {

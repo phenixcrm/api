@@ -1,6 +1,7 @@
 package com.ameriglide.phenix.api;
 
 import com.ameriglide.phenix.Startup;
+import com.ameriglide.phenix.common.Agent;
 import com.ameriglide.phenix.common.AgentStatus;
 import com.ameriglide.phenix.common.Team;
 import com.ameriglide.phenix.common.TeamMember;
@@ -11,12 +12,11 @@ import io.jsonwebtoken.lang.Objects;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import net.inetalliance.potion.Locator;
 import net.inetalliance.potion.query.Query;
 import net.inetalliance.types.json.Json;
 import net.inetalliance.types.json.JsonList;
 import net.inetalliance.types.json.JsonMap;
-
-import java.util.stream.Collectors;
 
 import static com.ameriglide.phenix.servlet.Startup.shared;
 import static net.inetalliance.potion.Locator.forEach;
@@ -39,24 +39,21 @@ public class Hud extends PhenixServlet {
     });
     this.teams = new JsonList();
     makeTeams();
-    if (shared.availability().size()==0) {
-      Startup.router.getWorkers().forEach(w -> {
-        var status = new AgentStatus(w);
-        shared.availability().put(status.id(), status);
-      });
-    }
+    new Thread(() -> Startup.router.getWorkers().forEach(w -> {
+      var agent = Locator.$1(Agent.withSid(w.getSid()));
+      if (agent!=null) {
+        shared.availability().put(agent.id, new AgentStatus(w, agent));
+      }
+    })).start();
     produce();
   }
 
   private void produce() {
-    var agents = shared
-      .availability()
-      .entrySet()
-      .stream()
-      .collect(Collectors.toMap(e -> String.valueOf(e.getKey()), e -> e.getValue().toJson(), (a, b) -> {
-        ((JsonMap) a).putAll((JsonMap) b);
-        return a;
-      }, JsonMap::new));
+    var agents = new JsonMap();
+    Locator.forEach(Agent.connected, agent -> {
+      agents.put(String.valueOf(agent.id),
+        shared.availability().computeIfAbsent(agent.id, id -> new AgentStatus(agent)).toJson());
+    });
     var newJson = new JsonMap().$("teams", teams).$("agents", agents);
     var newRaw = Json.ugly(newJson);
     if (!Objects.nullSafeEquals(raw, newRaw)) {
@@ -68,10 +65,15 @@ public class Hud extends PhenixServlet {
 
   private void makeTeams() {
     teams.clear();
-    forEach(Query.all(Team.class), team -> {
+    forEach(Query.all(Team.class).orderBy("name"), team -> {
       var membersList = new JsonList();
-      teams.add(membersList);
-      forEach(TeamMember.withTeam(team), member -> membersList.add((member.id)));
+      var json = new JsonMap().$("members", membersList).$("name", team.getName());
+      teams.add(json);
+      forEach(TeamMember.withTeam(team), member -> {
+        if (member.isActive()) {
+          membersList.add((member.id));
+        }
+      });
     });
 
   }
@@ -81,6 +83,9 @@ public class Hud extends PhenixServlet {
     if (request.getParameter("produce")!=null) {
       produce();
     }
-    respond(response, json);
+    if (request.getParameter("teams")!=null) {
+      makeTeams();
+    }
+    respond(response, raw);
   }
 }

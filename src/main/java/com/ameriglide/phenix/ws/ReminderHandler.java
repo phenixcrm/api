@@ -44,6 +44,11 @@ public class ReminderHandler implements JsonMessageHandler, Runnable {
   }
 
   @Override
+  public void onAsyncMessage(final List<Session> sessions, final JsonMap msg) {
+    sessions.forEach(session->onMessage(session,msg));
+  }
+
+  @Override
   public JsonMap onMessage(final Session session, final JsonMap msg) {
     broadcast(Events.getTicket(session));
     return null;

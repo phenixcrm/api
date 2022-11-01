@@ -80,6 +80,7 @@ public class HudHandler implements JsonMessageHandler {
   }
 
   private void broadcast(final String msg) {
+    log.trace(()->"Brodcasting HUD update");
     final var latch = new CountDownLatch(subscribers.size());
     final var toRemove = new ArrayList<Session>(0);
     try {

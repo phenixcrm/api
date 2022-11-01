@@ -35,6 +35,7 @@ public class Hud extends PhenixServlet {
       switch (msg.toUpperCase()) {
         case "PRODUCE" -> produce();
         case "TEAMS" -> makeTeams();
+        case "SALE" -> updateRevenue();
       }
     });
     this.teams = new JsonList();
@@ -48,6 +49,16 @@ public class Hud extends PhenixServlet {
     produce();
   }
 
+  private void updateRevenue() {
+    shared.availability().forEach((id,status)-> {
+      var sales = status.updateSales();
+      if(sales != status) {
+        shared.availability().put(id,sales);
+      }
+    });
+
+  }
+
   private void produce() {
     var agents = new JsonMap();
     Locator.forEach(Agent.connected, agent -> {
@@ -59,6 +70,8 @@ public class Hud extends PhenixServlet {
     if (!Objects.nullSafeEquals(raw, newRaw)) {
       raw = newRaw;
       json = newJson;
+      SessionHandler.hudHandler.changed(newJson);
+
     }
 
   }

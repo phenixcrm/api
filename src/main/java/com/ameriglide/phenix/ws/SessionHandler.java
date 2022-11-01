@@ -1,7 +1,6 @@
 package com.ameriglide.phenix.ws;
 
 import com.ameriglide.phenix.api.Hud;
-import com.ameriglide.phenix.twilio.TaskRouter;
 import jakarta.websocket.MessageHandler;
 import jakarta.websocket.Session;
 import net.inetalliance.types.json.Json;
@@ -17,20 +16,22 @@ public record SessionHandler(Session session) implements MessageHandler.Whole<St
 
   private static final Map<String, JsonMessageHandler> handlers = new ConcurrentHashMap<>();
   public static Hud hud;
+  public static HudHandler hudHandler;
 
   public SessionHandler(final Session session) {
     this.session = session;
     handlers.forEach((type, handler) -> send(session, type, handler.onConnect(session)));
   }
 
-  public static void init(final TaskRouter router) {
+  public static void init() {
     Events.init();
     var status = new StatusHandler();
     handlers.put("status", status);
     handlers.put("pop", new PopHandler(status));
     handlers.put("reminder", new ReminderHandler());
     handlers.put("ping", new PingHandler());
-    handlers.put("hud", new HudHandler());
+    hudHandler = new HudHandler();
+    handlers.put("hud", hudHandler);
 
   }
 

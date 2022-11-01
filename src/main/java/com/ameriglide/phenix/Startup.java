@@ -17,7 +17,7 @@ public class Startup extends com.ameriglide.phenix.servlet.Startup {
     @Override
     public void contextInitialized(ServletContextEvent sce) {
         super.contextInitialized(sce);
-        SessionHandler.init(router);
+        SessionHandler.init();
         Events.handler = SessionHandler::new;
 
     }

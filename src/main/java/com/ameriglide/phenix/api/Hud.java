@@ -5,7 +5,6 @@ import com.ameriglide.phenix.common.Agent;
 import com.ameriglide.phenix.common.AgentStatus;
 import com.ameriglide.phenix.common.Team;
 import com.ameriglide.phenix.common.TeamMember;
-import com.ameriglide.phenix.core.Log;
 import com.ameriglide.phenix.servlet.PhenixServlet;
 import com.ameriglide.phenix.ws.SessionHandler;
 import io.jsonwebtoken.lang.Objects;
@@ -24,7 +23,6 @@ import static net.inetalliance.potion.Locator.forEach;
 @WebServlet(value = "/api/hud", loadOnStartup = 1)
 public class Hud extends PhenixServlet {
 
-  private static final Log log = new Log();
   private final JsonList teams;
   public JsonMap json;
   private String raw;
@@ -40,13 +38,15 @@ public class Hud extends PhenixServlet {
     });
     this.teams = new JsonList();
     makeTeams();
-    new Thread(() -> Startup.router.getWorkers().forEach(w -> {
-      var agent = Locator.$1(Agent.withSid(w.getSid()));
-      if (agent!=null) {
-        shared.availability().put(agent.id, new AgentStatus(w, agent));
-      }
-    })).start();
-    produce();
+    new Thread(() -> {
+      Startup.router.getWorkers().forEach(w -> {
+        var agent = Locator.$1(Agent.withSid(w.getSid()));
+        if (agent!=null) {
+          shared.availability().put(agent.id, new AgentStatus(w, agent));
+        }
+      });
+      produce();
+    }).start();
   }
 
   private void updateRevenue() {
@@ -56,7 +56,6 @@ public class Hud extends PhenixServlet {
         shared.availability().put(id,sales);
       }
     });
-
   }
 
   private void produce() {

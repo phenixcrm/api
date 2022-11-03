@@ -25,6 +25,10 @@ public interface Listable<T> {
    */
   String pageSize = "n";
 
+  default int getPageSize(HttpServletRequest request) {
+    return getParameter(request,Listable.pageSize,0);
+  }
+
   static <T> JsonMap $(final Class<T> type, final Listable<T> listable,
       final HttpServletRequest request) {
     Query<T> query = listable.all(type, request);
@@ -35,7 +39,7 @@ public interface Listable<T> {
       query = Sortable.Impl.$(query, (Sortable<T>) listable, request);
     }
     final int total = Locator.count(query);
-    final int pageSize = getParameter(request, Listable.pageSize, 0);
+    final int pageSize = listable.getPageSize(request);
     final int page = getParameter(request, Listable.page, 1);
     if (pageSize > 0) {
       query = query.limit((page - 1) * pageSize, pageSize);

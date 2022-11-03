@@ -20,7 +20,6 @@ import net.inetalliance.types.json.JsonMap;
 import java.util.Comparator;
 import java.util.regex.Pattern;
 
-import static com.ameriglide.phenix.core.Strings.initialCapital;
 import static com.ameriglide.phenix.core.Strings.isNotEmpty;
 import static com.ameriglide.phenix.types.CallDirection.OUTBOUND;
 import static net.inetalliance.potion.Locator.forEach;
@@ -35,6 +34,82 @@ public class Pop extends TypeModel<Call> {
 
   protected static JsonMap toJson(Contact contact, Agent agent) {
     return toJson(contact, agent, new Path());
+  }
+
+  protected static JsonMap toJson(Contact contact, Agent agent, Path overallBest) {
+    final JsonList list = new JsonList(1);
+    var json = new JsonMap().$("id", contact.id).$("name", getContactLabel(contact)).$("leads", list);
+    var matchQuality = matchQuality(agent);
+    var contactBest = new Path(contact);
+    forEach(Opportunity.withContact(contact), opp -> {
+      if (matchQuality.compare(opp, overallBest.lead) > 0) {
+        overallBest.lead = opp;
+      }
+      if (matchQuality.compare(opp, contactBest.lead) > 0) {
+        contactBest.lead = opp;
+      }
+      var notes = new JsonList();
+      forEach(Note.withOpportunity(opp), n -> {
+        var a = n.getAuthor();
+        notes.add(new JsonMap()
+          .$("id", n.id)
+          .$("note", n.getNote())
+          .$("author", a==null ? "Unknown":a.getFullName())
+          .$("created", n.getCreated()));
+      });
+      var extra = new JsonMap();
+      extra.$("productLine", new JsonMap().$("id", opp.getProductLine().id).$("name", opp.getProductLine().getName()));
+      extra.$("assignedTo",
+        new JsonMap().$("id", opp.getAssignedTo().id).$("name", opp.getAssignedTo().getFirstNameLastInitial()));
+      extra.$("business", new JsonMap().$("id", opp.getBusiness().id).$("name", opp.getBusiness().getName()));
+      list.add(new JsonMap()
+        .$("id", opp.id)
+        .$("created", opp.getCreated())
+        .$("notes", notes)
+        .$("source", opp.getSource())
+        .$("heat", opp.getHeat())
+        .$("productLine", opp.getProductLine().id)
+        .$("assignedTo", opp.getAssignedTo().id)
+        .$("business", opp.getBusiness().id)
+        .$("extra", extra));
+    });
+    json.$("path", contactBest.toJson());
+    return json;
+  }
+
+  private static String getContactLabel(Contact c) {
+    var f = c.getFirstName();
+    var l = c.getLastName();
+    if (Strings.isEmpty(l)) {
+      return f;
+    }
+    return "%s %s".formatted(f, l);
+  }
+
+  private static Comparator<Opportunity> matchQuality(Agent loggedIn) {
+    return (a, b) -> {
+      if (a==null) {
+        if (b==null) {
+          return 0;
+        }
+        return -1;
+      }
+      if (b==null) {
+        return 1;
+      }
+
+      // then same agent opps
+      if (!a.getAssignedTo().id.equals(b.getAssignedTo().id)) {
+        if (loggedIn.id.equals(a.getAssignedTo().id)) {
+          return 1;
+        }
+        if (loggedIn.id.equals(b.getAssignedTo().id)) {
+          return -1;
+        }
+      }
+      // then hot before cold
+      return a.getHeat().compareTo(b.getHeat());
+    };
   }
 
   @Override
@@ -71,7 +146,7 @@ public class Pop extends TypeModel<Call> {
       return path.toJson();
     }
     forEach(query, c -> {
-      if (path.contact == null || !path.contact.id.equals(c.id)) {
+      if (path.contact==null || !path.contact.id.equals(c.id)) {
         contacts.add(toJson(c, loggedIn, path));
       }
     });
@@ -105,14 +180,7 @@ public class Pop extends TypeModel<Call> {
     if (phone!=null) {
       contact.$("phone", phone);
       if (call.getDirection()!=OUTBOUND) {
-        var name = call.getName();
-        if (isNotEmpty(name)) {
-          String[] split = name.split("[ ,]", 2);
-          contact.$("lastName", initialCapital(split[0]));
-          if (split.length==2) {
-            contact.$("firstName", initialCapital(split[1]));
-          }
-        }
+        contact.putAll(new FullName(call).toJson());
         Optionals
           .of(call.getState())
           .or(() -> Optionals.of(AreaCodeTime.getAreaCodeTime(phone)).map(AreaCodeTime::getUsState))
@@ -125,82 +193,6 @@ public class Pop extends TypeModel<Call> {
     return json;
   }
 
-  private static String getContactLabel(Contact c) {
-    var f = c.getFirstName();
-    var l = c.getLastName();
-    if(Strings.isEmpty(l)) {
-      return f;
-    }
-    return "%s %s".formatted(f,l);
-  }
-
-  protected static JsonMap toJson(Contact contact, Agent agent, Path overallBest) {
-    final JsonList list = new JsonList(1);
-    var json = new JsonMap().$("id", contact.id).$("name", getContactLabel(contact)).$("leads", list);
-    var matchQuality = matchQuality(agent);
-    var contactBest = new Path(contact);
-    forEach(Opportunity.withContact(contact), opp -> {
-      if (matchQuality.compare(opp, overallBest.lead) > 0) {
-        overallBest.lead = opp;
-      }
-      if(matchQuality.compare(opp,contactBest.lead) > 0) {
-        contactBest.lead = opp;
-      }
-      var notes = new JsonList();
-      forEach(Note.withOpportunity(opp), n -> {
-        var a = n.getAuthor();
-        notes.add(new JsonMap()
-          .$("id", n.id)
-          .$("note", n.getNote())
-          .$("author", a==null ? "Unknown":a.getFullName())
-          .$("created", n.getCreated()));
-      });
-      var extra = new JsonMap();
-      extra.$("productLine", new JsonMap().$("id", opp.getProductLine().id).$("name", opp.getProductLine().getName()));
-      extra.$("assignedTo",
-        new JsonMap().$("id", opp.getAssignedTo().id).$("name", opp.getAssignedTo().getFirstNameLastInitial()));
-      extra.$("business", new JsonMap().$("id", opp.getBusiness().id).$("name", opp.getBusiness().getName()));
-      list.add(new JsonMap()
-        .$("id", opp.id)
-        .$("created", opp.getCreated())
-        .$("notes", notes)
-        .$("source", opp.getSource())
-        .$("heat", opp.getHeat())
-        .$("productLine", opp.getProductLine().id)
-        .$("assignedTo", opp.getAssignedTo().id)
-        .$("business", opp.getBusiness().id)
-        .$("extra", extra));
-    });
-    json.$("path",contactBest.toJson());
-    return json;
-  }
-
-  private static Comparator<Opportunity> matchQuality(Agent loggedIn) {
-    return (a, b) -> {
-      if (a==null) {
-        if (b==null) {
-          return 0;
-        }
-        return -1;
-      }
-      if (b==null) {
-        return 1;
-      }
-
-      // then same agent opps
-      if (!a.getAssignedTo().id.equals(b.getAssignedTo().id)) {
-        if (loggedIn.id.equals(a.getAssignedTo().id)) {
-          return 1;
-        }
-        if (loggedIn.id.equals(b.getAssignedTo().id)) {
-          return -1;
-        }
-      }
-      // then hot before cold
-      return a.getHeat().compareTo(b.getHeat());
-    };
-  }
-
   protected static class Path {
     Opportunity lead;
     Contact contact;
@@ -208,13 +200,13 @@ public class Pop extends TypeModel<Call> {
     Path() {
     }
 
+    public Path(final Contact contact) {
+      this(contact, null);
+    }
+
     public Path(final Contact contact, final Opportunity lead) {
       this.contact = contact;
       this.lead = lead;
-    }
-
-    public Path(final Contact contact) {
-      this(contact,null);
     }
 
     boolean isComplete() {
@@ -226,11 +218,11 @@ public class Pop extends TypeModel<Call> {
         .$()
         .$("lead", lead==null ? "new":lead.id.toString())
         .$("contact", contact==null ? "new":contact.id.toString())
-        .$("script",1);
+        .$("script", 1);
     }
 
     public void complete() {
-      if(contact == null && lead != null) {
+      if (contact==null && lead!=null) {
         contact = lead.getContact();
       }
     }

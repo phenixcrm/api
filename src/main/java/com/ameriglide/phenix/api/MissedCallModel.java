@@ -1,5 +1,6 @@
 package com.ameriglide.phenix.api;
 
+import com.ameriglide.phenix.Auth;
 import com.ameriglide.phenix.common.Call;
 import com.ameriglide.phenix.common.FullName;
 import com.ameriglide.phenix.common.SkillQueue;
@@ -10,11 +11,8 @@ import jakarta.servlet.http.HttpServletRequest;
 import net.inetalliance.potion.query.Query;
 import net.inetalliance.types.json.Json;
 
-import java.util.EnumSet;
 import java.util.regex.Pattern;
 
-import static com.ameriglide.phenix.types.CallDirection.QUEUE;
-import static com.ameriglide.phenix.types.CallDirection.VIRTUAL;
 import static com.ameriglide.phenix.types.Resolution.VOICEMAIL;
 import static net.inetalliance.sql.OrderBy.Direction.DESCENDING;
 
@@ -26,9 +24,10 @@ public class MissedCallModel extends ListableModel<Call> {
 
   @Override
   public Query<Call> all(final Class<Call> type, final HttpServletRequest request) {
+    var agent = Auth.getAgent(request);
     return Call
-      .withAgent(null)
-      .and(Call.withDirectionIn(EnumSet.of(VIRTUAL, QUEUE)))
+      .withAgent("true".equals(request.getParameter("voicemail")) ? agent : null)
+      .and(Call.isQueue)
       .and(Call.withResolution(VOICEMAIL))
       .orderBy("created", DESCENDING);
   }
@@ -42,6 +41,7 @@ public class MissedCallModel extends ListableModel<Call> {
       .$("created", call.getCreated())
       .$("phone", call.getPhone())
       .$("state", call.getState())
+      .$("todo",call.isTodo())
       .$("resolution", call.getResolution())
       .$("recording", call.getRecordingSid())
       .$("transcription", call.getTranscription())

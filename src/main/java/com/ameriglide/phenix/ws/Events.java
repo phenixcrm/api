@@ -55,7 +55,7 @@ public class Events extends Endpoint {
       log.debug(() -> "new %s event for %s".formatted(type,
         agentId==null ? "twilio":Locator.$(new Agent(agentId)).getFullName()));
       log.trace(() -> Json.pretty(event));
-      SessionHandler.getHandler(type).onAsyncMessage(sessions.get(agentId),event);
+      SessionHandler.getHandler(type).onAsyncMessage(sessions.get(agentId), event);
     });
   }
 
@@ -127,7 +127,10 @@ public class Events extends Endpoint {
   @Override
   public void onError(final Session session, final Throwable thr) {
     super.onError(session, thr);
-    log.error(() -> "session error", thr);
+    if (thr instanceof IOException) {
+      log.trace(() -> "closing session %s".formatted(session.getId()));
+      Optionals.of(getTicket(session)).map(ticket -> sessions.get(ticket.id())).ifPresent(l -> l.remove(session));
+    }
   }
 
   public static class Configurator extends ServerEndpointConfig.Configurator {

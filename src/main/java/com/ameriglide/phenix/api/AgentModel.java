@@ -7,6 +7,7 @@ import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import net.inetalliance.potion.info.Info;
 import net.inetalliance.potion.query.Query;
+import net.inetalliance.sql.Namer;
 import net.inetalliance.types.json.Json;
 
 import static net.inetalliance.sql.OrderBy.Direction.ASCENDING;
@@ -34,7 +35,12 @@ public class AgentModel extends ListableModel<Agent> {
         if (request.getParameter("sales")!=null) {
             query = query.and(Agent.sales);
         }
-        return query.or(Query.is(Agent.system())).orderBy("firstName", ASCENDING).orderBy("lastName", ASCENDING);
+        var where = query.getWhere(Namer.simple,"agent");
+        if(where != null) {
+          query = query.or(Query.is(Agent.system()));
+        }
+
+        return query.orderBy("firstName", ASCENDING).orderBy("lastName", ASCENDING);
     }
 
     @Override

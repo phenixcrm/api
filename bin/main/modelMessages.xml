@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE properties PUBLIC "-//Sun Microsystems, Inc.//Properties File//EN"
+        "http://java.sun.com/dtd/properties.dtd">
+<properties>
+    <entry key="notFound">Could not find {0} with id {1}</entry>
+    <entry key="noDeleteAll">Can not delete all {0}</entry>
+    <entry key="save">Save</entry>
+    <entry key="cancel">Cancel</entry>
+    <entry key="delete">Delete</entry>
+    <entry key="error">Error</entry>
+    <entry key="close">Close</entry>
+    <entry key="connecting">Connecting...</entry>
+    <entry key="sendingData">Sending data...</entry>
+    <entry key="authenticationFailed">Authentication Failed</entry>
+    <entry key="ajaxFailed">Ajax communication failed</entry>
+    <entry key="formInvalid">At least one form field is invalid.</entry>
+    <entry key="accessRestricted">Access restricted to authorized users only.</entry>
+    <entry key="logout">Logout</entry>
+    <entry key="login">Login</entry>
+    <entry key="name">Name</entry>
+    <entry key="password">Password</entry>
+    <entry key="remember">Remember</entry>
+    <entry key="notForShared">This is not recommended for shared computers.</entry>
+    <entry key="deleteConfirmation">Delete Confirmation</entry>
+    <entry key="areYouSure">Are you sure?</entry>
+    <entry key="selectToAdd">Select to add...</entry>
+</properties>

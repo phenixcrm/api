@@ -6,6 +6,7 @@ import com.ameriglide.phenix.common.AgentStatus;
 import com.ameriglide.phenix.common.Team;
 import com.ameriglide.phenix.common.TeamMember;
 import com.ameriglide.phenix.servlet.PhenixServlet;
+import com.ameriglide.phenix.servlet.topics.HudTopic;
 import com.ameriglide.phenix.ws.SessionHandler;
 import io.jsonwebtoken.lang.Objects;
 import jakarta.servlet.annotation.WebServlet;
@@ -16,12 +17,13 @@ import net.inetalliance.potion.query.Query;
 import net.inetalliance.types.json.Json;
 import net.inetalliance.types.json.JsonList;
 import net.inetalliance.types.json.JsonMap;
+import org.redisson.api.listener.MessageListener;
 
 import static com.ameriglide.phenix.servlet.Startup.shared;
 import static net.inetalliance.potion.Locator.forEach;
 
 @WebServlet(value = "/api/hud", loadOnStartup = 1)
-public class Hud extends PhenixServlet {
+public class Hud extends PhenixServlet implements MessageListener<HudTopic> {
 
   private final JsonList teams;
   public JsonMap json;
@@ -29,13 +31,7 @@ public class Hud extends PhenixServlet {
 
   public Hud() {
     SessionHandler.hud = this;
-    Startup.topics.hud().addListener(String.class, (channel, msg) -> {
-      switch (msg.toUpperCase()) {
-        case "PRODUCE" -> produce();
-        case "TEAMS" -> makeTeams();
-        case "SALE" -> updateRevenue();
-      }
-    });
+    Startup.topics.hud().listen(this);
     this.teams = new JsonList();
     makeTeams();
     new Thread(() -> {
@@ -49,13 +45,13 @@ public class Hud extends PhenixServlet {
     }).start();
   }
 
-  private void updateRevenue() {
-    shared.availability().forEach((id,status)-> {
-      var sales = status.updateSales();
-      if(sales != status) {
-        shared.availability().put(id,sales);
-      }
-    });
+  @Override
+  public void onMessage(final CharSequence channel, final HudTopic msg) {
+    switch (msg) {
+      case PRODUCE -> produce();
+      case TEAMS -> makeTeams();
+      case SALE -> updateRevenue();
+    }
   }
 
   private void produce() {
@@ -88,6 +84,15 @@ public class Hud extends PhenixServlet {
       });
     });
 
+  }
+
+  private void updateRevenue() {
+    shared.availability().forEach((id, status) -> {
+      var sales = status.updateSales();
+      if (sales!=status) {
+        shared.availability().put(id, sales);
+      }
+    });
   }
 
   @Override

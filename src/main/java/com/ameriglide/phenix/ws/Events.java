@@ -20,6 +20,7 @@ import java.util.function.Function;
 
 import static com.ameriglide.phenix.servlet.Startup.topics;
 import static java.util.Collections.emptyList;
+import static java.util.Collections.synchronizedList;
 
 
 @ServerEndpoint(value = "/events", configurator = Events.Configurator.class)
@@ -46,9 +47,10 @@ public class Events extends Endpoint {
     return (Ticket) http.getAttribute("ticket");
   }
 
+
   public static void init() {
     log.info(() -> "watching the events topic");
-    topics.events().addListener(JsonMap.class, (channel, msg) -> {
+    topics.events().listen((channel, msg) -> {
       var agentId = msg.getInteger("agent");
       var type = msg.get("type");
       var event = msg.getMap("event");
@@ -57,6 +59,7 @@ public class Events extends Endpoint {
       log.trace(() -> Json.pretty(event));
       SessionHandler.getHandler(type).onAsyncMessage(sessions.get(agentId), event);
     });
+
   }
 
   public static void broadcast(final String type, final Integer principal, final Json msg) {
@@ -68,7 +71,7 @@ public class Events extends Endpoint {
       log.trace(() -> "shallowcasting [%s] from %d, msg: %s".formatted(type, principal, msg));
       // tell only the sockets for that agent
       sessions
-        .computeIfAbsent(principal, a -> Collections.synchronizedList(new LinkedList<>()))
+        .computeIfAbsent(principal, a -> synchronizedList(new LinkedList<>()))
         .forEach(session -> send(session, type, msg));
     }
   }
@@ -108,7 +111,7 @@ public class Events extends Endpoint {
   public void onOpen(final Session session, final EndpointConfig config) {
     var ticket = getTicket(session);
     if (ticket!=null) {
-      sessions.computeIfAbsent(ticket.id(), u -> Collections.synchronizedList(new LinkedList<>())).add(session);
+      sessions.computeIfAbsent(ticket.id(), u -> synchronizedList(new LinkedList<>())).add(session);
       log.trace(() -> "%s connected".formatted(ticket.principal()));
       session.addMessageHandler(handler.apply(session));
     }

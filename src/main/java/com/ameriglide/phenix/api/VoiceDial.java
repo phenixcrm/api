@@ -23,8 +23,7 @@ import java.util.Objects;
 import static com.ameriglide.phenix.core.Strings.isEmpty;
 import static com.ameriglide.phenix.core.Strings.isNotEmpty;
 import static com.ameriglide.phenix.servlet.TwiMLServlet.asParty;
-import static com.ameriglide.phenix.types.CallDirection.INTERNAL;
-import static com.ameriglide.phenix.types.CallDirection.OUTBOUND;
+import static com.ameriglide.phenix.types.CallDirection.*;
 import static net.inetalliance.potion.Locator.$;
 import static net.inetalliance.potion.Locator.$1;
 
@@ -100,14 +99,21 @@ public class VoiceDial extends PhenixServlet {
                 log.error(() -> "Could not transfer unknown call %s".formatted(transfer));
                 throw new NotFoundException();
             }
-            var leg = call.getActiveLeg();
+            if(call.getDirection() == QUEUE) {
+              Startup.router.addParticipant(call.sid,call.getActiveAgent(), called);
 
-            var transferSid = switch (call.getDirection()) {
-                case INTERNAL -> dialingAgent.equals(call.getAgent()) ? call.sid : leg.sid;
-                case OUTBOUND -> leg.sid;
-                default -> call.sid;
-            };
-            Startup.router.transfer(transferSid, called);
+            } else{
+
+                var leg = call.getActiveLeg();
+
+                var transferSid = switch (call.getDirection()) {
+                  case INTERNAL -> dialingAgent.equals(call.getAgent()) ? call.sid:leg.sid;
+                  case OUTBOUND -> leg.sid;
+                  default -> call.sid;
+                };
+
+                Startup.router.transfer(transferSid, called);
+              }
         }
     }
 }

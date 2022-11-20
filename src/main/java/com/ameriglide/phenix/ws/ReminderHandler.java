@@ -10,13 +10,10 @@ import jakarta.websocket.Session;
 import net.inetalliance.types.Surnamed;
 import net.inetalliance.types.json.JsonList;
 import net.inetalliance.types.json.JsonMap;
-import net.inetalliance.types.struct.maps.LazyMap;
 
 import java.util.*;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
 
 import static com.ameriglide.phenix.common.Opportunity.needsReminding;
@@ -28,24 +25,42 @@ public class ReminderHandler implements JsonMessageHandler, Runnable {
 
   private static final Log log = new Log();
   public static ReminderHandler $;
-  private final Map<Integer, JsonList> msgs;
-  private final Lock lock;
+  private final Map<Integer, Set<JsonMap>> msgs;
   private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor((r) -> {
     var t = new Thread(r);
     t.setDaemon(true);
     return t;
   });
+  private final Set<JsonMap> init =
+    Collections.synchronizedSet(new TreeSet<>(Comparator.comparingInt(json ->json.getInteger("id"))));
 
   ReminderHandler() {
     $ = this;
-    lock = new ReentrantLock();
-    msgs = new LazyMap<>(new HashMap<>(8), s -> new JsonList());
+    msgs = Collections.synchronizedMap(new HashMap<>());
     scheduler.scheduleWithFixedDelay(this, 0, 1, MINUTES);
   }
 
   @Override
+  public void run() {
+    final Map<TimeZone, Set<Ticket>> active = Events.getActiveAgents();
+    msgs.clear();
+    try {
+      if (!active.isEmpty()) {
+        active.forEach((timeZone, agents) -> forEach(needsReminding(15, MINUTES, timeZone).and(
+          Opportunity.withAgentIdIn(agents.stream().map(Ticket::id).collect(Collectors.toSet()))), this::add));
+        for (var entry : msgs.entrySet()) {
+          final var value = entry.getValue();
+          if (!value.isEmpty()) {
+            Events.broadcast("reminder", entry.getKey(), new JsonList(value));
+          }
+        }
+      }
+    } catch (Throwable t) {
+      log.error(t);
+    }
+  }  @Override
   public void onAsyncMessage(final List<Session> sessions, final JsonMap msg) {
-    sessions.forEach(session->onMessage(session,msg));
+    sessions.forEach(session -> onMessage(session, msg));
   }
 
   @Override
@@ -71,15 +86,10 @@ public class ReminderHandler implements JsonMessageHandler, Runnable {
 
   private void broadcast(Ticket ticket) {
     if (ticket!=null) {
-      lock.lock();
-      try {
-        msgs.remove(ticket.id());
-        forEach(needsReminding(15, MINUTES, ticket.getTimeZone()).and(Opportunity.withAgent(ticket.agent())),
-          this::add);
-        Events.broadcast("reminder", ticket.id(), msgs.get(ticket.id()));
-      } finally {
-        lock.unlock();
-      }
+      msgs.remove(ticket.id());
+      forEach(needsReminding(15, MINUTES, ticket.getTimeZone()).and(Opportunity.withAgent(ticket.agent())), this::add);
+      Events.broadcast("reminder", ticket.id(),
+        new JsonList(msgs.computeIfAbsent(ticket.id(), i -> init)));
     }
   }
 
@@ -96,7 +106,7 @@ public class ReminderHandler implements JsonMessageHandler, Runnable {
       dial.add(label("Billing", billing.getPhone()));
     }
     msgs
-      .get(o.getAssignedTo().id)
+      .computeIfAbsent(o.getAssignedTo().id,id-> init)
       .add(new JsonMap()
         .$("id", o.id)
         .$("reminder", o.getReminder())
@@ -113,27 +123,6 @@ public class ReminderHandler implements JsonMessageHandler, Runnable {
     return new JsonMap().$("label", label).$("phone", phone);
   }
 
-  @Override
-  public void run() {
-    final Map<TimeZone, Set<Ticket>> active = Events.getActiveAgents();
-    lock.lock();
-    msgs.clear();
-    try {
-      if (!active.isEmpty()) {
-        active.forEach((timeZone, agents) -> forEach(needsReminding(15, MINUTES, timeZone).and(
-          Opportunity.withAgentIdIn(agents.stream().map(Ticket::id).collect(Collectors.toSet()))), this::add));
-        for (Map.Entry<Integer, JsonList> entry : msgs.entrySet()) {
-          final JsonList value = entry.getValue();
-          if (!value.isEmpty()) {
-            Events.broadcast("reminder", entry.getKey(), value);
-          }
-        }
-      }
-    } catch (Throwable t) {
-      log.error(t);
-    } finally {
-      lock.unlock();
-    }
-  }
+
 
 }

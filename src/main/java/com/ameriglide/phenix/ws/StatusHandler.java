@@ -55,7 +55,7 @@ public class StatusHandler extends PhenixServlet implements JsonMessageHandler {
     if(sessions != null && !sessions.isEmpty()) {
       var ticket = Events.getTicket(sessions.get(0));
       var status = shared.availability().computeIfAbsent(ticket.id(), id -> new AgentStatus(ticket.agent()));
-      if (msg.containsKey("availability")) {
+      if (msg.containsKey("available")) {
         Events.broadcast("status", ticket.id(), status.withAvailability(msg.getBoolean("available")).toJson());
       }
       if (msg.containsKey("call")) {

@@ -22,7 +22,6 @@ import java.util.function.Function;
 
 import static com.ameriglide.phenix.servlet.Startup.topics;
 import static java.util.Collections.emptyList;
-import static java.util.Collections.synchronizedList;
 
 
 @ServerEndpoint(value = "/events", configurator = Events.Configurator.class)
@@ -113,7 +112,7 @@ public class Events extends Endpoint {
   public void onOpen(final Session session, final EndpointConfig config) {
     var ticket = getTicket(session);
     if (ticket!=null) {
-      sessions.computeIfAbsent(ticket.id(), u -> synchronizedList(new LinkedList<>())).add(session);
+      sessions.computeIfAbsent(ticket.id(), u -> new CopyOnWriteArrayList<>()).add(session);
       log.trace(() -> "%s connected".formatted(ticket.principal()));
       session.addMessageHandler(handler.apply(session));
     }

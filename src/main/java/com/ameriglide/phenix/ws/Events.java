@@ -84,7 +84,7 @@ public class Events extends Endpoint {
           session.getBasicRemote().sendText(Json.ugly(new JsonMap().$("type", type).$("msg", msg)));
         }
       } catch (IOException e) {
-        log.debug(() -> "cannot write to closed session for %s".formatted(getTicket(session).principal()));
+        log.debug(() -> "cannot write to closed session for %s".formatted(getTicket(session).principal));
       }
     }
   }
@@ -112,8 +112,8 @@ public class Events extends Endpoint {
   public void onOpen(final Session session, final EndpointConfig config) {
     var ticket = getTicket(session);
     if (ticket!=null) {
-      sessions.computeIfAbsent(ticket.id(), u -> new CopyOnWriteArrayList<>()).add(session);
-      log.trace(() -> "%s connected".formatted(ticket.principal()));
+      sessions.computeIfAbsent(ticket.id, u -> new CopyOnWriteArrayList<>()).add(session);
+      log.trace(() -> "%s connected".formatted(ticket.principal));
       session.addMessageHandler(handler.apply(session));
     }
   }
@@ -122,8 +122,8 @@ public class Events extends Endpoint {
   public void onClose(final Session session, final CloseReason closeReason) {
     var ticket = getTicket(session);
     if (ticket!=null) {
-      Optionals.of(sessions.get(ticket.id())).ifPresent(l -> l.remove(session));
-      log.trace(() -> "%s disconnected (%s - %s)".formatted(ticket.principal(), closeReason.getCloseCode(),
+      Optionals.of(sessions.get(ticket.id)).ifPresent(l -> l.remove(session));
+      log.trace(() -> "%s disconnected (%s - %s)".formatted(ticket.principal, closeReason.getCloseCode(),
         closeReason.getReasonPhrase()));
     }
   }
@@ -133,7 +133,7 @@ public class Events extends Endpoint {
     super.onError(session, thr);
     if (thr instanceof IOException) {
       log.trace(() -> "closing session %s".formatted(session.getId()));
-      Optionals.of(getTicket(session)).map(ticket -> sessions.get(ticket.id())).ifPresent(l -> l.remove(session));
+      Optionals.of(getTicket(session)).map(ticket -> sessions.get(ticket.id)).ifPresent(l -> l.remove(session));
     }
   }
 

@@ -31,8 +31,8 @@ public class ReminderHandler implements JsonMessageHandler, Runnable {
     t.setDaemon(true);
     return t;
   });
-  private final Set<JsonMap> init =
-    Collections.synchronizedSet(new TreeSet<>(Comparator.comparingInt(json ->json.getInteger("id"))));
+  private final Set<JsonMap> init = Collections.synchronizedSet(
+    new TreeSet<>(Comparator.comparingInt(json -> json.getInteger("id"))));
 
   ReminderHandler() {
     $ = this;
@@ -47,7 +47,7 @@ public class ReminderHandler implements JsonMessageHandler, Runnable {
     try {
       if (!active.isEmpty()) {
         active.forEach((timeZone, agents) -> forEach(needsReminding(15, MINUTES, timeZone).and(
-          Opportunity.withAgentIdIn(agents.stream().map(Ticket::id).collect(Collectors.toSet()))), this::add));
+          Opportunity.withAgentIdIn(agents.stream().map(t -> t.id).collect(Collectors.toSet()))), this::add));
         for (var entry : msgs.entrySet()) {
           final var value = entry.getValue();
           if (!value.isEmpty()) {
@@ -58,12 +58,40 @@ public class ReminderHandler implements JsonMessageHandler, Runnable {
     } catch (Throwable t) {
       log.error(t);
     }
+  }
+
+  private void add(Opportunity o) {
+    final Contact c = o.getContact();
+    final JsonList dial = new JsonList();
+    final Address shipping = c.getShipping();
+    if (shipping!=null && isNotEmpty(shipping.getPhone())) {
+      dial.add(label("Shipping", shipping.getPhone()));
+    }
+    final Address billing = c.getBilling();
+    if (billing!=null && isNotEmpty(billing.getPhone()) && (shipping==null || !Objects.equals(billing.getPhone(),
+      (shipping.getPhone())))) {
+      dial.add(label("Billing", billing.getPhone()));
+    }
+    msgs
+      .computeIfAbsent(o.getAssignedTo().id, id -> init)
+      .add(new JsonMap()
+        .$("id", o.id)
+        .$("reminder", o.getReminder())
+        .$("heat", o.getHeat())
+        .$("dial", dial)
+        .$("contact", Optionals.of(o.getContact()).map(Surnamed::getFullName).orElse(""))
+        .$("business", o.getBusiness().getAbbreviation())
+        .$("productLine",
+          JsonMap.$().$("name", o.getProductLine().getName()).$("abbreviation", o.getProductLine().getAbbreviation()))
+        .$("amount", o.getAmount()));
   }  @Override
   public void onAsyncMessage(final List<Session> sessions, final JsonMap msg) {
     sessions.forEach(session -> onMessage(session, msg));
   }
 
-  @Override
+  private static JsonMap label(final String label, final String phone) {
+    return new JsonMap().$("label", label).$("phone", phone);
+  }  @Override
   public JsonMap onMessage(final Session session, final JsonMap msg) {
     broadcast(Events.getTicket(session));
     return null;
@@ -86,42 +114,14 @@ public class ReminderHandler implements JsonMessageHandler, Runnable {
 
   private void broadcast(Ticket ticket) {
     if (ticket!=null) {
-      msgs.remove(ticket.id());
+      msgs.remove(ticket.id);
       forEach(needsReminding(15, MINUTES, ticket.getTimeZone()).and(Opportunity.withAgent(ticket.agent())), this::add);
-      Events.broadcast("reminder", ticket.id(),
-        new JsonList(msgs.computeIfAbsent(ticket.id(), i -> init)));
+      Events.broadcast("reminder", ticket.id, new JsonList(msgs.computeIfAbsent(ticket.id, i -> init)));
     }
   }
 
-  private void add(Opportunity o) {
-    final Contact c = o.getContact();
-    final JsonList dial = new JsonList();
-    final Address shipping = c.getShipping();
-    if (shipping!=null && isNotEmpty(shipping.getPhone())) {
-      dial.add(label("Shipping", shipping.getPhone()));
-    }
-    final Address billing = c.getBilling();
-    if (billing!=null && isNotEmpty(billing.getPhone()) && (shipping==null || !Objects.equals(billing.getPhone(),
-      (shipping.getPhone())))) {
-      dial.add(label("Billing", billing.getPhone()));
-    }
-    msgs
-      .computeIfAbsent(o.getAssignedTo().id,id-> init)
-      .add(new JsonMap()
-        .$("id", o.id)
-        .$("reminder", o.getReminder())
-        .$("heat", o.getHeat())
-        .$("dial", dial)
-        .$("contact", Optionals.of(o.getContact()).map(Surnamed::getFullName).orElse(""))
-        .$("business", o.getBusiness().getAbbreviation())
-        .$("productLine",
-          JsonMap.$().$("name", o.getProductLine().getName()).$("abbreviation", o.getProductLine().getAbbreviation()))
-        .$("amount", o.getAmount()));
-  }
 
-  private static JsonMap label(final String label, final String phone) {
-    return new JsonMap().$("label", label).$("phone", phone);
-  }
+
 
 
 

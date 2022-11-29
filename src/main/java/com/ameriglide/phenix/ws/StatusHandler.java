@@ -39,7 +39,7 @@ public class StatusHandler extends PhenixServlet implements JsonMessageHandler {
     log.trace(() -> "%s sent %s".formatted(ticket, Json.pretty(map)));
     switch (Action.valueOf(map.get("action").toUpperCase())) {
       case PAUSE -> {
-        var worker = router.getWorker(ticket.sid());
+        var worker = router.getWorker(ticket.sid);
         var available = router.available.getSid().equals(worker.getActivitySid());
         router.setActivity(worker.getSid(), available ? router.unavailable:router.available);
         log.info(
@@ -54,15 +54,15 @@ public class StatusHandler extends PhenixServlet implements JsonMessageHandler {
   public void onAsyncMessage(final List<Session> sessions, final JsonMap msg) {
     if(sessions != null && !sessions.isEmpty()) {
       var ticket = Events.getTicket(sessions.get(0));
-      var status = shared.availability().computeIfAbsent(ticket.id(), id -> new AgentStatus(ticket.agent()));
+      var status = shared.availability().computeIfAbsent(ticket.id, id -> new AgentStatus(ticket.agent()));
       if (msg.containsKey("available")) {
-        Events.broadcast("status", ticket.id(), status.withAvailability(msg.getBoolean("available")).toJson());
+        Events.broadcast("status", ticket.id, status.withAvailability(msg.getBoolean("available")).toJson());
       }
       if (msg.containsKey("call")) {
-        Events.broadcast("status", ticket.id(), status.withCall(Locator.$(new Call(msg.get("call")))).toJson());
+        Events.broadcast("status", ticket.id, status.withCall(Locator.$(new Call(msg.get("call")))).toJson());
       }
       if(msg.containsKey("clear")) {
-        Events.broadcast("status", ticket.id(), (status.isOnCall() ? status.withCall(null) : status).toJson());
+        Events.broadcast("status", ticket.id, (status.isOnCall() ? status.withCall(null) : status).toJson());
 
       }
     }
@@ -73,7 +73,7 @@ public class StatusHandler extends PhenixServlet implements JsonMessageHandler {
     var ticket = Events.getTicket(session);
     return ticket==null ? null:shared
       .availability()
-      .computeIfAbsent(ticket.id(), id -> new AgentStatus((ticket.agent())))
+      .computeIfAbsent(ticket.id, id -> new AgentStatus((ticket.agent())))
       .toJson();
   }
 

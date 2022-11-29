@@ -11,7 +11,7 @@ public class PingHandler implements JsonMessageHandler {
 
   @Override
   public JsonMap onMessage(final Session session, final JsonMap msg) {
-    log.trace(() -> "%s pinged us".formatted(Events.getTicket(session).principal()));
+    log.trace(() -> "%s pinged us".formatted(Events.getTicket(session).principal));
     return null;
   }
 

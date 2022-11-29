@@ -16,6 +16,8 @@ import net.inetalliance.types.json.JsonMap;
 
 import java.io.IOException;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Function;
 
 import static com.ameriglide.phenix.servlet.Startup.topics;
@@ -27,7 +29,7 @@ import static java.util.Collections.synchronizedList;
 public class Events extends Endpoint {
 
   private static final Log log = new Log();
-  private static final Map<Integer, List<Session>> sessions = Collections.synchronizedMap(new HashMap<>());
+  private static final Map<Integer, List<Session>> sessions = new ConcurrentHashMap<>();
   public static Function<Session, MessageHandler> handler =
     session -> (MessageHandler.Whole<String>) message -> log.debug(
     () -> "session [%s] new message %s".formatted(session.getId(), message));
@@ -71,7 +73,7 @@ public class Events extends Endpoint {
       log.trace(() -> "shallowcasting [%s] from %d, msg: %s".formatted(type, principal, msg));
       // tell only the sockets for that agent
       sessions
-        .computeIfAbsent(principal, a -> synchronizedList(new LinkedList<>()))
+        .computeIfAbsent(principal, a -> new CopyOnWriteArrayList<>())
         .forEach(session -> send(session, type, msg));
     }
   }

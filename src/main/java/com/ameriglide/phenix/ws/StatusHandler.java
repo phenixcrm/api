@@ -61,6 +61,10 @@ public class StatusHandler extends PhenixServlet implements JsonMessageHandler {
       if (msg.containsKey("call")) {
         Events.broadcast("status", ticket.id(), status.withCall(Locator.$(new Call(msg.get("call")))).toJson());
       }
+      if(msg.containsKey("clear")) {
+        Events.broadcast("status", ticket.id(), (status.isOnCall() ? status.withCall(null) : status).toJson());
+
+      }
     }
   }
 

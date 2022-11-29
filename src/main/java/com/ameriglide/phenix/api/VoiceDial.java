@@ -30,90 +30,88 @@ import static net.inetalliance.potion.Locator.$1;
 @WebServlet({"/api/voice/dial", "/api/dial"})
 public class VoiceDial extends PhenixServlet {
 
-    private static final Log log = new Log();
+  private static final Log log = new Log();
 
-    @Override
-    protected void get(HttpServletRequest request, HttpServletResponse response) throws Exception {
+  @Override
+  protected void get(HttpServletRequest request, HttpServletResponse response) throws Exception {
 
-        var agent = request.getParameter("agent");
-        var number = request.getParameter("number");
-        var transfer = request.getParameter("transfer");
-        CNAM.CallerIdSource cid;
+    var agent = request.getParameter("agent");
+    var number = request.getParameter("number");
+    var transfer = request.getParameter("transfer");
+    CNAM.CallerIdSource cid;
 
-        TwiMLServlet.Party called;
-        if (isEmpty(agent)) {
-            if (isEmpty(number)) {
-                throw new IllegalArgumentException();
-            }
-            called = asParty(new PhoneNumber(number));
-        } else {
-            called = asParty($(new Agent(Integer.parseInt(agent))));
-        }
-        var dialingAgent = Auth.getAgent(request);
-        if (Strings.isEmpty(transfer)) {
-            // create new Call with twilio
-            var from = new Sip(asParty(Auth.getAgent(request)).sip());
-            var lead = request.getParameter("lead");
-
-            var call = new Call();
-            call.setAgent(dialingAgent);
-            call.setDirection(called.isAgent() ? INTERNAL:OUTBOUND);
-            call.setCreated(LocalDateTime.now());
-            call.setResolution(Resolution.ACTIVE);
-            if (isNotEmpty(lead)) {
-                var opp = $(new Opportunity(Integer.valueOf(lead)));
-                if (opp==null) {
-                    throw new NotFoundException();
-                }
-                call.setOpportunity(opp);
-                call.setBusiness(opp.getBusiness());
-                cid = Optionals
-                        .of($1(SkillQueue
-                                .withProduct(opp.getProductLine())
-                                .and(SkillQueue.withBusiness(opp.getBusiness()))))
-                        .stream()
-                        .filter(Objects::nonNull)
-                        .peek(call::setQueue)
-                        .map(q -> $1(VerifiedCallerId.withQueue(q)))
-                        .filter(Objects::nonNull)
-                        .findFirst()
-                        .orElseGet(() -> $1(VerifiedCallerId.isDefault));
-            } else if (called.isAgent()) {
-                cid = dialingAgent;
-            } else {
-                cid = $1(VerifiedCallerId.isDefault);
-            }
-            cid.setPhoneNumber(call);
-            call.sid = Startup.router
-                    .call(cid.getPhoneNumber(), from, "/twilio/voice/dial", request.getQueryString())
-                    .getSid();
-            Locator.create("VoiceDial", call);
-            log.info(
-                    () -> "New API dial %s %s -> %s".formatted(call.sid, dialingAgent.getSipUser(), called.endpoint()));
-            response.sendError(HttpServletResponse.SC_NO_CONTENT);
-        } else {
-            log.info(() -> "Transfering call %s %s->%s ".formatted(transfer, dialingAgent.getFullName(),
-                    called.endpoint()));
-            var call = Locator.$(new Call(transfer));
-            if (call==null) {
-                log.error(() -> "Could not transfer unknown call %s".formatted(transfer));
-                throw new NotFoundException();
-            }
-            if(call.getDirection() == QUEUE) {
-              Startup.router.addParticipant(call.sid,call.getActiveAgent(), called);
-
-            } else{
-
-                var leg = call.getActiveLeg();
-
-                var transferSid = switch (call.getDirection()) {
-                  case INTERNAL -> dialingAgent.equals(call.getAgent()) ? call.sid:leg.sid;
-                  case OUTBOUND -> leg.sid;
-                  default -> call.sid;
-                };
-
-                Startup.router.transfer(transferSid, called);
-              }
-        }
+    TwiMLServlet.Party called;
+    if (isEmpty(agent)) {
+      if (isEmpty(number)) {
+        throw new IllegalArgumentException();
+      }
+      called = asParty(new PhoneNumber(number));
+    } else {
+      called = asParty($(new Agent(Integer.parseInt(agent))));
     }
+    var dialingAgent = Auth.getAgent(request);
+    if (Strings.isEmpty(transfer)) {
+      // create new Call with twilio
+      var from = new Sip(asParty(Auth.getAgent(request)).sip());
+      var lead = request.getParameter("lead");
+
+      var call = new Call();
+      call.setAgent(dialingAgent);
+      call.setDirection(called.isAgent() ? INTERNAL:OUTBOUND);
+      call.setCreated(LocalDateTime.now());
+      call.setResolution(Resolution.ACTIVE);
+      if (isNotEmpty(lead)) {
+        var opp = $(new Opportunity(Integer.valueOf(lead)));
+        if (opp==null) {
+          throw new NotFoundException();
+        }
+        call.setOpportunity(opp);
+        call.setBusiness(opp.getBusiness());
+        cid = Optionals
+          .of($1(SkillQueue.withProduct(opp.getProductLine()).and(SkillQueue.withBusiness(opp.getBusiness()))))
+          .stream()
+          .filter(Objects::nonNull)
+          .peek(call::setQueue)
+          .map(q -> $1(VerifiedCallerId.withQueue(q)))
+          .filter(Objects::nonNull)
+          .findFirst()
+          .orElseGet(() -> $1(VerifiedCallerId.isDefault));
+      } else if (called.isAgent()) {
+        cid = dialingAgent;
+      } else {
+        cid = $1(VerifiedCallerId.isDefault);
+      }
+      cid.setPhoneNumber(call);
+      call.sid = Startup.router
+        .call(cid.getPhoneNumber(), from, "/voice/dial", request.getQueryString())
+        .getSid();
+      Locator.create("VoiceDial", call);
+      log.info(() -> "New API dial %s %s -> %s".formatted(call.sid, dialingAgent.getSipUser(), called.endpoint()));
+      response.sendError(HttpServletResponse.SC_NO_CONTENT);
+    } else {
+      var call = Locator.$(new Call(transfer));
+      if (call==null) {
+        log.error(() -> "Could not transfer unknown call %s".formatted(transfer));
+        throw new NotFoundException();
+      }
+      if (called.isAgent() && call.getDirection() == QUEUE) {
+        log.info(() -> "Cold transfer %s %s->%s ".formatted(transfer, dialingAgent.getFullName(),
+          called.agent().getFullName()));
+        Startup.router.swapTaskAgent(call.sid, call.getActiveAgent(), called.agent());
+
+      } else {
+        log.info(
+          () -> "Transfering call %s %s->%s ".formatted(transfer, dialingAgent.getFullName(), called.endpoint()));
+        var leg = call.getActiveLeg();
+
+        var transferSid = switch (call.getDirection()) {
+          case INTERNAL -> dialingAgent.equals(call.getAgent()) ? call.sid:leg.sid;
+          case OUTBOUND -> leg.sid;
+          default -> call.sid;
+        };
+
+        Startup.router.transfer(transferSid, called);
+      }
+    }
+  }
 }

@@ -45,7 +45,16 @@ public class Events extends Endpoint {
     if (http==null) {
       return null;
     }
-    return (Ticket) http.getAttribute("ticket");
+    try {
+      return (Ticket) http.getAttribute("ticket");
+    } catch (IllegalStateException e) {
+      invalidate(session);
+    }
+    return null;
+  }
+
+  private static void invalidate(final Session session) {
+   sessions.values().forEach(list->list.remove(session));
   }
 
 
@@ -85,6 +94,7 @@ public class Events extends Endpoint {
         }
       } catch (IOException e) {
         log.debug(() -> "cannot write to closed session for %s".formatted(getTicket(session).principal));
+        invalidate(session);
       }
     }
   }

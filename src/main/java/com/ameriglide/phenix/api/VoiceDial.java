@@ -7,11 +7,9 @@ import com.ameriglide.phenix.core.Optionals;
 import com.ameriglide.phenix.core.Strings;
 import com.ameriglide.phenix.servlet.PhenixServlet;
 import com.ameriglide.phenix.servlet.Startup;
-import com.ameriglide.phenix.servlet.TwiMLServlet;
 import com.ameriglide.phenix.servlet.exception.NotFoundException;
 import com.ameriglide.phenix.types.Resolution;
 import com.twilio.type.PhoneNumber;
-import com.twilio.type.Sip;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -22,7 +20,6 @@ import java.util.Objects;
 
 import static com.ameriglide.phenix.core.Strings.isEmpty;
 import static com.ameriglide.phenix.core.Strings.isNotEmpty;
-import static com.ameriglide.phenix.servlet.TwiMLServlet.asParty;
 import static com.ameriglide.phenix.types.CallDirection.*;
 import static net.inetalliance.potion.Locator.$;
 import static net.inetalliance.potion.Locator.$1;
@@ -40,19 +37,19 @@ public class VoiceDial extends PhenixServlet {
     var transfer = request.getParameter("transfer");
     CNAM.CallerIdSource cid;
 
-    TwiMLServlet.Party called;
+    Party called;
     if (isEmpty(agent)) {
       if (isEmpty(number)) {
         throw new IllegalArgumentException();
       }
-      called = asParty(new PhoneNumber(number));
+      called = new Party(new PhoneNumber(number));
     } else {
-      called = asParty($(new Agent(Integer.parseInt(agent))));
+      called = new Party($(new Agent(Integer.parseInt(agent))));
     }
     var dialingAgent = Auth.getAgent(request);
     if (Strings.isEmpty(transfer)) {
       // create new Call with twilio
-      var from = new Sip(asParty(Auth.getAgent(request)).sip());
+      var from = new Party(Auth.getAgent(request)).asSip();
       var lead = request.getParameter("lead");
 
       var call = new Call();

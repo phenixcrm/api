@@ -37,8 +37,9 @@ public class VoiceDial extends PhenixServlet {
     var number = request.getParameter("number");
     var transfer = request.getParameter("transfer");
     CNAM.CallerIdSource cid;
-    log.debug(()->"%s: /api/dial agent=%s, number=%s, transfer=%s".formatted(dialingAgent.getFullName(), agent,number,
-      transfer));
+    log.debug(
+      () -> "%s: /api/dial agent=%s, number=%s, transfer=%s".formatted(dialingAgent.getFullName(), agent, number,
+        transfer));
 
     Party called;
     if (isEmpty(agent)) {
@@ -82,7 +83,7 @@ public class VoiceDial extends PhenixServlet {
       }
       cid.setPhoneNumber(call);
       call.sid = Startup.router
-        .call(cid.getPhoneNumber(), from, "/voice/dial", request.getQueryString())
+        .call(new PhoneNumber(cid.getPhoneNumber()), from, "/voice/dial", request.getQueryString())
         .getSid();
       Locator.create("VoiceDial", call);
       log.info(() -> "New API dial %s %s -> %s".formatted(call.sid, dialingAgent.getSipUser(), called.endpoint()));
@@ -93,7 +94,7 @@ public class VoiceDial extends PhenixServlet {
         log.error(() -> "Could not transfer unknown call %s".formatted(transfer));
         throw new NotFoundException();
       }
-      if (called.isAgent() && call.getDirection() == QUEUE) {
+      if (called.isAgent() && call.getDirection()==QUEUE) {
         log.info(() -> "Cold transfer %s %s->%s ".formatted(transfer, dialingAgent.getFullName(),
           called.agent().getFullName()));
         Startup.router.swapTaskAgent(call.sid, call.getActiveAgent(), called.agent());

@@ -31,11 +31,14 @@ public class VoiceDial extends PhenixServlet {
 
   @Override
   protected void get(HttpServletRequest request, HttpServletResponse response) throws Exception {
+    var dialingAgent = Auth.getAgent(request);
 
     var agent = request.getParameter("agent");
     var number = request.getParameter("number");
     var transfer = request.getParameter("transfer");
     CNAM.CallerIdSource cid;
+    log.debug(()->"%s: /api/dial agent=%s, number=%s, transfer=%s".formatted(dialingAgent.getFullName(), agent,number,
+      transfer));
 
     Party called;
     if (isEmpty(agent)) {
@@ -46,7 +49,6 @@ public class VoiceDial extends PhenixServlet {
     } else {
       called = new Party($(new Agent(Integer.parseInt(agent))));
     }
-    var dialingAgent = Auth.getAgent(request);
     if (Strings.isEmpty(transfer)) {
       // create new Call with twilio
       var from = new Party(Auth.getAgent(request)).asSip();

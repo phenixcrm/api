@@ -12,6 +12,7 @@ import jakarta.websocket.server.ServerEndpoint;
 import jakarta.websocket.server.ServerEndpointConfig;
 import net.inetalliance.potion.Locator;
 import net.inetalliance.types.json.Json;
+import net.inetalliance.types.json.JsonList;
 import net.inetalliance.types.json.JsonMap;
 
 import java.io.IOException;
@@ -19,6 +20,7 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import static com.ameriglide.phenix.servlet.Startup.topics;
 import static java.util.Collections.emptyList;
@@ -72,13 +74,25 @@ public class Events extends Endpoint {
 
   }
 
+   private static String trace(Json json, int limit) {
+    if(json instanceof JsonList list) {
+      var examples = "[" + list.stream().limit(limit).map(Json::ugly).collect(Collectors.joining(","));
+      var size = list.size();
+      if(size >limit) {
+        examples += ", ... " + size;
+      }
+      return examples + "]";
+    }
+    return Json.ugly(json);
+   }
+
   public static void broadcast(final String type, final Integer principal, final Json msg) {
     if (principal==null) {
-      log.trace(() -> "broadcasting [%s] from %d, msg: %s".formatted(type, principal, msg));
+      log.trace(() -> "broadcasting [%s] from %d, msg: %s".formatted(type, principal, trace(msg,2)));
       // tell everyone
       sessions.values().stream().flatMap(Iterables::stream).forEach(session -> send(session, type, msg));
     } else {
-      log.trace(() -> "shallowcasting [%s] from %d, msg: %s".formatted(type, principal, msg));
+      log.trace(() -> "shallowcasting [%s] from %d, msg: %s".formatted(type, principal, trace(msg,3)));
       // tell only the sockets for that agent
       sessions
         .computeIfAbsent(principal, a -> new CopyOnWriteArrayList<>())

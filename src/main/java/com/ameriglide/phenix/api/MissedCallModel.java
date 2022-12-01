@@ -13,6 +13,7 @@ import net.inetalliance.types.json.Json;
 
 import java.util.regex.Pattern;
 
+import static com.ameriglide.phenix.types.Resolution.DROPPED;
 import static com.ameriglide.phenix.types.Resolution.VOICEMAIL;
 import static net.inetalliance.sql.OrderBy.Direction.DESCENDING;
 
@@ -28,7 +29,7 @@ public class MissedCallModel extends ListableModel<Call> {
     return Call
       .withAgent("true".equals(request.getParameter("voicemail")) ? agent : null)
       .and(Call.isQueue)
-      .and(Call.withResolution(VOICEMAIL))
+      .and(Call.withResolution(VOICEMAIL).or(Call.withResolution(DROPPED)))
       .orderBy("created", DESCENDING);
   }
 

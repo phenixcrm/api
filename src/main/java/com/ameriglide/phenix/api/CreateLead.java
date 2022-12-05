@@ -171,6 +171,7 @@ public class CreateLead extends PhenixServlet {
         opp.setSource(REFERRAL);
         opp.setCampaign(leadgen);
         opp.setReferrerId(data.get("referrerId"));
+        opp.setAssignedTo(Locator.$(new Agent(57))); // assign all new MVF leads to Abbie
       } else if (isNotEmpty(campaign)) {
         opp.setSource(SOCIAL);
       } else {

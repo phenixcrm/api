@@ -215,6 +215,7 @@ public class CreateLead extends PhenixServlet {
     call.setCountry(contact.getShipping().getCountry());
     call.setQueue(q);
     call.setOpportunity(opp);
+    call.setContact(contact);
     call.setZip(contact.getShipping().getPostalCode());
     create("CreateLead", call);
     return call;

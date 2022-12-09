@@ -60,7 +60,7 @@ public class VoiceDial extends PhenixServlet {
       call.setDirection(called.isAgent() ? INTERNAL:OUTBOUND);
       call.setCreated(LocalDateTime.now());
       call.setResolution(Resolution.ACTIVE);
-      if (isNotEmpty(lead)) {
+      if (isNotEmpty(lead) && !"new".equals(lead)) {
         var opp = $(new Opportunity(Integer.valueOf(lead)));
         if (opp==null) {
           throw new NotFoundException();

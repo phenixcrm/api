@@ -117,11 +117,11 @@ public class Pop extends TypeModel<Call> {
     final Query<Contact> query;
     final var q = request.getParameter("q");
     final var phone = TaskRouter.toE164(call.getRemoteCaller().getPhone());
-    var selectedContact = Optionals.of(call.getOpportunity()).map(Opportunity::getContact).orElseGet(call::getContact);
+    var callContact = Optionals.of(call.getOpportunity()).map(Opportunity::getContact).orElseGet(call::getContact);
     if (isNotEmpty(q)) {
       query = new Search<>(Contact.class, getParameter(request, "n", 10), q.split(" "));
-    } else if (selectedContact!=null) {
-      query = Contact.withId(Contact.class, selectedContact.id);
+    } else if (callContact!=null) {
+      query = Contact.withId(Contact.class, callContact.id);
     } else if (phone!=null && phone.length() >= 10) {
       query = Contact.withPhoneNumber(phone);
     } else {
@@ -131,10 +131,14 @@ public class Pop extends TypeModel<Call> {
     var path = new Path();
     if (isNotEmpty(contactId) && !"new".equals(contactId)) {
       path.contact = Locator.$(new Contact(Integer.parseInt(contactId)));
+    } else {
+      path.contact = callContact;
     }
     var leadId = request.getParameter("lead");
     if (isNotEmpty(leadId) && !"new".equals(leadId)) {
       path.lead = Locator.$(new Opportunity(Integer.parseInt(leadId)));
+    } else {
+      path.lead = call.getOpportunity();
     }
     var loggedIn = Auth.getAgent(request);
     final var contacts = new JsonList(1);

@@ -147,7 +147,7 @@ public class AgentClosing extends CachedGroupingRangeReport<Agent, Business> {
   static Query<Call> noTransfers(Query<Call> queueQuery) {
     return queueQuery.and(new Query<>(Call.class, c -> Locator.count(Leg.withCall(c))==1, (namer, s) -> {
       var sql = new SqlBuilder(namer.name(Segment.class), null, new AggregateField(Aggregate.COUNT, "*"));
-      sql.where(new ColumnWhere("call", "key", "segment", "call", false));
+      sql.where(new ColumnWhere("call", "sid", "leg", "call", false));
       return new SubqueryValueWhere(sql.getSql(), 1);
     }));
   }

@@ -13,8 +13,8 @@ import net.inetalliance.types.json.Json;
 
 import java.util.regex.Pattern;
 
-import static com.ameriglide.phenix.types.Resolution.DROPPED;
-import static com.ameriglide.phenix.types.Resolution.VOICEMAIL;
+import static com.ameriglide.phenix.common.Call.withResolution;
+import static com.ameriglide.phenix.types.Resolution.*;
 import static net.inetalliance.sql.OrderBy.Direction.DESCENDING;
 
 @WebServlet("/api/missed")
@@ -27,9 +27,9 @@ public class MissedCallModel extends ListableModel<Call> {
   public Query<Call> all(final Class<Call> type, final HttpServletRequest request) {
     var agent = Auth.getAgent(request);
     return Call
-      .withAgent("true".equals(request.getParameter("voicemail")) ? agent : null)
+      .withAgent("true".equals(request.getParameter("voicemail")) ? agent:null)
       .and(Call.isQueue)
-      .and(Call.withResolution(VOICEMAIL).or(Call.withResolution(DROPPED)))
+      .and(withResolution(VOICEMAIL).or(withResolution(DROPPED).or(withResolution(ANSWERED).and(Call.withVoicemail))))
       .orderBy("created", DESCENDING);
   }
 
@@ -42,9 +42,10 @@ public class MissedCallModel extends ListableModel<Call> {
       .$("created", call.getCreated())
       .$("phone", call.getPhone())
       .$("state", call.getState())
-      .$("todo",call.isTodo())
+      .$("todo", call.isTodo())
       .$("resolution", call.getResolution())
-      .$("recording", call.getRecordingSid())
+      .$("recordingSid", call.getRecordingSid())
+      .$("voicemailSid", call.getVoicemailSid())
       .$("transcription", call.getTranscription())
       .$("duration", call.getDuration())
       .$("queue", Optionals.of(call.getQueue()).map(SkillQueue::getName).orElse(""));

@@ -6,7 +6,6 @@ import com.ameriglide.phenix.core.Log;
 import com.ameriglide.phenix.core.Optionals;
 import com.ameriglide.phenix.core.Strings;
 import com.ameriglide.phenix.servlet.PhenixServlet;
-import com.ameriglide.phenix.servlet.Startup;
 import com.ameriglide.phenix.servlet.exception.NotFoundException;
 import com.ameriglide.phenix.types.Resolution;
 import com.twilio.type.PhoneNumber;
@@ -20,6 +19,7 @@ import java.util.Objects;
 
 import static com.ameriglide.phenix.core.Strings.isEmpty;
 import static com.ameriglide.phenix.core.Strings.isNotEmpty;
+import static com.ameriglide.phenix.servlet.Startup.router;
 import static com.ameriglide.phenix.types.CallDirection.*;
 import static net.inetalliance.potion.Locator.$;
 import static net.inetalliance.potion.Locator.$1;
@@ -82,22 +82,34 @@ public class VoiceDial extends PhenixServlet {
         cid = $1(VerifiedCallerId.isDefault);
       }
       cid.setPhoneNumber(call);
-      call.sid = Startup.router
+      call.sid = router
         .call(new PhoneNumber(cid.getPhoneNumber()), from, "/voice/dial", request.getQueryString())
         .getSid();
       Locator.create("VoiceDial", call);
       log.info(() -> "New API dial %s %s -> %s".formatted(call.sid, dialingAgent.getSipUser(), called.endpoint()));
       response.sendError(HttpServletResponse.SC_NO_CONTENT);
     } else {
+      var voicemail = "true".equals(request.getParameter("voicemail"));
       var call = Locator.$(new Call(transfer));
       if (call==null) {
         log.error(() -> "Could not transfer unknown call %s".formatted(transfer));
         throw new NotFoundException();
       }
       if (called.isAgent() && call.getDirection()==QUEUE) {
-        log.info(() -> "Cold transfer %s %s->%s ".formatted(transfer, dialingAgent.getFullName(),
-          called.agent().getFullName()));
-        Startup.router.swapTaskAgent(call.sid, call.getActiveAgent(), called.agent());
+        if(voicemail) {
+          log.info(() -> "Cold transfer to VM %s %s->%s ".formatted(transfer, dialingAgent.getFullName(),
+            called.agent().getFullName()));
+          Locator.update(call,"VoiceDial",copy-> {
+            copy.setAgent(called.agent());
+          });
+          router.sendToVoicemail(call.sid, router.getPrompt(called.agent()));
+
+
+        } else {
+          log.info(() -> "Warm transfer %s %s->%s ".formatted(transfer, dialingAgent.getFullName(),
+            called.agent().getFullName()));
+          router.warmAdd(call.sid, call.getActiveAgent(), called.agent());
+        }
 
       } else {
         log.info(
@@ -110,7 +122,7 @@ public class VoiceDial extends PhenixServlet {
           default -> call.sid;
         };
 
-        Startup.router.transfer(transferSid, called);
+        router.transfer(transferSid, called);
       }
     }
   }

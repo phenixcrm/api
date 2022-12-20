@@ -6,6 +6,7 @@ import com.ameriglide.phenix.common.Call;
 import com.ameriglide.phenix.common.ws.Action;
 import com.ameriglide.phenix.core.Log;
 import com.ameriglide.phenix.servlet.PhenixServlet;
+import com.ameriglide.phenix.types.WorkerState;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -18,6 +19,8 @@ import java.util.List;
 
 import static com.ameriglide.phenix.servlet.Startup.router;
 import static com.ameriglide.phenix.servlet.Startup.shared;
+import static com.ameriglide.phenix.types.WorkerState.AVAILABLE;
+import static com.ameriglide.phenix.types.WorkerState.UNAVAILABLE;
 
 @WebServlet("/api/status")
 public class StatusHandler extends PhenixServlet implements JsonMessageHandler {
@@ -40,10 +43,10 @@ public class StatusHandler extends PhenixServlet implements JsonMessageHandler {
     switch (Action.valueOf(map.get("action").toUpperCase())) {
       case PAUSE -> {
         var worker = router.getWorker(ticket.sid);
-        var available = router.available.getSid().equals(worker.getActivitySid());
-        router.setActivity(worker.getSid(), available ? router.unavailable:router.available);
-        log.info(
-          () -> "%s switched to %s".formatted(ticket.agent().getFullName(), available ? "unavailable":"available"));
+        var from = WorkerState.from(worker);
+        var opposite = from==AVAILABLE ? UNAVAILABLE:AVAILABLE;
+        router.setActivity(worker.getSid(), opposite.activity());
+        log.info(() -> "%s switched from %s to %s".formatted(ticket.agent().getFullName(), from, opposite));
       }
       default -> throw new IllegalArgumentException();
     }
@@ -52,7 +55,7 @@ public class StatusHandler extends PhenixServlet implements JsonMessageHandler {
 
   @Override
   public void onAsyncMessage(final List<Session> sessions, final JsonMap msg) {
-    if(sessions != null && !sessions.isEmpty()) {
+    if (sessions!=null && !sessions.isEmpty()) {
       var ticket = Events.getTicket(sessions.get(0));
       var status = shared.availability().computeIfAbsent(ticket.id, id -> new AgentStatus(ticket.agent()));
       if (msg.containsKey("available")) {
@@ -61,8 +64,8 @@ public class StatusHandler extends PhenixServlet implements JsonMessageHandler {
       if (msg.containsKey("call")) {
         Events.broadcast("status", ticket.id, status.withCall(Locator.$(new Call(msg.get("call")))).toJson());
       }
-      if(msg.containsKey("clear")) {
-        Events.broadcast("status", ticket.id, (status.isOnCall() ? status.withCall(null) : status).toJson());
+      if (msg.containsKey("clear")) {
+        Events.broadcast("status", ticket.id, (status.isOnCall() ? status.withCall(null):status).toJson());
 
       }
     }

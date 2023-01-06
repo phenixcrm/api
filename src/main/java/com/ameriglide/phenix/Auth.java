@@ -204,12 +204,15 @@ public class Auth extends HttpServlet {
     var json = Info.$(Agent.class).toJson($(a)).$("sipSecret", Startup.router.getSipSecret(a));
     var roles = new JsonList();
     json.$("roles", roles);
+    var superUser = a.isSuperUser();
 
-    if (manager) {
-      roles.add("manager");
-    }
-    if (a.isSuperUser()) {
+    if (superUser) {
       roles.add("superuser");
+    }
+
+    if (manager || superUser) {
+      roles.add("manager");
+      roles.add("reports");
     }
     json.$("twilioApi", "https://api.twilio.com/2010-04-01/Accounts/%s".formatted(Startup.router.accountSid));
     return json;

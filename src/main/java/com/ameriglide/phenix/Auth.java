@@ -200,7 +200,7 @@ public class Auth extends HttpServlet {
     if (a==null) {
       throw new IllegalStateException();
     }
-    var manager = a.isSuperUser() || Locator.count(Team.withManager(a)) > 0;
+    var manager = isManager(a);
     var json = Info.$(Agent.class).toJson($(a)).$("sipSecret", Startup.router.getSipSecret(a));
     var roles = new JsonList();
     json.$("roles", roles);
@@ -216,5 +216,9 @@ public class Auth extends HttpServlet {
     }
     json.$("twilioApi", "https://api.twilio.com/2010-04-01/Accounts/%s".formatted(Startup.router.accountSid));
     return json;
+  }
+
+  public static boolean isManager(final Agent a) {
+    return a.isSuperUser() || Locator.count(Team.withManager(a)) > 0;
   }
 }

@@ -26,11 +26,12 @@ public class MissedCallModel extends ListableModel<Call> {
   @Override
   public Query<Call> all(final Class<Call> type, final HttpServletRequest request) {
     var agent = Auth.getAgent(request);
-    return Call
+    return Query.uncacheable(Call
       .withAgent("true".equals(request.getParameter("voicemail")) ? agent:null)
       .and(Call.isQueue)
       .and(withResolution(VOICEMAIL).or(withResolution(DROPPED).or(withResolution(ANSWERED).and(Call.withVoicemail))))
-      .orderBy("created", DESCENDING);
+      .orderBy("created", DESCENDING));
+
   }
 
   @Override

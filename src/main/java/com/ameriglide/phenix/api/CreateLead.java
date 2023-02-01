@@ -11,6 +11,7 @@ import com.ameriglide.phenix.servlet.exception.NotFoundException;
 import com.ameriglide.phenix.twilio.TaskRouter;
 import com.ameriglide.phenix.types.CallDirection;
 import com.ameriglide.phenix.types.Resolution;
+import com.ameriglide.phenix.util.Publishing;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -171,7 +172,7 @@ public class CreateLead extends PhenixServlet {
         opp.setSource(REFERRAL);
         opp.setCampaign(leadgen);
         opp.setReferrerId(data.get("referrerId"));
-        opp.setAssignedTo(Locator.$(new Agent(57))); // assign all new MVF leads to Abbie
+        opp.setAssignedTo(Agent.system());
       } else if (isNotEmpty(campaign)) {
         opp.setSource(SOCIAL);
       } else {
@@ -191,11 +192,14 @@ public class CreateLead extends PhenixServlet {
       n.setNote("Customer submitted web form");
       create("CreateLead", n);
     }
-    var call = dispatch(product, opp, contact, q);
-    respond(response, new JsonMap().$("call", call.sid).$("opportunity", opp.id));
+    Publishing.update(opp);
+    respond(response, new JsonMap().$("opportunity", opp.id));
   }
 
-  private static Call dispatch(ProductLine product, Opportunity opp, Contact contact, SkillQueue q) {
+  public static Call dispatch( Opportunity opp) {
+    var product = opp.getProductLine();
+    var contact = opp.getContact();
+    var q = Locator.$1(SkillQueue.withProduct(product));
     var taskData = new JsonMap()
       .$("type", "sales")
       .$("product", product.getAbbreviation())

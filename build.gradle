@@ -22,6 +22,6 @@ dependencies {
     'org.eclipse.angus:angus-mail:1.0.0',
     'org.eclipse.angus:providers:1.0.0',
     'org.redisson:redisson:3.18.1',
-    'io.github.cdimascio:dotenv-java:2.3.1'
+    'io.github.cdimascio:dotenv-java:2.3.1',
   )
 }

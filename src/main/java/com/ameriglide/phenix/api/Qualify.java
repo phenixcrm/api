@@ -15,7 +15,7 @@ import net.inetalliance.potion.Locator;
 
 import java.io.IOException;
 
-@WebServlet(value = {"/api/qualify", "/api/trash"})
+@WebServlet(value = {"/api/qualify"})
 public class Qualify extends PhenixServlet {
     private static final Log log = new Log();
 
@@ -26,6 +26,11 @@ public class Qualify extends PhenixServlet {
             response.sendError(HttpServletResponse.SC_BAD_REQUEST, "missing id");
             return;
         }
+        var rawHeat = request.getParameter("heat");
+        if (Strings.isEmpty(rawHeat)) {
+            response.sendError(HttpServletResponse.SC_BAD_REQUEST, "missing heat");
+            return;
+        }
         try {
             var id = Integer.parseInt(rawId);
             var opp = Locator.$(new Opportunity(id));
@@ -33,18 +38,16 @@ public class Qualify extends PhenixServlet {
                 response.sendError(HttpServletResponse.SC_NOT_FOUND);
                 return;
             }
+            var heat = Heat.valueOf(rawHeat.toUpperCase());
             Locator.update(opp, "Qualify", copy -> {
-                switch (request.getServletPath()) {
-                    case "/api/qualify" -> {
-                        copy.setHeat(Heat.CONTACTED);
+                copy.setHeat(heat);
+                switch (heat) {
+                    case CONTACTED -> {
                         var call = CreateLead.dispatch(copy);
                         log.info(() -> "Callcenter qualified %d [%s]".formatted(id, call.sid));
-
                     }
-                    case "/api/trash" -> {
-                        copy.setHeat(Heat.DEAD);
-                        log.info(() -> "Callcenter trashed %d".formatted(id));
-                    }
+                    case DEAD -> log.info(() -> "Callcenter trashed %d".formatted(id));
+                    case NEW -> log.info(() -> "Callcenter marked %d as new".formatted(id));
                     default -> {
                         try {
                             response.sendError(HttpServletResponse.SC_BAD_REQUEST, "did not understand instructions");
@@ -63,11 +66,8 @@ public class Qualify extends PhenixServlet {
                 }
                 Publishing.update(copy);
             });
-
-
         } catch (NumberFormatException e) {
             response.sendError(HttpServletResponse.SC_BAD_REQUEST, "%s is not a number".formatted(rawId));
         }
-
     }
 }

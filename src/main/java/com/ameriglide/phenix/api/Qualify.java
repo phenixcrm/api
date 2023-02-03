@@ -42,10 +42,6 @@ public class Qualify extends PhenixServlet {
             Locator.update(opp, "Qualify", copy -> {
                 copy.setHeat(heat);
                 switch (heat) {
-                    case CONTACTED -> {
-                        var call = CreateLead.dispatch(copy);
-                        log.info(() -> "Callcenter qualified %d [%s]".formatted(id, call.sid));
-                    }
                     case DEAD -> log.info(() -> "Callcenter trashed %d".formatted(id));
                     case NEW -> log.info(() -> "Callcenter marked %d as new".formatted(id));
                     default -> {
@@ -66,6 +62,10 @@ public class Qualify extends PhenixServlet {
                 }
                 Publishing.update(copy);
             });
+            if(heat == Heat.CONTACTED) {
+                var call = CreateLead.dispatch(opp);
+                log.info(() -> "Callcenter qualified %d [%s]".formatted(id, call.sid));
+            }
         } catch (NumberFormatException e) {
             response.sendError(HttpServletResponse.SC_BAD_REQUEST, "%s is not a number".formatted(rawId));
         }

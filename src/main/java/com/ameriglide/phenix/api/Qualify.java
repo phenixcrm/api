@@ -44,6 +44,7 @@ public class Qualify extends PhenixServlet {
                 switch (heat) {
                     case DEAD -> log.info(() -> "Callcenter trashed %d".formatted(id));
                     case NEW -> log.info(() -> "Callcenter marked %d as new".formatted(id));
+                    case CONTACTED -> log.info(()->"Callcenter qualified %d".formatted(id));
                     default -> {
                         try {
                             response.sendError(HttpServletResponse.SC_BAD_REQUEST, "did not understand instructions");

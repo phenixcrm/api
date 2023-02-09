@@ -2,7 +2,6 @@ package com.ameriglide.phenix.ws;
 
 import com.ameriglide.phenix.Auth;
 import com.ameriglide.phenix.common.AgentStatus;
-import com.ameriglide.phenix.common.Call;
 import com.ameriglide.phenix.common.ws.Action;
 import com.ameriglide.phenix.core.Log;
 import com.ameriglide.phenix.servlet.PhenixServlet;
@@ -11,7 +10,6 @@ import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.websocket.Session;
-import net.inetalliance.potion.Locator;
 import net.inetalliance.types.json.Json;
 import net.inetalliance.types.json.JsonMap;
 
@@ -58,15 +56,9 @@ public class StatusHandler extends PhenixServlet implements JsonMessageHandler {
     if (sessions!=null && !sessions.isEmpty()) {
       var ticket = Events.getTicket(sessions.get(0));
       var status = shared.availability().computeIfAbsent(ticket.id, id -> new AgentStatus(ticket.agent()));
-      if (msg.containsKey("available")) {
-        Events.broadcast("status", ticket.id, status.withAvailability(msg.getBoolean("available")).toJson());
-      }
-      if (msg.containsKey("call")) {
-        Events.broadcast("status", ticket.id, status.withCall(Locator.$(new Call(msg.get("call")))).toJson());
-      }
-      if (msg.containsKey("clear")) {
-        Events.broadcast("status", ticket.id, (status.isOnCall() ? status.withCall(null):status).toJson());
-
+      if (msg.containsKey("workerState")) {
+        Events.broadcast("status", ticket.id,
+          status.withWorkerState(msg.getEnum("workerState",WorkerState.class)).toJson());
       }
     }
   }

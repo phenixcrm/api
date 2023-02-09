@@ -4,7 +4,6 @@ import com.ameriglide.phenix.Auth;
 import com.ameriglide.phenix.common.*;
 import com.ameriglide.phenix.core.Log;
 import com.ameriglide.phenix.core.Optionals;
-import com.ameriglide.phenix.core.Strings;
 import com.ameriglide.phenix.servlet.PhenixServlet;
 import com.ameriglide.phenix.servlet.exception.NotFoundException;
 import com.ameriglide.phenix.types.Resolution;
@@ -13,6 +12,7 @@ import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import net.inetalliance.potion.Locator;
+import net.inetalliance.sql.OrderBy;
 
 import java.time.LocalDateTime;
 import java.util.Objects;
@@ -50,7 +50,7 @@ public class VoiceDial extends PhenixServlet {
     } else {
       called = new Party($(new Agent(Integer.parseInt(agent))));
     }
-    if (Strings.isEmpty(transfer)) {
+    if (!"true".equals(transfer)) {
       // create new Call with twilio
       var from = new Party(Auth.getAgent(request)).asSip();
       var lead = request.getParameter("lead");
@@ -90,16 +90,17 @@ public class VoiceDial extends PhenixServlet {
       response.sendError(HttpServletResponse.SC_NO_CONTENT);
     } else {
       var voicemail = "true".equals(request.getParameter("voicemail"));
-      var call = Locator.$(new Call(transfer));
+      var call = Locator.$1(
+        Call.withAgent(dialingAgent).and(Call.isActiveVoiceCall).orderBy("created", OrderBy.Direction.DESCENDING));
       if (call==null) {
         log.error(() -> "Could not transfer unknown call %s".formatted(transfer));
         throw new NotFoundException();
       }
       if (called.isAgent() && call.getDirection()==QUEUE) {
-        if(voicemail) {
+        if (voicemail) {
           log.info(() -> "Cold transfer to VM %s %s->%s ".formatted(transfer, dialingAgent.getFullName(),
             called.agent().getFullName()));
-          Locator.update(call,"VoiceDial",copy-> {
+          Locator.update(call, "VoiceDial", copy -> {
             copy.setAgent(called.agent());
           });
           router.sendToVoicemail(call.sid, router.getPrompt(called.agent()));

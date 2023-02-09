@@ -15,6 +15,6 @@ public record PopHandler(StatusHandler status) implements JsonMessageHandler {
 
   @Override
   public void onAsyncMessage(final List<Session> sessions, final JsonMap msg) {
-    Events.send(sessions.get(sessions.size() - 1), "pop", msg);
+    Events.sendReliably(sessions, "pop", msg);
   }
 }

@@ -56,7 +56,7 @@ public class Events extends Endpoint {
   }
 
   private static void invalidate(final Session session) {
-   sessions.values().forEach(list->list.remove(session));
+    sessions.values().forEach(list -> list.remove(session));
   }
 
 
@@ -74,30 +74,30 @@ public class Events extends Endpoint {
 
   }
 
-   private static String trace(Json json, int limit) {
-    if(json instanceof JsonList list) {
-      var examples = "[" + list.stream().limit(limit).map(Json::ugly).collect(Collectors.joining(","));
-      var size = list.size();
-      if(size >limit) {
-        examples += ", ... " + size;
-      }
-      return examples + "]";
-    }
-    return Json.ugly(json);
-   }
-
   public static void broadcast(final String type, final Integer principal, final Json msg) {
     if (principal==null) {
-      log.trace(() -> "broadcasting [%s] from %d, msg: %s".formatted(type, principal, trace(msg,2)));
+      log.trace(() -> "broadcasting [%s] from %d, msg: %s".formatted(type, principal, trace(msg, 2)));
       // tell everyone
       sessions.values().stream().flatMap(Iterables::stream).forEach(session -> send(session, type, msg));
     } else {
-      log.trace(() -> "shallowcasting [%s] from %d, msg: %s".formatted(type, principal, trace(msg,3)));
+      log.trace(() -> "shallowcasting [%s] from %d, msg: %s".formatted(type, principal, trace(msg, 3)));
       // tell only the sockets for that agent
       sessions
         .computeIfAbsent(principal, a -> new CopyOnWriteArrayList<>())
         .forEach(session -> send(session, type, msg));
     }
+  }
+
+  private static String trace(Json json, int limit) {
+    if (json instanceof JsonList list) {
+      var examples = "[" + list.stream().limit(limit).map(Json::ugly).collect(Collectors.joining(","));
+      var size = list.size();
+      if (size > limit) {
+        examples += ", ... " + size;
+      }
+      return examples + "]";
+    }
+    return Json.ugly(json);
   }
 
   public static void send(final Session session, final String type, final Json msg) {
@@ -106,8 +106,8 @@ public class Events extends Endpoint {
         if (session.isOpen()) {
           session.getBasicRemote().sendText(Json.ugly(new JsonMap().$("type", type).$("msg", msg)));
         }
-      } catch (IOException e) {
-        log.debug(() -> "cannot write to closed session for %s".formatted(getTicket(session).principal));
+      } catch (Throwable t) {
+        log.debug(() -> "cannot write to session for %s".formatted(getTicket(session).principal), t);
         invalidate(session);
       }
     }
@@ -130,6 +130,22 @@ public class Events extends Endpoint {
         result.putAll(partial);
         return result;
       });
+  }
+
+  public static void sendReliably(final List<Session> sessions, final String type, final JsonMap msg) {
+    var newestFirst = sessions.listIterator(sessions.size());
+    while (newestFirst.hasPrevious()) {
+      var session = newestFirst.previous();
+      if (session.isOpen()) {
+        try {
+          send(session, type, msg);
+          return;
+        } catch (Throwable t) {
+          log.warn(t);
+        }
+      }
+    }
+    log.warn(() -> "no available sessions for msg of type %s: %s".formatted(type, Json.pretty(msg)));
   }
 
   @Override

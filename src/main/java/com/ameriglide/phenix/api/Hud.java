@@ -50,7 +50,6 @@ public class Hud extends PhenixServlet implements MessageListener<HudTopic> {
     switch (msg) {
       case PRODUCE -> produce();
       case TEAMS -> makeTeams();
-      case SALE -> updateRevenue();
     }
   }
 
@@ -84,15 +83,6 @@ public class Hud extends PhenixServlet implements MessageListener<HudTopic> {
       });
     });
 
-  }
-
-  private void updateRevenue() {
-    shared.availability().forEach((id, status) -> {
-      var sales = status.updateSales();
-      if (sales!=status) {
-        shared.availability().put(id, sales);
-      }
-    });
   }
 
   @Override

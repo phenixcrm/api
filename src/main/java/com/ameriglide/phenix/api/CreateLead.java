@@ -164,19 +164,16 @@ public class CreateLead extends PhenixServlet {
     } else {
       opp = $1(Opportunity.withContact(contact).and(Opportunity.withProductLine(product)));
     }
+    var source = leadgen != null ? REFERRAL : isNotEmpty("campaign") ? SOCIAL : FORM;
     if (opp == null) {
       opp = new Opportunity();
+      opp.setSource(source);
       opp.setContact(contact);
       opp.setAssignedTo(Agent.system());
       if (leadgen != null) {
-        opp.setSource(REFERRAL);
         opp.setCampaign(leadgen);
         opp.setReferrerId(data.get("referrerId"));
         opp.setAssignedTo(Agent.system());
-      } else if (isNotEmpty(campaign)) {
-        opp.setSource(SOCIAL);
-      } else {
-        opp.setSource(FORM);
       }
       opp.setBusiness(q.getBusiness());
       opp.setHeat(Heat.NEW);
@@ -185,6 +182,11 @@ public class CreateLead extends PhenixServlet {
         .and(Opportunity.isSold), Aggregate.AVG, Currency.class, "amount")).orElse(Currency.ZERO));
       create("CreateLead", opp);
     } else {
+      if(opp.getSource() == null) {
+        Locator.update(opp,"CreateLead",copy-> {
+          copy.setSource(source);
+        });
+      }
       var n = new Note();
       n.setOpportunity(opp);
       n.setAuthor(Agent.system());

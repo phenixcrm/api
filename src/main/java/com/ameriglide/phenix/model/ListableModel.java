@@ -1,6 +1,6 @@
 package com.ameriglide.phenix.model;
 
-import com.ameriglide.phenix.core.Strings;
+import com.ameriglide.phenix.core.Classes;
 import jakarta.servlet.http.HttpServletRequest;
 import net.inetalliance.potion.info.Info;
 import net.inetalliance.potion.obj.IdPo;
@@ -17,7 +17,7 @@ public class ListableModel<T> extends TypeModel<T> implements Listable<T> {
 
     protected ListableModel(final Class<T> type) {
         this(type,
-                Pattern.compile("/(?:api|reporting)/" + Strings.camel(type) + "(?:/(" + getKeyPattern(type) + "))?"));
+                Pattern.compile("/(?:api|reporting)/" + Classes.camel(type) + "(?:/(" + getKeyPattern(type) + "))?"));
     }
 
     protected ListableModel(final Class<T> type, final Pattern pattern) {

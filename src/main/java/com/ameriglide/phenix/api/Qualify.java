@@ -14,6 +14,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import net.inetalliance.potion.Locator;
 
 import java.io.IOException;
+import java.time.LocalDateTime;
 
 @WebServlet(value = {"/api/qualify"})
 public class Qualify extends PhenixServlet {
@@ -41,6 +42,7 @@ public class Qualify extends PhenixServlet {
             var heat = Heat.valueOf(rawHeat.toUpperCase());
             Locator.update(opp, "Qualify", copy -> {
                 copy.setHeat(heat);
+                copy.setScreened(LocalDateTime.now());
                 switch (heat) {
                     case DEAD -> log.info(() -> "Callcenter trashed %d".formatted(id));
                     case NEW -> log.info(() -> "Callcenter marked %d as new".formatted(id));

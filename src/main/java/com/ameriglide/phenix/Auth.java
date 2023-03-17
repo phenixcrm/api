@@ -35,7 +35,7 @@ import static java.lang.String.format;
 import static javax.naming.Context.*;
 import static net.inetalliance.potion.Locator.$;
 
-@WebServlet({"/login", "/logout", "/reporting/login", "/reporting/logout"})
+@WebServlet({"/api/login", "/api/logout", "/login", "/logout"})
 public class Auth extends HttpServlet {
 
   private static final Log log = new Log();

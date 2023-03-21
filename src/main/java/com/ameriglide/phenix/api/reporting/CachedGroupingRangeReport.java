@@ -99,7 +99,7 @@ public abstract class CachedGroupingRangeReport<R, G> extends PhenixServlet {
 
         final String q = "report:%s,user:%d,start:%s,end:%s,%s:%s,mode:%s,contactTypes:%s,teams:%s%s".formatted(
                 getClass().getSimpleName(), (loggedIn.isSuperUser() ? Agent.SYSTEM.get():loggedIn).id,
-                simple.format(start), simple.format(end), groupParam, join(",", groupParams),
+                american.format(start), american.format(end), groupParam, join(",", groupParams),
                 mode==null ? "":join(",", mode), contactTypesParam==null ? "":join(",", contactTypesParam),
                 teamParam==null ? "":join(",", teamParam), extra.toString());
         final Map<String, String[]> extras = new HashMap<>(extraParams.length);

@@ -26,16 +26,16 @@ import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 
-import static com.ameriglide.phenix.common.Opportunity.*;
+import static com.ameriglide.phenix.common.Heat.SOLD;
+import static com.ameriglide.phenix.common.Opportunity.isActive;
+import static com.ameriglide.phenix.common.Opportunity.isClosed;
 import static com.ameriglide.phenix.core.Strings.isEmpty;
 import static com.ameriglide.phenix.core.Strings.isNotEmpty;
 import static com.ameriglide.phenix.twilio.TaskRouter.toUS10;
 import static java.util.regex.Pattern.CASE_INSENSITIVE;
 import static java.util.regex.Pattern.compile;
-import static java.util.stream.Collectors.toList;
-import static java.util.stream.Collectors.toSet;
+import static java.util.stream.Collectors.*;
 import static net.inetalliance.sql.OrderBy.Direction.ASCENDING;
 import static net.inetalliance.sql.OrderBy.Direction.DESCENDING;
 
@@ -75,9 +75,13 @@ public class LeadModel extends ListableModel<Opportunity> {
       var notes = new JsonList();
       extra.$("notes", notes);
       var n = Locator.$1(Note.withOpportunity(o));
-      if(n != null) {
+      if (n!=null) {
         var a = n.getAuthor();
-        notes.add(new JsonMap().$("id", n.id).$("note", n.getNote()).$("author", a==null ? "Unknown":a.getFullName()).$("created", n.getCreated()));
+        notes.add(new JsonMap()
+          .$("id", n.id)
+          .$("note", n.getNote())
+          .$("author", a==null ? "Unknown":a.getFullName())
+          .$("created", n.getCreated()));
       }
       json.put("extra", extra);
     }
@@ -93,6 +97,11 @@ public class LeadModel extends ListableModel<Opportunity> {
     }
     return json;
 
+  }
+
+  @Override
+  protected void setDefaults(final Opportunity opportunity, final HttpServletRequest request, final JsonMap data) {
+    data.put("created", LocalDateTime.now());
   }
 
   @Override
@@ -130,26 +139,23 @@ public class LeadModel extends ListableModel<Opportunity> {
 
     final String[] sources = request.getParameterValues("src");
     if (sources!=null && sources.length > 0) {
-      query = query.and(Opportunity.withSources(Arrays
-        .stream(sources)
-        .map(Source::valueOf)
-        .collect(Collectors.toCollection(() -> EnumSet.noneOf(Source.class)))));
+      query = query.and(Opportunity.withSources(
+        Arrays.stream(sources).map(Source::valueOf).collect(toCollection(() -> EnumSet.noneOf(Source.class)))));
     }
 
     final String q = request.getParameter("q");
     boolean onlySold = false;
 
-    final String heat = request.getParameter("h");
-    if (isNotEmpty(heat)) {
-      switch (heat) {
-        case "CLOSED" -> query = query.and(isClosed);
-        case "SOLD" -> {
-          onlySold = true;
-          query = query.and(isSold);
-        }
-        case "DEAD" -> query = query.and(isDead);
-        case "OPEN" -> query = query.and(isActive);
-      }
+    final String[] heats = request.getParameterValues("h");
+    if (heats!=null && heats.length > 0) {
+      var selectedHeats = Arrays
+        .stream(heats)
+        .map(String::toUpperCase)
+        .map(Heat::valueOf)
+        .collect(toCollection(() -> EnumSet.noneOf(Heat.class)));
+      query = query.and(Opportunity.withHeats(selectedHeats));
+      onlySold = selectedHeats.size()==1 && selectedHeats.iterator().next() == SOLD;
+
     } else if (isEmpty(q) && !(support || review)) {
       query = query.and(isActive);
     }
@@ -157,7 +163,7 @@ public class LeadModel extends ListableModel<Opportunity> {
     Supplier<Set<Agent>> viewable = () -> Locator.$$(Agent.viewableBy(loggedIn));
 
     if (support || review || asap || digis) {
-      final String[] as = request.getParameterValues("a");
+      var as = request.getParameterValues("a");
       if (as!=null && as.length > 0) {
         if ((review || digis) && !loggedIn.isSuperUser()) {
           var viewableKeys = viewable.get().stream().map(a -> a.id.toString()).collect(toSet());
@@ -182,19 +188,31 @@ public class LeadModel extends ListableModel<Opportunity> {
         query = query.and(Opportunity.estimatedCloseInInterval(ec.toInterval()));
       }
     }
-
     final Range sd = getParameter(request, Range.class, "sd");
     if (sd!=null) {
       query = query.and(Opportunity.soldInInterval(sd.toInterval()));
+    } else {
+      var soldIn =  getInterval(request,"sold");
+      if(soldIn != null) {
+        query = query.and(Opportunity.soldInInterval(soldIn));
+      }
     }
 
     final Range c = getParameter(request, Range.class, "c");
     if (c!=null) {
       query = query.and(Opportunity.createdInInterval(c.toInterval()));
+    } else {
+      var createdIn =  getInterval(request,"created");
+      if(createdIn != null) {
+        query = query.and(Opportunity.createdInInterval(createdIn));
+      }
     }
-    if (
+    var remindIn =  getInterval(request,"reminder");
+    if(remindIn != null) {
+      query = query.and(Opportunity.withReminderIn(remindIn));
+    }
 
-      isEmpty(q)) {
+    if ( isEmpty(q)) {
       return query;
     }
     return
@@ -338,11 +356,6 @@ public class LeadModel extends ListableModel<Opportunity> {
     };
 
     abstract public DateTimeInterval toInterval();
-  }
-
-  @Override
-  protected void setDefaults(final Opportunity opportunity, final HttpServletRequest request, final JsonMap data) {
-    data.put("created", LocalDateTime.now());
   }
 
   public record SortField(String field, OrderBy.Direction direction) {

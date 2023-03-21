@@ -67,7 +67,7 @@ public class ReviewModel extends PhenixServlet {
 
     try {
       var now = LocalDate.now();
-      var day = isEmpty(dayParam) ? now:simple.parse(dayParam, LocalDate::from);
+      var day = isEmpty(dayParam) ? now:american.parse(dayParam, LocalDate::from);
       var cacheKey = "Review:%s,%s,%s".formatted(day.toString(), loggedIn.isSuperUser(), teamParam);
       var allowCache = !day.plusDays(1).isAfter(now);
       if (allowCache) {

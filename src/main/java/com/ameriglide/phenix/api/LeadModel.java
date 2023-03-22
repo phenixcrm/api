@@ -154,7 +154,7 @@ public class LeadModel extends ListableModel<Opportunity> {
         .map(Heat::valueOf)
         .collect(toCollection(() -> EnumSet.noneOf(Heat.class)));
       query = query.and(Opportunity.withHeats(selectedHeats));
-      onlySold = selectedHeats.size()==1 && selectedHeats.iterator().next() == SOLD;
+      onlySold = selectedHeats.size()==1 && selectedHeats.iterator().next()==SOLD;
 
     } else if (isEmpty(q) && !(support || review)) {
       query = query.and(isActive);
@@ -192,8 +192,8 @@ public class LeadModel extends ListableModel<Opportunity> {
     if (sd!=null) {
       query = query.and(Opportunity.soldInInterval(sd.toInterval()));
     } else {
-      var soldIn =  getInterval(request,"sold");
-      if(soldIn != null) {
+      var soldIn = getInterval(request, "sold");
+      if (soldIn!=null) {
         query = query.and(Opportunity.soldInInterval(soldIn));
       }
     }
@@ -202,17 +202,17 @@ public class LeadModel extends ListableModel<Opportunity> {
     if (c!=null) {
       query = query.and(Opportunity.createdInInterval(c.toInterval()));
     } else {
-      var createdIn =  getInterval(request,"created");
-      if(createdIn != null) {
+      var createdIn = getInterval(request, "created");
+      if (createdIn!=null) {
         query = query.and(Opportunity.createdInInterval(createdIn));
       }
     }
-    var remindIn =  getInterval(request,"reminder");
-    if(remindIn != null) {
+    var remindIn = getInterval(request, "reminder");
+    if (remindIn!=null) {
       query = query.and(Opportunity.withReminderIn(remindIn));
     }
 
-    if ( isEmpty(q)) {
+    if (isEmpty(q)) {
       return query;
     }
     return
@@ -222,7 +222,7 @@ public class LeadModel extends ListableModel<Opportunity> {
 
   protected Query<Opportunity> sort(Query<Opportunity> base, SortField f) {
     return switch (f.field) {
-      case "productLine" -> Query
+      case "productLine", "product" -> Query
         .all(ProductLine.class)
         .join(Opportunity.class, "productLine")
         .and(base)
@@ -238,6 +238,11 @@ public class LeadModel extends ListableModel<Opportunity> {
         .join(Opportunity.class, "contact")
         .and(base)
         .orderBy("shipping_state", f.direction, false);
+      case "business" -> Query
+        .all(Business.class)
+        .join(Opportunity.class, "business")
+        .and(base)
+        .orderBy("business.name", f.direction, false);
       case "assignedTo" -> Query
         .all(Agent.class)
         .join(Opportunity.class, "assignedTo")

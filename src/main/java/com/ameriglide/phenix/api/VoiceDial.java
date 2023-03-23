@@ -7,6 +7,7 @@ import com.ameriglide.phenix.core.Optionals;
 import com.ameriglide.phenix.servlet.PhenixServlet;
 import com.ameriglide.phenix.servlet.exception.NotFoundException;
 import com.ameriglide.phenix.types.Resolution;
+import com.ameriglide.phenix.types.WorkerState;
 import com.twilio.type.PhoneNumber;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServletRequest;
@@ -97,15 +98,15 @@ public class VoiceDial extends PhenixServlet {
         throw new NotFoundException();
       }
       if (called.isAgent() && call.getDirection()==QUEUE) {
-        if (voicemail) {
+        var calledAgent = called.agent();
+        var worker = router.getWorker(calledAgent.getSid());
+        if (voicemail || WorkerState.from(worker) != WorkerState.AVAILABLE) {
           log.info(() -> "Cold transfer to VM %s %s->%s ".formatted(transfer, dialingAgent.getFullName(),
-            called.agent().getFullName()));
+            calledAgent.getFullName()));
           Locator.update(call, "VoiceDial", copy -> {
             copy.setAgent(called.agent());
           });
           router.sendToVoicemail(call.sid, router.getPrompt(called.agent()));
-
-
         } else {
           log.info(() -> "Warm transfer %s %s->%s ".formatted(transfer, dialingAgent.getFullName(),
             called.agent().getFullName()));

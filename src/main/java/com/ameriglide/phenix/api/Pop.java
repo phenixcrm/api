@@ -145,7 +145,7 @@ public class Pop extends TypeModel<Call> {
     if (path.contact!=null) {
       contacts.add(toJson(path.contact, loggedIn, path));
     }
-    var onlyPath = getParameter(request, "path", false);
+    var onlyPath = getParameter(request, "pathOnly", false);
     if (onlyPath && path.isComplete()) {
       return path.toJson();
     }

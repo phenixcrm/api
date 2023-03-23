@@ -37,10 +37,12 @@ public class VoiceDial extends PhenixServlet {
     var agent = request.getParameter("agent");
     var number = request.getParameter("number");
     var transfer = request.getParameter("transfer");
+    var lead = request.getParameter("lead");
+
     CNAM.CallerIdSource cid;
     log.debug(
-      () -> "%s: /api/dial agent=%s, number=%s, transfer=%s".formatted(dialingAgent.getFullName(), agent, number,
-        transfer));
+      () -> "%s: /api/dial agent=%s, number=%s, transfer=%s, lead=%s".formatted(dialingAgent.getFullName(), agent,
+        number, transfer, lead));
 
     Party called;
     if (isEmpty(agent)) {
@@ -54,7 +56,6 @@ public class VoiceDial extends PhenixServlet {
     if (!"true".equals(transfer)) {
       // create new Call with twilio
       var from = new Party(Auth.getAgent(request)).asSip();
-      var lead = request.getParameter("lead");
 
       var call = new Call();
       call.setAgent(dialingAgent);
@@ -66,6 +67,7 @@ public class VoiceDial extends PhenixServlet {
         if (opp==null) {
           throw new NotFoundException();
         }
+        call.setContact(opp.getContact());
         call.setOpportunity(opp);
         call.setBusiness(opp.getBusiness());
         cid = Optionals

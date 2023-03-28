@@ -180,11 +180,11 @@ public class Auth extends HttpServlet {
 
   }
 
-  private void setTicket(final HttpServletRequest request, final Ticket ticket) {
+  protected static void setTicket(final HttpServletRequest request, final Ticket ticket) {
     request.getSession().setAttribute("ticket", ticket);
   }
 
-  private void respond(HttpServletResponse res, Json content) throws ServletException {
+  protected static void respond(HttpServletResponse res, Json content) throws ServletException {
     try (var w = res.getWriter()) {
       res.setContentType(ContentType.JSON.toString());
       w.println(Json.pretty(content));
@@ -199,7 +199,7 @@ public class Auth extends HttpServlet {
     }
   }
 
-  protected Json toJson(final Agent authorized) {
+  protected static Json toJson(final Agent authorized) {
     var a = Locator.$1(Agent.withEmail(authorized.getEmail()));
     if (a==null) {
       throw new IllegalStateException();

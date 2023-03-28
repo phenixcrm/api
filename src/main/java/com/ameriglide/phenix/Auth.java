@@ -144,7 +144,11 @@ public class Auth extends HttpServlet {
 
   private Ticket login(final String principal, final String domain, final String password, TimeZone timeZone) {
     if (Startup.isDevelopment()) {
-      return new Ticket(principal, domain, timeZone);
+      var agent = Ticket.forEmail(principal,domain);
+      if(agent == null) {
+        return null;
+      }
+      return new Ticket(agent,timeZone);
     }
     if (isEmpty(password)) {
       return null;

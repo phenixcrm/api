@@ -164,6 +164,7 @@ public class CreateLead extends PhenixServlet {
     } else {
       opp = $1(Opportunity.withContact(contact).and(Opportunity.withProductLine(product)));
     }
+    var note = data.get("note");
     var source = leadgen != null ? REFERRAL : isNotEmpty("campaign") ? SOCIAL : FORM;
     if (opp == null) {
       opp = new Opportunity();
@@ -187,13 +188,14 @@ public class CreateLead extends PhenixServlet {
           copy.setSource(source);
         });
       }
-      var n = new Note();
-      n.setOpportunity(opp);
-      n.setAuthor(Agent.system());
-      n.setCreated(LocalDateTime.now());
-      n.setNote("Customer submitted web form");
-      create("CreateLead", n);
+
     }
+    var n = new Note();
+    n.setOpportunity(opp);
+    n.setAuthor(Agent.system());
+    n.setCreated(LocalDateTime.now());
+    n.setNote("Customer submitted web form: " + (Strings.isEmpty(note) ? "" : note));
+    create("CreateLead", n);
     Publishing.update(opp);
     respond(response, new JsonMap().$("opportunity", opp.id));
   }

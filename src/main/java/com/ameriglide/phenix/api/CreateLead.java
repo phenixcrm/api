@@ -27,6 +27,7 @@ import java.util.Locale;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import static com.ameriglide.phenix.common.Source.*;
@@ -164,7 +165,19 @@ public class CreateLead extends PhenixServlet {
     } else {
       opp = $1(Opportunity.withContact(contact).and(Opportunity.withProductLine(product)));
     }
-    var note = data.get("note");
+    var note = new StringBuilder();
+    var rawNote = data.get("note");
+    if (Strings.isNotEmpty(rawNote)) {
+      note.append(rawNote);
+    }
+    var extra = data.getMap("extra");
+    if(extra != null && !extra.isEmpty()) {
+      if(note.length()>0) {
+        note.append('\n');
+      }
+      note.append(extra.entrySet().stream().map(e->"%s=%s".formatted(e.getKey(),e.getValue().toString())).collect(
+        Collectors.joining("\n")));
+    }
     var source = leadgen != null ? REFERRAL : isNotEmpty("campaign") ? SOCIAL : FORM;
     if (opp == null) {
       opp = new Opportunity();

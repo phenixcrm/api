@@ -58,6 +58,9 @@ public class CreateLead extends PhenixServlet {
     if (isNotEmpty(city)) {
       shipping.setCity(city);
     }
+    if(shipping.getState() == null && Strings.isNotEmpty(shipping.getPostalCode())) {
+      shipping.setState(State.fromZipCode(shipping.getPostalCode()));
+    }
   }
 
   static final Pattern productFromCampaign = Pattern.compile(".*Lead - (.*)");

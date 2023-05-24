@@ -146,14 +146,13 @@ public class CreateLead extends PhenixServlet {
         case 4, 10030, 10038 -> 8; // power, manual, specialty -> wheelchairs
         case 5 -> 5; // ramps
         case 6, 10036, 10037 -> 2; // stair lifts, stair climber, used -> stair lifts
-        case 7 -> 1; // CVPLs
         case 8 -> 4; // dumbwaiters
+        case 7,23 -> 1; // VPLs
         case 12 -> 9; // vehicle lifts
         case 13, 15 -> 11; // bath lifts, toilet seat lifts -> bath lifts
         case 16, 17, 19, 27, 10032, 10033 -> 12; // rolling walkers,med supply,accessories,parts,cushions,overlays ->
         // accessories
         case 18 -> 7; // elevators
-        case 23 -> 14; // RVPLs
         case 26 -> 15; // IVPLs
         case 10040 -> 3; // pool lifts
         case 10041 -> 16; // curved stair lifts

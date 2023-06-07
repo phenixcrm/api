@@ -115,6 +115,7 @@ public class CreateLead extends PhenixServlet {
         updateContact(data, copy, phone, email);
       });
     }
+    Business business = null;
     var campaign = data.get("campaign");
     final Integer productId;
     if (isNotEmpty(campaign)) {
@@ -130,6 +131,7 @@ public class CreateLead extends PhenixServlet {
         log.warn(() -> "weird FB campaign name %s".formatted(campaign));
         productId = null;
       }
+      business = campaign.endsWith("Ontario") ? Locator.$(new Business(1)): Business.getDefault.get();
     } else if (leadgen != null) {
       productId = leadgen.getProductLine().id;
     } else {
@@ -191,7 +193,7 @@ public class CreateLead extends PhenixServlet {
         opp.setReferrerId(data.get("referrerId"));
         opp.setAssignedTo(Agent.system());
       }
-      opp.setBusiness(q.getBusiness());
+      opp.setBusiness(business == null ? q.getBusiness() : business);
       opp.setHeat(Heat.NEW);
       opp.setProductLine(q.getProduct());
       opp.setAmount(Optionals.of(Locator.$$(Opportunity.withProductLine(q.getProduct())

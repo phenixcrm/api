@@ -131,7 +131,7 @@ public class CreateLead extends PhenixServlet {
         log.warn(() -> "weird FB campaign name %s".formatted(campaign));
         productId = null;
       }
-      business = campaign.endsWith("Ontario") ? Locator.$(new Business(1)): Business.getDefault.get();
+      business = campaign.endsWith("Ontario") ? Locator.$(new Business(2)): Business.getDefault.get();
     } else if (leadgen != null) {
       productId = leadgen.getProductLine().id;
     } else {

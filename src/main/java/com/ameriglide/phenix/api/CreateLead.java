@@ -95,6 +95,7 @@ public class CreateLead extends PhenixServlet {
     var leadgen = getLeadGenSource(request);
 
     var data = JsonMap.parse(request.getInputStream());
+    log.info("CreateLead: %s",Json.ugly(data));
     var phone = Stream.of("mobile", "phone")
       .map(data::get)
       .map(TaskRouter::toE164)

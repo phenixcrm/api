@@ -177,7 +177,7 @@ public class CreateLead extends PhenixServlet {
     }
     var extra = data.getMap("extra");
     if(extra != null && !extra.isEmpty()) {
-      if(note.length()>0) {
+      if(!note.isEmpty()) {
         note.append('\n');
       }
       note.append(extra.entrySet().stream().map(e->"%s=%s".formatted(e.getKey(),e.getValue().toString())).collect(

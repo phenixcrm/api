@@ -162,7 +162,7 @@ public class CreateLead extends PhenixServlet {
         .map(e -> "%s=%s".formatted(e.getKey(), e.getValue().toString()))
         .collect(Collectors.joining("\n")));
     }
-    var source = leadgen!=null ? REFERRAL:(isNotEmpty("campaign") ? SOCIAL:FORM);
+    var source = leadgen!=null ? REFERRAL:(isNotEmpty(campaign) ? SOCIAL:FORM);
     if (opp==null) {
       opp = new Opportunity();
       opp.setSource(source);

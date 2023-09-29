@@ -45,7 +45,7 @@ public class CreateLead extends PhenixServlet {
     var contact = opp.getContact();
     var q = Locator.$1(SkillQueue.withProduct(product));
     var taskData = new JsonMap().$("type", "sales").$("product", product.getAbbreviation()).$("Lead", opp.id);
-    if (opp.getAssignedTo()!=null) {
+    if (opp.getSource() == PHONE && opp.getAssignedTo()!=null) {
       taskData.$("preferred", opp.getAssignedTo().getSid());
     }
     var task = Startup.router.createDigitalLeadsTask(Json.ugly(taskData), (int) TimeUnit.DAYS.toSeconds(1));

@@ -17,6 +17,7 @@ import net.inetalliance.sql.OrderBy;
 
 import java.time.LocalDateTime;
 import java.util.Objects;
+import java.util.UUID;
 
 import static com.ameriglide.phenix.core.Strings.isEmpty;
 import static com.ameriglide.phenix.core.Strings.isNotEmpty;
@@ -85,10 +86,10 @@ public class VoiceDial extends PhenixServlet {
         cid = $1(VerifiedCallerId.isDefault);
       }
       cid.setPhoneNumber(call);
-      call.sid = router
-        .call(new PhoneNumber(cid.getPhoneNumber()), from, "/voice/dial", request.getQueryString())
-        .getSid();
+      call.sid = "ph" + UUID.randomUUID().toString().replaceAll("-", "");
       Locator.create("VoiceDial", call);
+      router.call(new PhoneNumber(cid.getPhoneNumber()), from, "/voice/dial",
+        request.getQueryString() + "&call=" + call.sid);
       log.info(() -> "New API dial %s %s -> %s".formatted(call.sid, dialingAgent.getSipUser(), called.endpoint()));
       response.sendError(HttpServletResponse.SC_NO_CONTENT);
     } else {
@@ -102,7 +103,7 @@ public class VoiceDial extends PhenixServlet {
       if (called.isAgent() && call.getDirection()==QUEUE) {
         var calledAgent = called.agent();
         var worker = router.getWorker(calledAgent.getSid());
-        if (voicemail || WorkerState.from(worker) != WorkerState.AVAILABLE) {
+        if (voicemail || WorkerState.from(worker)!=WorkerState.AVAILABLE) {
           log.info(() -> "Cold transfer to VM %s %s->%s ".formatted(transfer, dialingAgent.getFullName(),
             calledAgent.getFullName()));
           Locator.update(call, "VoiceDial", copy -> {

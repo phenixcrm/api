@@ -13,7 +13,6 @@ import net.inetalliance.types.json.Json;
 
 import java.util.regex.Pattern;
 
-import static com.ameriglide.phenix.common.Call.withResolution;
 import static com.ameriglide.phenix.types.Resolution.*;
 import static net.inetalliance.sql.OrderBy.Direction.DESCENDING;
 
@@ -26,11 +25,16 @@ public class MissedCallModel extends ListableModel<Call> {
   @Override
   public Query<Call> all(final Class<Call> type, final HttpServletRequest request) {
     var agent = Auth.getAgent(request);
-    return Query.uncacheable(Call
-      .withAgent("true".equals(request.getParameter("voicemail")) ? agent:null)
-      .and(Call.isQueue)
-      .and(withResolution(VOICEMAIL).or(withResolution(DROPPED).or(withResolution(ANSWERED).and(Call.withVoicemail))))
-      .orderBy("created", DESCENDING));
+    final Query<Call> base;
+    var withVoicemail = Call
+      .withResolution(VOICEMAIL)
+      .or(Call.withResolution(ANSWERED).and(Call.withVoicemailRecording));
+    if ("true".equals(request.getParameter("voicemail"))) {
+      base = Call.withAgent(agent).and(withVoicemail);
+    } else {
+      base = Call.isQueue.and(withVoicemail.or(Call.withResolution(DROPPED)));
+    }
+    return Query.uncacheable(base.orderBy("created", DESCENDING));
 
   }
 

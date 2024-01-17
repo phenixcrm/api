@@ -129,7 +129,7 @@ public class Auth extends HttpServlet {
         synchronized (session) {
           var ticket = login(principal, domain, password, timeZone);
           if (ticket==null) {
-            log.info(() -> "password login failed for %s".formatted(session.getId()));
+            log.info(() -> "password login failed for %s".formatted(principal));
             response.sendError(SC_FORBIDDEN, "Access Denied");
           } else {
             setTicket(request, ticket);

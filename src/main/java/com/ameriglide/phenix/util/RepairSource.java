@@ -9,8 +9,10 @@ import com.ameriglide.phenix.core.Strings;
 import com.twilio.exception.ApiException;
 import net.inetalliance.cli.Cli;
 import net.inetalliance.potion.Locator;
+import net.inetalliance.sql.DateTimeInterval;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.Objects;
 
 import static net.inetalliance.sql.OrderBy.Direction.DESCENDING;
@@ -49,7 +51,8 @@ public class RepairSource implements Runnable {
       });
       log.info(() -> "Changing source by first touch");
 
-      Locator.forEachWithProgress(Opportunity.isSold, (o, meter) -> {
+      Locator.forEachWithProgress(Opportunity.isSold.and(Opportunity.createdInInterval(new DateTimeInterval(LocalDate.of(2023,11,1).atStartOfDay(),
+        LocalDateTime.now()))), (o, meter) -> {
         var firstCall = Locator.$1(Call.withContact(o.getContact()).orderBy("created"));
         if (firstCall!=null) {
           var did = firstCall.getDialedNumber();

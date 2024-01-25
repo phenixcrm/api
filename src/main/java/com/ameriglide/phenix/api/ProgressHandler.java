@@ -1,7 +1,7 @@
 package com.ameriglide.phenix.api;
 
 import com.ameriglide.phenix.core.Log;
-import com.ameriglide.phenix.util.ProgressMeter;
+import net.inetalliance.util.ProgressMeter;
 import com.ameriglide.phenix.ws.Events;
 import jakarta.servlet.http.HttpServletResponse;
 import net.inetalliance.types.json.Json;

@@ -12,7 +12,7 @@ import com.ameriglide.phenix.core.Optionals;
 import com.ameriglide.phenix.servlet.PhenixServlet;
 import com.ameriglide.phenix.servlet.exception.BadRequestException;
 import com.ameriglide.phenix.servlet.exception.ForbiddenException;
-import com.ameriglide.phenix.util.ProgressMeter;
+import net.inetalliance.util.ProgressMeter;
 import jakarta.servlet.ServletConfig;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;

@@ -2,15 +2,18 @@ package com.ameriglide.phenix.util;
 
 import com.ameriglide.phenix.Startup;
 import com.ameriglide.phenix.common.Call;
+import com.ameriglide.phenix.common.Opportunity;
 import com.ameriglide.phenix.common.VerifiedCallerId;
 import com.ameriglide.phenix.core.Log;
 import com.ameriglide.phenix.core.Strings;
 import net.inetalliance.cli.Cli;
 import net.inetalliance.potion.Locator;
 
+import java.util.Objects;
+
 import static net.inetalliance.sql.OrderBy.Direction.DESCENDING;
 
-public class RepairSource implements Runnable{
+public class RepairSource implements Runnable {
   private static final Log log = new Log();
 
   public static void main(String[] args) {
@@ -21,24 +24,40 @@ public class RepairSource implements Runnable{
     Startup.bootstrap();
     try {
       var q = Call.isQueue.and(Call.withoutDialedNumber().orderBy("created", DESCENDING));
-      int n = Locator.count(q);
-      var meter = new ProgressMeter(n);
-      Locator.forEach(q, c -> {
+      log.info(() -> "Setting missing dialed numbers...");
+      Locator.forEachWithProgress(q, (c, meter) -> {
         var call = Startup.router.getCall(c.sid);
         var dialedNumber = call.getPhoneNumberSid();
         if (Strings.isNotEmpty(dialedNumber)) {
           var did = Locator.$(new VerifiedCallerId(dialedNumber));
           if (did==null) {
-            meter.increment("No match for %s",dialedNumber);
+            meter.increment("No match for %s", dialedNumber);
           } else {
             Locator.update(c, "RepairSource", copy -> {
               copy.setDialedNumber(did);
               copy.setSource(did.getSource());
             });
-            meter.increment(
-               "dialed number %s [%s] assigned for %s",did.getPhoneNumber(), did.getSource(), c.sid);
+            meter.increment("dialed number %s [%s] assigned for %s", did.getPhoneNumber(), did.getSource(), c.sid);
           }
         }
+      });
+      log.info(() -> "Changing source by first touch");
+
+      Locator.forEachWithProgress(Opportunity.isSold, (o, meter) -> {
+        var firstCall = Locator.$1(Call.withContact(o.getContact()).orderBy("created"));
+        if (firstCall!=null) {
+          var did = firstCall.getDialedNumber();
+          if (did!=null) {
+            var callSource = did.getSource();
+            if (!Objects.equals(callSource, o.getSource())) {
+              System.err.printf("%d, %s, %s%n", o.id, o.getSource(), callSource);
+              Locator.update(o, "RepairSource",copy->{
+                copy.setSource(did.getSource());
+              });
+            }
+          }
+        }
+        meter.increment();
       });
     } finally {
       Startup.teardown();

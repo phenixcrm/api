@@ -10,6 +10,7 @@ import com.twilio.exception.ApiException;
 import net.inetalliance.cli.Cli;
 import net.inetalliance.potion.Locator;
 
+import java.time.LocalDate;
 import java.util.Objects;
 
 import static net.inetalliance.sql.OrderBy.Direction.DESCENDING;
@@ -24,7 +25,7 @@ public class RepairSource implements Runnable {
   public void run() {
     Startup.bootstrap();
     try {
-      var q = Call.isQueue.and(Call.withoutDialedNumber().orderBy("created", DESCENDING));
+      var q = Call.isQueue.and(Call.withoutDialedNumber().and(Call.isAfter(LocalDate.of(2023,11,19))).orderBy("created", DESCENDING));
       log.info(() -> "Setting missing dialed numbers...");
       Locator.forEachWithProgress(q, (c, meter) -> {
         try {

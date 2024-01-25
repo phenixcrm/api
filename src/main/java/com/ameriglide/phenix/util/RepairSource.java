@@ -6,6 +6,7 @@ import com.ameriglide.phenix.common.Opportunity;
 import com.ameriglide.phenix.common.VerifiedCallerId;
 import com.ameriglide.phenix.core.Log;
 import com.ameriglide.phenix.core.Strings;
+import com.twilio.exception.ApiException;
 import net.inetalliance.cli.Cli;
 import net.inetalliance.potion.Locator;
 
@@ -26,19 +27,23 @@ public class RepairSource implements Runnable {
       var q = Call.isQueue.and(Call.withoutDialedNumber().orderBy("created", DESCENDING));
       log.info(() -> "Setting missing dialed numbers...");
       Locator.forEachWithProgress(q, (c, meter) -> {
-        var call = Startup.router.getCall(c.sid);
-        var dialedNumber = call.getPhoneNumberSid();
-        if (Strings.isNotEmpty(dialedNumber)) {
-          var did = Locator.$(new VerifiedCallerId(dialedNumber));
-          if (did==null) {
-            meter.increment("No match for %s", dialedNumber);
-          } else {
-            Locator.update(c, "RepairSource", copy -> {
-              copy.setDialedNumber(did);
-              copy.setSource(did.getSource());
-            });
-            meter.increment("dialed number %s [%s] assigned for %s", did.getPhoneNumber(), did.getSource(), c.sid);
+        try {
+          var call = Startup.router.getCall(c.sid);
+          var dialedNumber = call.getPhoneNumberSid();
+          if (Strings.isNotEmpty(dialedNumber)) {
+            var did = Locator.$(new VerifiedCallerId(dialedNumber));
+            if (did==null) {
+              meter.increment("No match for %s", dialedNumber);
+            } else {
+              Locator.update(c, "RepairSource", copy -> {
+                copy.setDialedNumber(did);
+                copy.setSource(did.getSource());
+              });
+              meter.increment("dialed number %s [%s] assigned for %s", did.getPhoneNumber(), did.getSource(), c.sid);
+            }
           }
+        } catch (ApiException e) {
+          meter.increment("could not find call %s at twilio",c.sid);
         }
       });
       log.info(() -> "Changing source by first touch");
@@ -51,7 +56,7 @@ public class RepairSource implements Runnable {
             var callSource = did.getSource();
             if (!Objects.equals(callSource, o.getSource())) {
               System.err.printf("%d, %s, %s%n", o.id, o.getSource(), callSource);
-              Locator.update(o, "RepairSource",copy->{
+              Locator.update(o, "RepairSource", copy -> {
                 copy.setSource(did.getSource());
               });
             }

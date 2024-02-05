@@ -4,10 +4,12 @@ import com.ameriglide.phenix.common.Opportunity;
 import com.ameriglide.phenix.core.Log;
 import com.ameriglide.phenix.core.Strings;
 import com.ameriglide.phenix.servlet.PhenixServlet;
+import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import net.inetalliance.potion.Locator;
 
+@WebServlet("/api/createQuote")
 public class CreateQuote extends PhenixServlet {
   @Override
   protected void get(final HttpServletRequest request, final HttpServletResponse response) throws Exception {

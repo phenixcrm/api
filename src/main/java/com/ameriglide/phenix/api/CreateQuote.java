@@ -4,6 +4,7 @@ import com.ameriglide.phenix.common.Opportunity;
 import com.ameriglide.phenix.core.Log;
 import com.ameriglide.phenix.core.Strings;
 import com.ameriglide.phenix.servlet.PhenixServlet;
+import com.ameriglide.phenix.util.Publishing;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -33,6 +34,7 @@ public class CreateQuote extends PhenixServlet {
         Locator.update(lead,"CreateQuote",copy-> {
           copy.setQuote(code);
         });
+        Publishing.quoteCreated(lead,log::error);
       }
     } catch(NumberFormatException e)  {
       response.sendError(400, "leadId must be a positive integer");

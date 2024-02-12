@@ -61,12 +61,14 @@ public class Pop extends TypeModel<Call> {
       extra.$("productLine", new JsonMap().$("id", opp.getProductLine().id).$("name", opp.getProductLine().getName()));
       extra.$("assignedTo",
         new JsonMap().$("id", opp.getAssignedTo().id).$("name", opp.getAssignedTo().getFirstNameLastInitial()));
-      extra.$("business", new JsonMap().$("id", opp.getBusiness().id).$("name", opp.getBusiness().getName()));
+      extra.$("business", new JsonMap().$("id", opp.getBusiness().id).$("name", opp.getBusiness().getName()).$("uri",
+        opp.getBusiness().getUri()));
       list.add(new JsonMap()
         .$("id", opp.id)
         .$("created", opp.getCreated())
         .$("notes", notes)
         .$("source", opp.getSource())
+        .$("quote", opp.getQuote())
         .$("heat", opp.getHeat())
         .$("productLine", opp.getProductLine().id)
         .$("assignedTo", opp.getAssignedTo().id)

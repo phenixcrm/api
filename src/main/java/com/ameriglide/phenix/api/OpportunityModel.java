@@ -22,39 +22,10 @@ import static com.ameriglide.phenix.core.Strings.isNotEmpty;
 
 
 @WebServlet("/api/opportunity/*")
-public class OpportunityModel
-    extends ListableModel<Opportunity> {
+public class OpportunityModel extends ListableModel<Opportunity> {
 
   public OpportunityModel() {
     super(Opportunity.class);
-  }
-
-  public static Json json(Opportunity arg) {
-    final Agent assignedTo = arg.getAssignedTo();
-    final ProductLine productLine = arg.getProductLine();
-    final Business biz = arg.getBusiness();
-    final Heat heat = arg.getHeat();
-    return new JsonMap().$("id", arg.id)
-        .$("heat", new JsonMap().$("name", heat.name()).$("ordinal", heat.ordinal()))
-        .$("business", new JsonMap().$("id", biz.id)
-            .$("abbreviation", biz.getAbbreviation())
-            .$("name", biz.getName()))
-        .$("assignedTo",
-            new JsonMap().$("name", assignedTo.getLastNameFirstInitial())
-              .$("id", assignedTo.id))
-        .$("productLine", new JsonMap().$("name", productLine.getName())
-            .$("abbreviation", productLine.getAbbreviation())
-            .$("id", productLine.id)
-            .$("root", productLine.getRoot() == null
-                ? null
-                : productLine.getRoot().id));
-  }
-
-  @Override
-  public JsonMap create(final Key<Opportunity> key, final HttpServletRequest request,
-                        final HttpServletResponse response, final JsonMap data) {
-    data.put("created", LocalDateTime.now());
-    return super.create(key, request, response, data);
   }
 
   @Override
@@ -63,7 +34,7 @@ public class OpportunityModel
     final var callId = request.getParameter("call");
     if (isNotEmpty(callId)) {
       final var call = Locator.$(new Call(callId));
-      if (call == null) {
+      if (call==null) {
         throw new NotFoundException("Could not find call with key %s", callId);
       }
       q = q.and(Opportunity.withBusinessIdIn(List.of(call.getBusiness().id)));
@@ -71,7 +42,7 @@ public class OpportunityModel
     final var contactId = request.getParameter("contact");
     if (isNotEmpty(contactId)) {
       final var contact = Locator.$(new Contact(Integer.valueOf(contactId)));
-      if (contact == null) {
+      if (contact==null) {
         throw new NotFoundException("Could not find contact with id %s", contactId);
       }
       q = q.and(Opportunity.withContact(contact));
@@ -91,7 +62,7 @@ public class OpportunityModel
         throw new BadRequestException("must specify a call key");
       }
       final var call = Locator.$(new Call(callKey));
-      if (call == null) {
+      if (call==null) {
         throw new NotFoundException("could not find call with key %s", callKey);
       }
       opp.setProductLine(call.getQueue().getProduct());
@@ -104,18 +75,45 @@ public class OpportunityModel
   }
 
   @Override
-  protected Json toJson(final Key<Opportunity> key, final Opportunity opportunity,
-      final HttpServletRequest request) {
+  public JsonMap create(final Key<Opportunity> key, final HttpServletRequest request,
+                        final HttpServletResponse response, final JsonMap data) {
+    data.put("created", LocalDateTime.now());
+    return super.create(key, request, response, data);
+  }
+
+  @Override
+  protected Json toJson(final Key<Opportunity> key, final Opportunity opportunity, final HttpServletRequest request) {
     final var map = (JsonMap) super.toJson(key, opportunity, request);
     map.put("extra", json(opportunity));
     return map;
+  }
+
+  public static Json json(Opportunity arg) {
+    final Agent assignedTo = arg.getAssignedTo();
+    final ProductLine productLine = arg.getProductLine();
+    final Business biz = arg.getBusiness();
+    final Heat heat = arg.getHeat();
+    return new JsonMap()
+      .$("id", arg.id)
+      .$("heat", new JsonMap().$("name", heat.name()).$("ordinal", heat.ordinal()))
+      .$("business", new JsonMap()
+        .$("id", biz.id)
+        .$("abbreviation", biz.getAbbreviation())
+        .$("uri", biz.getUri())
+        .$("name", biz.getName()))
+      .$("assignedTo", new JsonMap().$("name", assignedTo.getLastNameFirstInitial()).$("id", assignedTo.id))
+      .$("productLine", new JsonMap()
+        .$("name", productLine.getName())
+        .$("abbreviation", productLine.getAbbreviation())
+        .$("id", productLine.id)
+        .$("root", productLine.getRoot()==null ? null:productLine.getRoot().id));
   }
 
   @Override
   public Json toJson(final HttpServletRequest request, final Opportunity o) {
 
     final var superJson = (JsonMap) super.toJson(request, o);
-    if (request.getParameter("summary") == null) {
+    if (request.getParameter("summary")==null) {
       return superJson;
     }
     return superJson.$("extra", json(o));

@@ -70,7 +70,11 @@ public class LeadModel extends ListableModel<Opportunity> {
         .$("assignedTo",
           new JsonMap().$("name", o.getAssignedTo().getLastNameFirstInitial()).$("id", o.getAssignedTo().id))
         .$("business",
-          new JsonMap().$("name", o.getBusiness().getName()).$("abbreviation", o.getBusiness().getAbbreviation()));
+          new JsonMap()
+            .$("name", o.getBusiness().getName())
+            .$("abbreviation", o.getBusiness().getAbbreviation())
+            .$("uri",o.getBusiness().getUri())
+        );
 
       var notes = new JsonList();
       extra.$("notes", notes);

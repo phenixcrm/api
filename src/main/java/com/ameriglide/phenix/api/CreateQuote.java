@@ -16,7 +16,7 @@ public class CreateQuote extends PhenixServlet {
   protected void get(final HttpServletRequest request, final HttpServletResponse response) throws Exception {
     var leadId = request.getParameter("leadId");
     var code = request.getParameter("code");
-
+    log.info(()->"received request to attach quote %s to lead %s".formatted(code,leadId));
     if(Strings.isEmpty("leadId")) {
       response.sendError(400,"leadId is required");
       return;
@@ -35,6 +35,7 @@ public class CreateQuote extends PhenixServlet {
           copy.setQuote(code);
         });
         Publishing.quoteCreated(lead,log::error);
+        response.sendError(200, "OK");
       }
     } catch(NumberFormatException e)  {
       response.sendError(400, "leadId must be a positive integer");

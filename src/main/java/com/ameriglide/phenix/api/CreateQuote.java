@@ -16,12 +16,13 @@ public class CreateQuote extends PhenixServlet {
   protected void get(final HttpServletRequest request, final HttpServletResponse response) throws Exception {
     var leadId = request.getParameter("leadId");
     var code = request.getParameter("code");
-    log.info(()->"received request to attach quote %s to lead %s".formatted(code,leadId));
     if(Strings.isEmpty("leadId")) {
+      log.warn(()->"received bad request to attach quote %s to lead %s".formatted(code,leadId));
       response.sendError(400,"leadId is required");
       return;
     }
     if(Strings.isEmpty("code")) {
+      log.warn(()->"received bad request to attach quote %s to lead %s".formatted(code,leadId));
       response.sendError(400, "code is required");
       return;
     }
@@ -29,8 +30,10 @@ public class CreateQuote extends PhenixServlet {
       var id = Integer.parseInt(leadId);
       var lead = Locator.$(new Opportunity(id));
       if(lead == null) {
+        log.warn(()->"received request to attach quote %s to unknown lead %s".formatted(code,leadId));
         response.sendError(404, "could not find lead with id %d".formatted(id));
       } else {
+        log.warn(()->"received request to attach quote %s to lead %s".formatted(code,leadId));
         Locator.update(lead,"CreateQuote",copy-> {
           copy.setQuote(code);
         });

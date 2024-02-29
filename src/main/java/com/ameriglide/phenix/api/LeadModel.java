@@ -2,37 +2,48 @@ package com.ameriglide.phenix.api;
 
 import com.ameriglide.phenix.Auth;
 import com.ameriglide.phenix.common.*;
+import com.ameriglide.phenix.core.Consumers;
+import com.ameriglide.phenix.core.Strings;
 import com.ameriglide.phenix.model.Key;
+import com.ameriglide.phenix.model.Listable;
 import com.ameriglide.phenix.model.ListableModel;
 import com.ameriglide.phenix.servlet.exception.ForbiddenException;
 import com.ameriglide.phenix.ws.Events;
 import com.ameriglide.phenix.ws.ReminderHandler;
+import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import net.inetalliance.potion.Locator;
 import net.inetalliance.potion.info.Info;
+import net.inetalliance.potion.info.PersistenceError;
 import net.inetalliance.potion.query.*;
 import net.inetalliance.sql.*;
 import net.inetalliance.types.json.Json;
 import net.inetalliance.types.json.JsonList;
 import net.inetalliance.types.json.JsonMap;
+import org.postgresql.util.PSQLException;
 
 import java.io.IOException;
 import java.time.*;
 import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.Set;
+import java.util.function.BiConsumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.regex.Pattern;
 
+import static com.ameriglide.phenix.Auth.getAgent;
 import static com.ameriglide.phenix.common.Heat.SOLD;
 import static com.ameriglide.phenix.common.Opportunity.isActive;
 import static com.ameriglide.phenix.common.Opportunity.isClosed;
+import static com.ameriglide.phenix.core.Functions.throwing;
 import static com.ameriglide.phenix.core.Strings.isEmpty;
 import static com.ameriglide.phenix.core.Strings.isNotEmpty;
 import static com.ameriglide.phenix.twilio.TaskRouter.toUS10;
+import static jakarta.servlet.http.HttpServletResponse.SC_BAD_REQUEST;
+import static jakarta.servlet.http.HttpServletResponse.SC_NOT_FOUND;
 import static java.util.regex.Pattern.CASE_INSENSITIVE;
 import static java.util.regex.Pattern.compile;
 import static java.util.stream.Collectors.*;
@@ -45,9 +56,11 @@ public class LeadModel extends ListableModel<Opportunity> {
   private static final Pattern space = compile("[ @.]");
   private static final Pattern spaces = compile(" +");
   private static final Pattern or = compile("( \\| )|( OR )", CASE_INSENSITIVE);
+  private static final Pattern supportedProducts = Pattern.compile(
+    "/api/lead/([0-9]*)(?:/supportedProducts(?:/([0-9]*)(?:/serviceNotes)?)?)");
 
   public LeadModel() {
-    super(Opportunity.class, compile("/api/lead(?:/([^/]*))?"));
+    super(Opportunity.class, compile("/api/lead(?:/([^/]*))?.*"));
   }
 
   @Override
@@ -69,12 +82,10 @@ public class LeadModel extends ListableModel<Opportunity> {
           new JsonMap().$("name", o.getProductLine().getName()).$("abbreviation", o.getProductLine().getAbbreviation()))
         .$("assignedTo",
           new JsonMap().$("name", o.getAssignedTo().getLastNameFirstInitial()).$("id", o.getAssignedTo().id))
-        .$("business",
-          new JsonMap()
-            .$("name", o.getBusiness().getName())
-            .$("abbreviation", o.getBusiness().getAbbreviation())
-            .$("uri",o.getBusiness().getUri())
-        );
+        .$("business", new JsonMap()
+          .$("name", o.getBusiness().getName())
+          .$("abbreviation", o.getBusiness().getAbbreviation())
+          .$("uri", o.getBusiness().getUri()));
 
       var notes = new JsonList();
       extra.$("notes", notes);
@@ -115,7 +126,7 @@ public class LeadModel extends ListableModel<Opportunity> {
     final boolean asap = request.getParameter("asap")!=null;
     final boolean digis = request.getParameter("digis")!=null;
     final SortField sort = SortField.from(request);
-    final Agent loggedIn = Auth.getAgent(request);
+    final Agent loggedIn = getAgent(request);
     final boolean teamLeader = Auth.isTeamLeader(request);
     if (review && !teamLeader) {
       throw new ForbiddenException("%s tried to access review section", loggedIn.getFullName());
@@ -224,6 +235,172 @@ public class LeadModel extends ListableModel<Opportunity> {
       buildSearchQuery(query, q);
   }
 
+  @Override
+  protected void get(final HttpServletRequest request, final HttpServletResponse response) throws Exception {
+    var m = supportedProducts.matcher(request.getRequestURI());
+    if (m.matches()) {
+      try {
+        var leadId = Integer.parseInt(m.group(1));
+        var lead = Locator.$(new Opportunity(leadId));
+        if (lead==null) {
+          response.sendError(SC_NOT_FOUND);
+        } else {
+          var list = new JsonList();
+          Locator.forEach(SupportedProduct.withOpportunity(lead), p -> {
+            list.add(toJson(p));
+          });
+          respond(response, Listable.formatResult(list.size(), list));
+        }
+      } catch (NumberFormatException e) {
+        response.sendError(SC_BAD_REQUEST, "could not parse id as number, given: %s".formatted(m.group(1)));
+      }
+    } else {
+      super.get(request, response);
+    }
+  }
+
+  @Override
+  protected void post(final HttpServletRequest request, final HttpServletResponse response) throws Exception {
+    var m = supportedProducts.matcher(request.getRequestURI());
+    if (m.matches()) {
+      try {
+        var leadId = Integer.parseInt(m.group(1));
+        var lead = Locator.$(new Opportunity(leadId));
+        if (lead==null) {
+          response.sendError(SC_NOT_FOUND);
+        } else {
+          var rawProductId = m.group(2);
+          if (Strings.isEmpty(rawProductId)) { // creating a product
+            var p = new SupportedProduct();
+            Info.$(SupportedProduct.class).fromJson(p, parseData(request));
+            p.setAdded(LocalDateTime.now());
+            p.setOpportunity(lead);
+            Locator.create(getAgent(request).getFullName(), p);
+            respond(response, Info.$(p).toJson(p));
+          } else { // creating a note for a product
+            var productId = Integer.parseInt(rawProductId);
+            var product = Locator.$(new SupportedProduct(productId));
+            if (product==null) {
+              response.sendError(SC_NOT_FOUND);
+            } else {
+              var n = new ServiceNote();
+              n.setAuthor(Auth.getAgent(request));
+              n.setCreated(LocalDateTime.now());
+              n.setSupportedProduct(product);
+              n.setNote(parseData(request).get("note"));
+              if (Strings.isEmpty(n.getNote())) {
+                response.sendError(SC_BAD_REQUEST, "must specify note to add");
+              } else {
+                Locator.create(n.getAuthor().getFullName(), n);
+                respond(response, Info.$(ServiceNote.class).toJson(n).$("author",n.getAuthor().getFullName()));
+              }
+            }
+
+          }
+
+        }
+
+      } catch (NumberFormatException e) {
+        response.sendError(SC_BAD_REQUEST, e.getMessage());
+      }
+    } else {
+      super.post(request, response);
+    }
+  }
+
+  @Override
+  protected void delete(final HttpServletRequest request, final HttpServletResponse response) throws IOException {
+    forProduct(request, response, Consumers.throwing((product, data) -> {
+      try {
+        Locator.delete(Auth.getAgent(request).getFullName(), product);
+        respond(response, "{}");
+      } catch (PersistenceError e) {
+        var cause = e.getCause();
+        if (cause instanceof PSQLException p) {
+          var constraint = p.getServerErrorMessage().getConstraint();
+          if ("fk_supportedproduct".equals(constraint)) {
+            respond(response,
+              JsonMap.singletonMap("error", "You can not remove a tracked product that has service notes"));
+            return;
+          }
+        }
+        throw e;
+      }
+
+    }), throwing(() -> {
+      throw new UnsupportedOperationException();
+    }));
+  }
+
+  @Override
+  protected void put(final HttpServletRequest request, final HttpServletResponse response) throws Exception {
+    forProduct(request, response, (product, data) -> {
+      data.remove("opportunity");
+      data.remove("id");
+      data.remove("notes");
+      Locator.update(product, Auth.getAgent(request).getFullName(), copy -> {
+        Info.$(SupportedProduct.class).fromJson(copy, data);
+      });
+    }, throwing(() -> super.put(request, response)));
+
+  }
+
+  @Override
+  protected Json update(final Key<Opportunity> key, final HttpServletRequest request,
+                        final HttpServletResponse response, final Opportunity opportunity, final JsonMap data) throws
+    IOException {
+    try {
+      return super.update(key, request, response, opportunity, data);
+    } finally {
+      if (data.containsKey("reminder") && ReminderHandler.$!=null) {
+        ReminderHandler.$.onConnect(Events.getTicket(opportunity.getAssignedTo()));
+      }
+    }
+  }
+
+  @Override
+  protected Json toJson(final Key<Opportunity> key, final Opportunity opportunity, final HttpServletRequest request) {
+    return LeadModel.json(opportunity);
+  }
+
+  @Override
+  protected Json getAll(final HttpServletRequest request) {
+    final JsonMap map = (JsonMap) super.getAll(request);
+    map.$("filters", getFilters(request));
+    return map;
+
+  }
+
+  private void forProduct(final HttpServletRequest request, final HttpServletResponse response,
+                          BiConsumer<SupportedProduct, JsonMap> ifPresent, Runnable orElse) throws IOException {
+    var m = supportedProducts.matcher(request.getRequestURI());
+    if (m.matches()) {
+      try {
+        var id = Integer.parseInt(m.group(2));
+        var product = Locator.$(new SupportedProduct(id));
+        if (product==null) {
+          response.sendError(SC_NOT_FOUND);
+        } else {
+          ifPresent.accept(product, parseData(request));
+          return;
+        }
+      } catch (NumberFormatException | ServletException e) {
+        response.sendError(SC_BAD_REQUEST, "supported product keys must be numbers");
+      }
+      orElse.run();
+    }
+  }
+
+  private Json toJson(SupportedProduct p) {
+    var json = Info.$(p).toJson(p);
+    var notes = new JsonList();
+    Locator.forEach(ServiceNote.withSupportedProduct(p), n -> {
+      notes.add(Info.$(n).toJson(n).$("author", n.getAuthor().getFullName()));
+    });
+    json.$("notes", notes);
+    return json;
+  }
+
   protected Query<Opportunity> sort(Query<Opportunity> base, SortField f) {
     return switch (f.field) {
       case "productLine", "product" -> Query
@@ -281,37 +458,6 @@ public class LeadModel extends ListableModel<Opportunity> {
       }
 
     };
-  }
-
-  @Override
-  protected void delete(final HttpServletRequest request, final HttpServletResponse response) {
-    throw new UnsupportedOperationException();
-  }
-
-  @Override
-  protected Json update(final Key<Opportunity> key, final HttpServletRequest request,
-                        final HttpServletResponse response, final Opportunity opportunity, final JsonMap data) throws
-    IOException {
-    try {
-      return super.update(key, request, response, opportunity, data);
-    } finally {
-      if (data.containsKey("reminder") && ReminderHandler.$!=null) {
-        ReminderHandler.$.onConnect(Events.getTicket(opportunity.getAssignedTo()));
-      }
-    }
-  }
-
-  @Override
-  protected Json toJson(final Key<Opportunity> key, final Opportunity opportunity, final HttpServletRequest request) {
-    return LeadModel.json(opportunity);
-  }
-
-  @Override
-  protected Json getAll(final HttpServletRequest request) {
-    final JsonMap map = (JsonMap) super.getAll(request);
-    map.$("filters", getFilters(request));
-    return map;
-
   }
 
   @SuppressWarnings("unused")

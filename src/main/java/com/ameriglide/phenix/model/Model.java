@@ -347,7 +347,7 @@ public class Model<T> extends PhenixServlet {
     return Key.$(getType(m), m.group(2));
   }
 
-  private JsonMap parseData(final HttpServletRequest request) throws ServletException, IOException {
+  protected JsonMap parseData(final HttpServletRequest request) throws ServletException, IOException {
     return switch (parse(request.getContentType())) {
       case MULTIPART_FORMDATA -> throw new ServletException(new UnsupportedOperationException());
       case URL_ENCODED -> parseUrlEncoded(request);

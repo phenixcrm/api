@@ -57,7 +57,7 @@ public class LeadModel extends ListableModel<Opportunity> {
   private static final Pattern spaces = compile(" +");
   private static final Pattern or = compile("( \\| )|( OR )", CASE_INSENSITIVE);
   private static final Pattern supportedProducts = Pattern.compile(
-    "/api/lead/([0-9]*)(?:/supportedProducts(?:/([0-9]*)(?:/serviceNotes)?))");
+    "/api/lead/([0-9]*)(?:/supportedProducts(?:/([0-9]*)(?:/serviceNotes)?)?)");
 
   public LeadModel() {
     super(Opportunity.class, compile("/api/lead(?:/([^/]*))?.*"));

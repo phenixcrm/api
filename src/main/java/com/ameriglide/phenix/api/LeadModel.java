@@ -382,11 +382,11 @@ public class LeadModel extends ListableModel<Opportunity> {
           response.sendError(SC_NOT_FOUND);
         } else {
           ifPresent.accept(product, parseData(request));
-          return;
         }
       } catch (NumberFormatException | ServletException e) {
         response.sendError(SC_BAD_REQUEST, "supported product keys must be numbers");
       }
+    } else {
       orElse.run();
     }
   }

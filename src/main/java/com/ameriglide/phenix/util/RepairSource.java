@@ -27,7 +27,7 @@ public class RepairSource implements Runnable {
   public void run() {
     Startup.bootstrap();
     try {
-      var q = Call.isQueue.and(Call.withoutDialedNumber().and(Call.isAfter(LocalDate.of(2023,11,19))).orderBy("created", DESCENDING));
+      var q = Call.isQueue.and(Call.withoutDialedNumber().and(Call.isAfter(LocalDate.of(2024,1,1))).orderBy("created", DESCENDING));
       log.info(() -> "Setting missing dialed numbers...");
       Locator.forEachWithProgress(q, (c, meter) -> {
         try {

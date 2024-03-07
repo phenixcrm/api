@@ -1,6 +1,7 @@
 package com.ameriglide.phenix.api;
 
 import com.ameriglide.phenix.Auth;
+import com.ameriglide.phenix.DialMode;
 import com.ameriglide.phenix.common.*;
 import com.ameriglide.phenix.core.Log;
 import com.ameriglide.phenix.core.Optionals;
@@ -19,7 +20,6 @@ import java.time.LocalDateTime;
 import java.util.Objects;
 import java.util.UUID;
 
-import static com.ameriglide.phenix.core.Strings.isEmpty;
 import static com.ameriglide.phenix.core.Strings.isNotEmpty;
 import static com.ameriglide.phenix.servlet.Startup.router;
 import static com.ameriglide.phenix.types.CallDirection.*;
@@ -35,25 +35,20 @@ public class VoiceDial extends PhenixServlet {
   protected void get(HttpServletRequest request, HttpServletResponse response) throws Exception {
     var dialingAgent = Auth.getAgent(request);
 
-    var agent = request.getParameter("agent");
-    var number = request.getParameter("number");
+    var param = DialMode.fromRequest(request);
     var transfer = request.getParameter("transfer");
     var lead = request.getParameter("lead");
 
     CNAM.CallerIdSource cid;
     log.debug(
-      () -> "%s: /api/dial agent=%s, number=%s, transfer=%s, lead=%s".formatted(dialingAgent.getFullName(), agent,
-        number, transfer, lead));
+      () -> "%s: /api/dial mode=%s, target=%s, transfer=%s, lead=%s".formatted(dialingAgent.getFullName(), param.mode(),
+        param.value(), transfer, lead));
+    var called = switch (param.mode()) {
+      case NUMBER -> new Party(new PhoneNumber(param.value()));
+      case AGENT -> new Party($(new Agent(Integer.parseInt(param.value()))));
+      case QUEUE -> null;
+    };
 
-    Party called;
-    if (isEmpty(agent)) {
-      if (isEmpty(number)) {
-        throw new IllegalArgumentException();
-      }
-      called = new Party(new PhoneNumber(number));
-    } else {
-      called = new Party($(new Agent(Integer.parseInt(agent))));
-    }
     if (!"true".equals(transfer)) {
       // create new Call with twilio
       var from = new Party(Auth.getAgent(request)).asSip();
@@ -100,34 +95,45 @@ public class VoiceDial extends PhenixServlet {
         log.error(() -> "Could not transfer unknown call %s".formatted(transfer));
         throw new NotFoundException();
       }
-      if (called.isAgent() && call.getDirection()==QUEUE) {
-        var calledAgent = called.agent();
-        var worker = router.getWorker(calledAgent.getSid());
-        if (voicemail || WorkerState.from(worker)!=WorkerState.AVAILABLE) {
-          log.info(() -> "Cold transfer to VM %s %s->%s ".formatted(transfer, dialingAgent.getFullName(),
-            calledAgent.getFullName()));
-          Locator.update(call, "VoiceDial", copy -> {
-            copy.setAgent(called.agent());
-          });
-          router.sendToVoicemail(call.sid, router.getPrompt(called.agent()));
-        } else {
-          log.info(() -> "Warm transfer %s %s->%s ".formatted(transfer, dialingAgent.getFullName(),
-            called.agent().getFullName()));
-          router.warmAdd(call.sid, call.getActiveAgent(), called.agent());
+      switch (param.mode()) {
+        case AGENT -> {
+          if (call.getDirection()==QUEUE) {
+            var calledAgent = called.agent();
+            var worker = router.getWorker(calledAgent.getSid());
+            if (voicemail || WorkerState.from(worker)!=WorkerState.AVAILABLE) {
+              log.info(() -> "Cold transfer to VM %s %s->%s ".formatted(transfer, dialingAgent.getFullName(),
+                calledAgent.getFullName()));
+              Locator.update(call, "VoiceDial", copy -> {
+                copy.setAgent(called.agent());
+              });
+              router.sendToVoicemail(call.sid, router.getPrompt(called.agent()));
+            } else {
+              log.info(() -> "Warm transfer %s %s->%s ".formatted(transfer, dialingAgent.getFullName(),
+                called.agent().getFullName()));
+              router.warmAdd(call.sid, call.getActiveAgent(), called.agent());
+
+            }
+          } else {
+            log.info(
+              () -> "Transfering call %s %s->%s ".formatted(transfer, dialingAgent.getFullName(), called.endpoint()));
+            var leg = call.getActiveLeg();
+            var transferSid = switch (call.getDirection()) {
+              case INTERNAL -> dialingAgent.equals(call.getAgent()) ? call.sid:leg.sid;
+              case OUTBOUND -> leg.sid;
+              default -> call.sid;
+            };
+            router.transfer(transferSid, called);
+          }
         }
-
-      } else {
-        log.info(
-          () -> "Transfering call %s %s->%s ".formatted(transfer, dialingAgent.getFullName(), called.endpoint()));
-        var leg = call.getActiveLeg();
-
-        var transferSid = switch (call.getDirection()) {
-          case INTERNAL -> dialingAgent.equals(call.getAgent()) ? call.sid:leg.sid;
-          case OUTBOUND -> leg.sid;
-          default -> call.sid;
-        };
-
-        router.transfer(transferSid, called);
+        case NUMBER -> {
+          log.info(() -> "Transfering call %s %s->%s ".formatted(transfer, dialingAgent.getFullName(), param.value()));
+          router.transfer(call.sid, param.value());
+        }
+        case QUEUE -> {
+          var q = $(new SkillQueue(Integer.parseInt(param.value())));
+          log.info(() -> "Transfering call %s %s->%s ".formatted(transfer, dialingAgent.getFullName(), q.getName()));
+          router.transfer(call.sid, q);
+        }
       }
     }
   }

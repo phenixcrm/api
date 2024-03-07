@@ -5,6 +5,7 @@ import com.ameriglide.phenix.common.Agent;
 import com.ameriglide.phenix.common.AgentStatus;
 import com.ameriglide.phenix.common.Team;
 import com.ameriglide.phenix.common.TeamMember;
+import com.ameriglide.phenix.core.Optionals;
 import com.ameriglide.phenix.servlet.PhenixServlet;
 import com.ameriglide.phenix.servlet.topics.HudTopic;
 import com.ameriglide.phenix.ws.SessionHandler;
@@ -45,17 +46,28 @@ public class Hud extends PhenixServlet implements MessageListener<HudTopic> {
     }).start();
   }
 
-  @Override
-  public void onMessage(final CharSequence channel, final HudTopic msg) {
-    switch (msg) {
-      case PRODUCE -> produce();
-      case TEAMS -> makeTeams();
-    }
+  private void makeTeams() {
+    teams.clear();
+    forEach(Query.all(Team.class).orderBy("name"), team -> {
+      var membersList = new JsonList();
+      var json = new JsonMap()
+        .$("members", membersList)
+        .$("name", team.getName())
+        .$("queue",
+          Optionals.of(team.getQueue()).map(q -> JsonMap.$().$("id", q.id).$("name", q.getName())).orElse(null));
+      teams.add(json);
+      forEach(TeamMember.withTeam(team), member -> {
+        if (member.isActive()) {
+          membersList.add((member.id));
+        }
+      });
+    });
+
   }
 
   private void produce() {
     var agents = new JsonMap();
-    Locator.forEach(Agent.connected, agent -> {
+    forEach(Agent.connected, agent -> {
       agents.put(String.valueOf(agent.id),
         shared.availability().computeIfAbsent(agent.id, id -> new AgentStatus(agent)).toJson());
     });
@@ -70,19 +82,12 @@ public class Hud extends PhenixServlet implements MessageListener<HudTopic> {
 
   }
 
-  private void makeTeams() {
-    teams.clear();
-    forEach(Query.all(Team.class).orderBy("name"), team -> {
-      var membersList = new JsonList();
-      var json = new JsonMap().$("members", membersList).$("name", team.getName());
-      teams.add(json);
-      forEach(TeamMember.withTeam(team), member -> {
-        if (member.isActive()) {
-          membersList.add((member.id));
-        }
-      });
-    });
-
+  @Override
+  public void onMessage(final CharSequence channel, final HudTopic msg) {
+    switch (msg) {
+      case PRODUCE -> produce();
+      case TEAMS -> makeTeams();
+    }
   }
 
   @Override

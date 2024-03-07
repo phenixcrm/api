@@ -53,6 +53,7 @@ public class Hud extends PhenixServlet implements MessageListener<HudTopic> {
       var json = new JsonMap()
         .$("members", membersList)
         .$("name", team.getName())
+        .$("position",team.getPosition())
         .$("queue",
           Optionals.of(team.getQueue()).map(q -> JsonMap.$().$("id", q.id).$("name", q.getName())).orElse(null));
       teams.add(json);

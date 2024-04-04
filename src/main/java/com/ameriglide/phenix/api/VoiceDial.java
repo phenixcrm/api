@@ -17,7 +17,6 @@ import net.inetalliance.potion.Locator;
 import net.inetalliance.sql.OrderBy;
 
 import java.time.LocalDateTime;
-import java.util.Objects;
 import java.util.UUID;
 
 import static com.ameriglide.phenix.core.Strings.isNotEmpty;
@@ -67,12 +66,9 @@ public class VoiceDial extends PhenixServlet {
         call.setOpportunity(opp);
         call.setBusiness(opp.getBusiness());
         cid = Optionals
-          .of($1(SkillQueue.withProduct(opp.getProductLine()).and(SkillQueue.withBusiness(opp.getBusiness()))))
+          .of($1(VerifiedCallerId.withProductLine(opp.getProductLine())))
           .stream()
-          .filter(Objects::nonNull)
-          .peek(call::setQueue)
-          .map(q -> $1(VerifiedCallerId.withQueue(q)))
-          .filter(Objects::nonNull)
+          .peek(vCid-> call.setQueue(vCid.getQueue()))
           .findFirst()
           .orElseGet(() -> $1(VerifiedCallerId.isDefault));
       } else if (called.isAgent()) {

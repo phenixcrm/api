@@ -95,8 +95,8 @@ public class AgentClosing extends CachedGroupingRangeReport<Agent, Business> {
     boolean uniqueCid = Boolean.parseBoolean(getSingleExtra(extras, "uniqueCid", "false"));
     boolean noTransfers = Boolean.parseBoolean(getSingleExtra(extras, "noTransfers", "false"));
 
-    final Set<Integer> queues = Locator.$A(SkillQueue.class).stream().map(q -> q.id).collect(toSet());
-    ProductLineClosing.retainVisible(loggedIn, businesses, queues);
+    final Set<String> vCids = Locator.$A(VerifiedCallerId.class).stream().map(q -> q.sid).collect(toSet());
+    ProductLineClosing.retainVisible(loggedIn, businesses, vCids);
 
     final Query<Call> callQuery = Call.inInterval(interval);
     final Query<Opportunity> oppQuery = Opportunity
@@ -108,10 +108,10 @@ public class AgentClosing extends CachedGroupingRangeReport<Agent, Business> {
     final JsonList rows = new JsonList();
     Locator.forEach(Query.all(ProductLine.class), productLine -> {
       final AtomicInteger n = new AtomicInteger(0);
-      var productLineQueues = new HashSet<>(queues);
-      productLineQueues.retainAll(ProductLineClosing.getQueues(loggedIn,productLine,businesses));
-      final Query<Call> productLineCallQuery = productLineQueues.isEmpty() ? Query.none(Call.class):callQuery.and(
-        Call.withQueueIn(productLineQueues));
+      var productLineVCids = new HashSet<>(vCids);
+      productLineVCids.retainAll(ProductLineClosing.getVerifiedCids(loggedIn,productLine,businesses));
+      final Query<Call> productLineCallQuery = productLineVCids.isEmpty() ? Query.none(Call.class):callQuery.and(
+        Call.withVerifiedCidIn(productLineVCids));
       var productLineTotal = new JsonMap();
       Query<Call> queueQuery = productLineCallQuery.and(isQueue).and(callSources).and(withAgent(agent));
       if (noTransfers) {
@@ -121,7 +121,7 @@ public class AgentClosing extends CachedGroupingRangeReport<Agent, Business> {
       var queueCalls = uniqueCid ? countDistinct(queueQuery, "phone"):count(queueQuery);
       productLineTotal.put("queueCalls", queueCalls);
 
-      final Query<Call> outboundQuery = productLineCallQuery.and(isOutbound).and(withAgent(agent));
+      var outboundQuery = productLineCallQuery.and(isOutbound).and(withAgent(agent));
       if (uniqueCid) {
         productLineTotal.put("outbound", countDistinct(outboundQuery.join(Leg.class, "call"), "leg.phone"));
 

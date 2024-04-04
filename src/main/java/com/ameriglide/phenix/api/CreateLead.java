@@ -11,7 +11,7 @@ import com.ameriglide.phenix.servlet.exception.NotFoundException;
 import com.ameriglide.phenix.twilio.TaskRouter;
 import com.ameriglide.phenix.types.CallDirection;
 import com.ameriglide.phenix.types.Resolution;
-import com.ameriglide.phenix.util.Publishing;
+import com.ameriglide.phenix.ws.SessionHandler;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -25,6 +25,7 @@ import net.inetalliance.types.json.JsonMap;
 import java.time.LocalDateTime;
 import java.util.Locale;
 import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -33,6 +34,7 @@ import java.util.stream.Stream;
 import static com.ameriglide.phenix.common.Source.*;
 import static com.ameriglide.phenix.core.Strings.isEmpty;
 import static com.ameriglide.phenix.core.Strings.isNotEmpty;
+import static com.ameriglide.phenix.servlet.Startup.router;
 import static net.inetalliance.potion.Locator.*;
 
 @WebServlet("/api/createLead")
@@ -40,30 +42,16 @@ public class CreateLead extends PhenixServlet {
   static final Pattern productFromCampaign = Pattern.compile(".*Lead - (.*)");
   private static final Log log = new Log();
 
-  public static Call dispatch(Opportunity opp) {
-    var product = opp.getProductLine();
-    var contact = opp.getContact();
-    var q = Locator.$1(SkillQueue.withProduct(product));
-    var taskData = new JsonMap().$("type", "sales").$("product", product.getAbbreviation()).$("Lead", opp.id);
-    if (opp.getSource() == PHONE && opp.getAssignedTo()!=null) {
-      taskData.$("preferred", opp.getAssignedTo().getSid());
+  public static void main(String[] args) {
+    Startup.bootstrap();
+    try {
+      var opp = $1(Opportunity.withAgent(Locator.$(Agent.system())).and(Opportunity.withSources(Set.of(FORM, SOCIAL))));
+      opp.setProductLine(Locator.$(new ProductLine(13)));
+      dispatch(opp);
+      log.info(()->"Dispatched Opp %d".formatted(opp.id));
+    } finally {
+      Startup.teardown();
     }
-    var task = Startup.router.createDigitalLeadsTask(Json.ugly(taskData), (int) TimeUnit.DAYS.toSeconds(1));
-    var call = new Call(task.getSid());
-    call.setCreated(LocalDateTime.now());
-    call.setDirection(CallDirection.VIRTUAL);
-    call.setBusiness(q.getBusiness());
-    call.setSource(opp.getSource());
-    call.setResolution(Resolution.ACTIVE);
-    call.setName("%s,%s".formatted(contact.getLastName(), contact.getFirstName()));
-    call.setPhone(contact.getPhone());
-    call.setCountry(contact.getShipping().getCountry());
-    call.setQueue(q);
-    call.setOpportunity(opp);
-    call.setContact(contact);
-    call.setZip(contact.getShipping().getPostalCode());
-    create("CreateLead", call);
-    return call;
   }
 
   @Override
@@ -139,7 +127,7 @@ public class CreateLead extends PhenixServlet {
         default -> 17; // when all else fails, set to undetermined
       }));
     Opportunity opp;
-    var q = $1(SkillQueue.withProduct(product));
+    var vCid = $1(VerifiedCallerId.withProductLine(product));
     if (contact.id==null) {
       create("CreateLead", contact);
       opp = null;
@@ -173,12 +161,12 @@ public class CreateLead extends PhenixServlet {
         opp.setReferrerId(data.get("referrerId"));
         opp.setAssignedTo(Agent.system());
       }
-      opp.setBusiness(business==null ? q.getBusiness():business);
+      opp.setBusiness(Optionals.of(vCid).map(VerifiedCallerId::getQueue).map(SkillQueue::getBusiness).orElse(null));
       opp.setHeat(Heat.NEW);
-      opp.setProductLine(q.getProduct());
+      opp.setProductLine(product);
       opp.setAmount(Optionals
         .of(
-          Locator.$$(Opportunity.withProductLine(q.getProduct()).and(Opportunity.isSold), Aggregate.AVG, Currency.class,
+          Locator.$$(Opportunity.withProductLine(product).and(Opportunity.isSold), Aggregate.AVG, Currency.class,
             "amount"))
         .orElse(Currency.ZERO));
       create("CreateLead", opp);
@@ -196,7 +184,7 @@ public class CreateLead extends PhenixServlet {
     n.setCreated(LocalDateTime.now());
     n.setNote("Customer submitted web form: " + (Strings.isEmpty(note) ? "":note));
     create("CreateLead", n);
-    Publishing.update(opp);
+    dispatch(opp);
     respond(response, new JsonMap().$("opportunity", opp.id));
   }
 
@@ -249,6 +237,35 @@ public class CreateLead extends PhenixServlet {
     if (shipping.getState()==null && Strings.isNotEmpty(shipping.getPostalCode())) {
       shipping.setState(State.fromZipCode(shipping.getPostalCode()));
     }
+  }
+
+  public static Call dispatch(Opportunity opp) {
+    var product = opp.getProductLine();
+    var contact = opp.getContact();
+    var taskData = new JsonMap().$("type", "lead-screening").$("product", product.getAbbreviation()).$("Lead", opp.id);
+    if (opp.getSource()==PHONE && opp.getAssignedTo()!=null) {
+      taskData.$("preferred", opp.getAssignedTo().getSid());
+    }
+    var task = router.createDigitalLeadsTask(Json.ugly(taskData), (int) TimeUnit.DAYS.toSeconds(1));
+    var call = new Call(task.getSid());
+    call.setCreated(LocalDateTime.now());
+    call.setDirection(CallDirection.VIRTUAL);
+    call.setBusiness(opp.getBusiness());
+    call.setSource(opp.getSource());
+    call.setAgent(Agent.system());
+    call.setResolution(Resolution.ACTIVE);
+    call.setName("%s,%s".formatted(contact.getLastName(), contact.getFirstName()));
+    call.setPhone(contact.getPhone());
+    call.setCountry(contact.getShipping().getCountry());
+    call.setQueue(router.getQueue("lead-screening"));
+    call.setOpportunity(opp);
+    call.setContact(contact);
+    call.setZip(contact.getShipping().getPostalCode());
+    create("CreateLead", call);
+    if (SessionHandler.digiHandler!=null) {
+      SessionHandler.digiHandler.newDigi(DigiModel.toJson(call));
+    }
+    return call;
   }
 
 }

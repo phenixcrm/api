@@ -90,13 +90,13 @@ public class ProductLineClosing extends CachedGroupingRangeReport<Agent, Busines
     boolean uniqueCid = Boolean.parseBoolean(getSingleExtra(extras, "uniqueCid", "false"));
     boolean noTransfers = Boolean.parseBoolean(getSingleExtra(extras, "noTransfers", "false"));
 
-    final Set<Integer> queues = productLines
+    final Set<String> vCids = productLines
       .stream()
-      .map(pl -> getQueues(loggedIn, pl, businesses))
+      .map(pl -> getVerifiedCids(loggedIn, pl, businesses))
       .flatMap(Iterables::stream)
       .collect(toSet());
 
-    final Query<Call> callQuery = Call.inInterval(interval).and(Call.withQueueIn(queues));
+    final Query<Call> callQuery = Call.inInterval(interval).and(Call.withVerifiedCidIn(vCids));
     Query<Opportunity> oppQuery = Opportunity
       .soldInInterval(interval)
       .and(sources.isEmpty() ? Opportunity.online.negate():Opportunity.withSources(sources))
@@ -179,10 +179,10 @@ public class ProductLineClosing extends CachedGroupingRangeReport<Agent, Busines
 
   }
 
-  static Set<Integer> getQueues(final Agent loggedIn, final ProductLine productLine,
+  static Set<String> getVerifiedCids(final Agent loggedIn, final ProductLine productLine,
                                 final Collection<Business> businesses) {
-    final Set<Integer> allForProductLine = getQueues(productLine);
-    final Set<Integer> queues = new HashSet<>(allForProductLine);
+    final Set<String> allForProductLine = getVerifiedCids(productLine);
+    final Set<String> queues = new HashSet<>(allForProductLine);
     retainVisible(loggedIn, businesses, queues);
     return queues;
 
@@ -206,11 +206,11 @@ public class ProductLineClosing extends CachedGroupingRangeReport<Agent, Busines
     }, Currency::add, JsonMap::put);
   }
 
-  static Set<Integer> getQueues(ProductLine productLine) {
-    return Locator.$$(SkillQueue.withProduct(productLine)).stream().map(q -> q.id).collect(toSet());
+  static Set<String> getVerifiedCids(ProductLine productLine) {
+    return Locator.$$(VerifiedCallerId.withProductLine(productLine)).stream().map(v -> v.sid).collect(toSet());
   }
 
-  static void retainVisible(Agent loggedIn, Collection<Business> sites, Set<Integer> queues) {
+  static void retainVisible(Agent loggedIn, Collection<Business> sites, Set<String> queues) {
     // todo: implement this logic
 
   }

@@ -17,6 +17,7 @@ public record SessionHandler(Session session) implements MessageHandler.Whole<St
   private static final Map<String, JsonMessageHandler> handlers = new ConcurrentHashMap<>();
   public static Hud hud;
   public static HudHandler hudHandler;
+  public static DigiHandler digiHandler;
 
   public SessionHandler(final Session session) {
     this.session = session;
@@ -31,6 +32,8 @@ public record SessionHandler(Session session) implements MessageHandler.Whole<St
     handlers.put("reminder", new ReminderHandler());
     handlers.put("ping", new PingHandler());
     hudHandler = new HudHandler();
+    digiHandler = new DigiHandler();
+    handlers.put("digi", digiHandler);
     handlers.put("hud", hudHandler);
 
   }

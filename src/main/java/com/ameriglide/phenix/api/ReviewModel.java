@@ -109,7 +109,7 @@ public class ReviewModel extends PhenixServlet {
           .$("site", business==null ? null:new JsonMap().$("abbreviation", business.getAbbreviation()))
           .$("agent", agent==null ? null:new JsonMap().$("name", agent.getFirstNameLastInitial()).$("id", agent.id))
           .$("queue", call.getQueue().getName())
-          .$("productLine", Optionals.of(call.getQueue().getProduct()).map(p -> p.id).orElse(null))
+          .$("productLine", Optionals.of(call.getProductLine()).map(p -> p.id).orElse(null))
           .$("duration", new Duration(1000 * call.getDuration()).getAbbreviation(true));
         var blame = call.getBlame();
         callJson.$("blame",

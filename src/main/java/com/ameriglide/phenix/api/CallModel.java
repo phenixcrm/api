@@ -1,6 +1,7 @@
 package com.ameriglide.phenix.api;
 
 import com.ameriglide.phenix.Auth;
+import com.ameriglide.phenix.Startup;
 import com.ameriglide.phenix.common.*;
 import com.ameriglide.phenix.core.Log;
 import com.ameriglide.phenix.core.Optionals;
@@ -47,7 +48,8 @@ import static java.lang.String.format;
 import static java.lang.System.currentTimeMillis;
 import static java.util.regex.Pattern.compile;
 import static java.util.stream.Collectors.toSet;
-import static net.inetalliance.potion.Locator.*;
+import static net.inetalliance.potion.Locator.$$;
+import static net.inetalliance.potion.Locator.forEach;
 import static net.inetalliance.sql.OrderBy.Direction.ASCENDING;
 import static net.inetalliance.sql.OrderBy.Direction.DESCENDING;
 
@@ -161,8 +163,7 @@ public class CallModel extends ListableModel<Call> {
       }
       final Call call = new Call(format("SIM%d", currentTimeMillis()));
       call.setBusiness(business);
-
-      call.setQueue($1(SkillQueue.withProduct(product).and(SkillQueue.withBusiness(business))));
+      call.setQueue(Startup.router.getQueue("sales"));
 
       if (call.getQueue()==null) {
         return new JsonMap()

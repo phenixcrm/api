@@ -7,21 +7,15 @@ import net.inetalliance.types.json.Json;
 import net.inetalliance.types.json.JsonMap;
 
 import java.io.IOException;
-import java.util.*;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-
-import static java.util.concurrent.TimeUnit.SECONDS;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 public class HudHandler implements JsonMessageHandler {
 
   private static final Log log = new Log();
-  private static final ExecutorService service = Executors.newFixedThreadPool(4, (r) -> {
-    var t = new Thread(r);
-    t.setDaemon(true);
-    return t;
-  });
+
   private final Set<Session> subscribers;
 
   HudHandler() {
@@ -58,19 +52,10 @@ public class HudHandler implements JsonMessageHandler {
     return null;
   }
 
-  public void changed(final JsonMap map) {
-    broadcast(new JsonMap().$("type","hud").$("msg",map));
-  }
-
-  private void broadcast(final JsonMap msg) {
-    broadcast(Json.ugly(msg));
-
-  }
-
   @Override
   public void onAsyncMessage(final List<Session> sessions, final JsonMap jsonMsg) {
     var msg = Json.ugly(jsonMsg);
-    sessions.parallelStream().forEach(session-> {
+    sessions.parallelStream().forEach(session -> {
       try {
         session.getBasicRemote().sendText(msg);
       } catch (IOException e) {
@@ -79,31 +64,18 @@ public class HudHandler implements JsonMessageHandler {
     });
   }
 
+  public void changed(final JsonMap map) {
+    broadcast(new JsonMap().$("type", "hud").$("msg", map));
+  }
+
+  private void broadcast(final JsonMap msg) {
+    broadcast(Json.ugly(msg));
+
+  }
+
   private void broadcast(final String msg) {
-    log.trace(()->"Brodcasting HUD update");
-    final var latch = new CountDownLatch(subscribers.size());
-    final var toRemove = new ArrayList<Session>(0);
-    try {
-      for (final var subscriber : subscribers) {
-        service.submit(() -> {
-          try {
-            subscriber.getBasicRemote().sendText(msg);
-          } catch (IOException e) {
-            toRemove.add(subscriber);
-          } finally {
-            latch.countDown();
-          }
-        });
-      }
-      if (!latch.await(1, SECONDS)) {
-        log.warn(() -> "slow status broadcast");
-      }
-    } catch (InterruptedException e) {
-      // oh well, we'll get 'em next time
-    } finally {
-      // remove any dead ones we found
-      toRemove.forEach(subscribers::remove);
-    }
+    log.trace(() -> "Brodcasting HUD update");
+    broadcast(subscribers, msg);
   }
 
   enum Action {

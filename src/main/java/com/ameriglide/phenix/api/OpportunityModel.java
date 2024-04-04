@@ -65,7 +65,7 @@ public class OpportunityModel extends ListableModel<Opportunity> {
       if (call==null) {
         throw new NotFoundException("could not find call with key %s", callKey);
       }
-      opp.setProductLine(call.getQueue().getProduct());
+      opp.setProductLine(call.getDialedNumber().getProductLine());
       opp.setSource(call.getSource());
       opp.setCreated(LocalDateTime.now());
       opp.setBusiness(call.getBusiness());

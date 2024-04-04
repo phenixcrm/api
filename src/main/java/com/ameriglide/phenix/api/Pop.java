@@ -75,8 +75,7 @@ public class Pop extends TypeModel<Call> {
         .$("business", opp.getBusiness().id)
         .$("extra", extra));
     });
-    json.$("path", contactBest.toJson());
-    return json;
+    return json.$("path", contactBest.toJson());
   }
 
   private static String getContactLabel(Contact c) {
@@ -147,6 +146,10 @@ public class Pop extends TypeModel<Call> {
     if (path.contact!=null) {
       contacts.add(toJson(path.contact, loggedIn, path));
     }
+    var latest = call.getLastLeg();
+    if(latest != null) {
+      path.reservation = latest.sid.startsWith("WR") ? latest.sid : null;
+    }
     var onlyPath = getParameter(request, "pathOnly", false);
     if (onlyPath && path.isComplete()) {
       return path.toJson();
@@ -202,6 +205,7 @@ public class Pop extends TypeModel<Call> {
   protected static class Path {
     Opportunity lead;
     Contact contact;
+    String reservation;
 
     Path() {
     }
@@ -224,7 +228,8 @@ public class Pop extends TypeModel<Call> {
         .$()
         .$("lead", lead==null ? "new":lead.id.toString())
         .$("contact", contact==null ? "new":contact.id.toString())
-        .$("script", 1);
+        .$("script", 1)
+        .$("reservation",reservation);
     }
 
     public void complete() {

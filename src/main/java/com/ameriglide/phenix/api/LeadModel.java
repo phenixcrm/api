@@ -137,7 +137,8 @@ public class LeadModel extends ListableModel<Opportunity> {
     } else if (review) {
       query = Query.all(Opportunity.class);
     } else if (digis) {
-      query = Opportunity.withSources(Set.of(Source.FORM, Source.SOCIAL, Source.REFERRAL));
+      query =
+        Opportunity.withSources(Set.of(Source.FORM, Source.SOCIAL, Source.REFERRAL)).and(Opportunity.withAgent(Agent.system()));
     } else {
       query = Opportunity.withAgent(loggedIn);
     }

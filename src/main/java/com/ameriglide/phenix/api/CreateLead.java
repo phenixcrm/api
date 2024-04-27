@@ -257,7 +257,7 @@ public class CreateLead extends PhenixServlet {
     call.setName("%s,%s".formatted(contact.getLastName(), contact.getFirstName()));
     call.setPhone(contact.getPhone());
     call.setCountry(contact.getShipping().getCountry());
-    call.setQueue(router.getQueue("lead-screening"));
+    call.setQueue(router.getQueue("leadScreening"));
     call.setOpportunity(opp);
     call.setContact(contact);
     call.setZip(contact.getShipping().getPostalCode());

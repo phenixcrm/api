@@ -97,7 +97,9 @@ public class CreateLead extends PhenixServlet {
         log.warn(() -> "weird FB campaign name %s".formatted(campaign));
         productId = null;
       }
-      business = campaign.endsWith("Ontario") ? Locator.$(new Business(2)):Business.getDefault.get();
+      if (campaign.endsWith("Ontario")) {
+        business = $(new Business(2));
+      }
     } else if (leadgen!=null) {
       productId = leadgen.getProductLine().id;
     } else {
@@ -156,12 +158,15 @@ public class CreateLead extends PhenixServlet {
       opp.setSource(source);
       opp.setContact(contact);
       opp.setAssignedTo(Agent.system());
+      opp.setBusiness(business);
       if (leadgen!=null) {
         opp.setCampaign(leadgen);
         opp.setReferrerId(data.get("referrerId"));
         opp.setAssignedTo(Agent.system());
       }
-      opp.setBusiness(Optionals.of(vCid).map(VerifiedCallerId::getQueue).map(SkillQueue::getBusiness).orElse(null));
+      if(business == null) {
+        opp.setBusiness(Optionals.of(vCid).map(VerifiedCallerId::getQueue).map(SkillQueue::getBusiness).orElseGet(Business.getDefault));
+      }
       opp.setHeat(Heat.NEW);
       opp.setProductLine(product);
       opp.setAmount(Optionals

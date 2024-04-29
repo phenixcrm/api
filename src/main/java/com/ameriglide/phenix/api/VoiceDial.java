@@ -66,11 +66,11 @@ public class VoiceDial extends PhenixServlet {
         call.setOpportunity(opp);
         call.setBusiness(opp.getBusiness());
         cid = Optionals
-          .of($1(VerifiedCallerId.withProductLine(opp.getProductLine())))
+          .of($1(VerifiedCallerId.withProductLine(opp.getProductLine()).and(VerifiedCallerId.isDefault)))
           .stream()
-          .peek(vCid-> call.setQueue(vCid.getQueue()))
+          .peek(vCid -> call.setQueue(vCid.getQueue()))
           .findFirst()
-          .orElseGet(() -> $1(VerifiedCallerId.isDefault));
+          .orElseGet(() -> $1(VerifiedCallerId.withProductLine(null).and(VerifiedCallerId.isDefault)));
       } else if (called.isAgent()) {
         cid = dialingAgent;
       } else {

@@ -39,7 +39,7 @@ import static net.inetalliance.potion.Locator.*;
 
 @WebServlet("/api/createLead")
 public class CreateLead extends PhenixServlet {
-  static final Pattern productFromCampaign = Pattern.compile(".*Lead - (.*)");
+  static final Pattern productFromCampaign = Pattern.compile(".* (.*) - (?:.*)");
   private static final Log log = new Log();
 
   public static void main(String[] args) {
@@ -88,7 +88,7 @@ public class CreateLead extends PhenixServlet {
       var m = productFromCampaign.matcher(campaign);
       if (m.matches()) {
         productId = switch (m.group(1).toUpperCase(Locale.ROOT)) {
-          case "STAIRLIFT", "STAIRLIFT W/ NUMBER" -> 6;
+          case "SL" -> 6;
           case "LC" -> 2;
           case "VPL" -> 23;
           default -> null;

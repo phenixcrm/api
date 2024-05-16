@@ -4,6 +4,7 @@ import com.ameriglide.phenix.Auth;
 import com.ameriglide.phenix.common.Agent;
 import com.ameriglide.phenix.common.Call;
 import com.ameriglide.phenix.common.FullName;
+import com.ameriglide.phenix.core.Log;
 import com.ameriglide.phenix.model.ListableModel;
 import com.ameriglide.phenix.servlet.exception.NotFoundException;
 import jakarta.servlet.annotation.WebServlet;
@@ -20,6 +21,8 @@ import static net.inetalliance.sql.OrderBy.Direction.DESCENDING;
 
 @WebServlet("/api/digi/*")
 public class DigiModel extends ListableModel<Call> {
+  private static final Log log = new Log();
+
   public DigiModel() {
     super(Call.class, Pattern.compile("/api/digi(?:/(.*)/take)?"));
   }
@@ -34,16 +37,19 @@ public class DigiModel extends ListableModel<Call> {
   protected void put(final HttpServletRequest request, final HttpServletResponse response) throws Exception {
     var key = getKey(request);
     var call = Locator.$(new Call(key.id));
-    if(call == null) {
-      throw new NotFoundException("could not find call %s",key.id);
+    if (call==null) {
+      throw new NotFoundException("could not find call %s", key.id);
     }
     var loggedIn = Auth.getAgent(request);
     var existingAgent = call.getAgent();
-    if(Agent.system().equals(existingAgent)) {
-      Locator.update(call,loggedIn.getFullName() ,copy-> {
+
+    if (Agent.system().equals(existingAgent)) {
+      log.info(() -> "%s took ownership of call %s and lead %s".formatted(loggedIn.getFullName(), call.sid,
+        call.getOpportunity().id));
+      Locator.update(call, loggedIn.getFullName(), copy -> {
         copy.setAgent(loggedIn);
       });
-      Locator.update(call.getOpportunity(), loggedIn.getFullName(),copy-> {
+      Locator.update(call.getOpportunity(), loggedIn.getFullName(), copy -> {
         copy.setAssignedTo(loggedIn);
       });
       response.sendError(HttpServletResponse.SC_OK);

@@ -40,10 +40,10 @@ public class DigiModel extends ListableModel<Call> {
     var loggedIn = Auth.getAgent(request);
     var existingAgent = call.getAgent();
     if(Agent.system().equals(existingAgent)) {
-      Locator.update(call,"DigiModel",copy-> {
+      Locator.update(call,loggedIn.getFullName() ,copy-> {
         copy.setAgent(loggedIn);
       });
-      Locator.update(call.getOpportunity(),"DigiModel",copy-> {
+      Locator.update(call.getOpportunity(), loggedIn.getFullName(),copy-> {
         copy.setAssignedTo(loggedIn);
       });
       response.sendError(HttpServletResponse.SC_OK);

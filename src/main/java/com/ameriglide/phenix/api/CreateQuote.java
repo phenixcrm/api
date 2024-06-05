@@ -1,6 +1,6 @@
 package com.ameriglide.phenix.api;
 
-import com.ameriglide.phenix.common.Opportunity;
+import com.ameriglide.phenix.common.Lead;
 import com.ameriglide.phenix.core.Log;
 import com.ameriglide.phenix.core.Strings;
 import com.ameriglide.phenix.servlet.PhenixServlet;
@@ -28,7 +28,7 @@ public class CreateQuote extends PhenixServlet {
     }
     try {
       var id = Integer.parseInt(leadId);
-      var lead = Locator.$(new Opportunity(id));
+      var lead = Locator.$(new Lead(id));
       if(lead == null) {
         log.warn(()->"received request to attach quote %s to unknown lead %s".formatted(code,leadId));
         response.sendError(404, "could not find lead with id %d".formatted(id));

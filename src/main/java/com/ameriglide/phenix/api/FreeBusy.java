@@ -2,7 +2,7 @@ package com.ameriglide.phenix.api;
 
 import com.ameriglide.phenix.Auth;
 import com.ameriglide.phenix.common.Agent;
-import com.ameriglide.phenix.common.Opportunity;
+import com.ameriglide.phenix.common.Lead;
 import com.ameriglide.phenix.servlet.PhenixServlet;
 import com.ameriglide.phenix.servlet.exception.BadRequestException;
 import jakarta.servlet.annotation.WebServlet;
@@ -16,7 +16,7 @@ import net.inetalliance.types.json.JsonMap;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
-import static com.ameriglide.phenix.common.Opportunity.withAgent;
+import static com.ameriglide.phenix.common.Lead.withAgent;
 import static com.ameriglide.phenix.core.Strings.isEmpty;
 import static net.inetalliance.potion.Locator.forEach;
 import static net.inetalliance.sql.OrderBy.Direction.ASCENDING;
@@ -24,14 +24,14 @@ import static net.inetalliance.sql.OrderBy.Direction.ASCENDING;
 @WebServlet("/api/freeBusy")
 public class FreeBusy extends PhenixServlet {
 
-  private static JsonMap toJson(final Opportunity opp) {
-    return new JsonMap().$("id", opp.id)
-      .$("productLine", opp.getProductLine().getName())
-      .$("reminder", opp.getReminder())
-      .$("contact", opp.getContact().getLastNameFirstInitial())
-      .$("business", opp.getBusiness().getName())
-      .$("heat", opp.getHeat())
-      .$("amount", opp.getAmount());
+  private static JsonMap toJson(final Lead lead) {
+    return new JsonMap().$("id", lead.id)
+      .$("productLine", lead.getProductLine().getName())
+      .$("reminder", lead.getReminder())
+      .$("contact", lead.getContact().getLastNameFirstInitial())
+      .$("business", lead.getBusiness().getName())
+      .$("heat", lead.getHeat())
+      .$("amount", lead.getAmount());
   }
 
   @Override
@@ -58,7 +58,7 @@ public class FreeBusy extends PhenixServlet {
     final Agent agent = Auth.getAgent(request);
 
     final JsonMap map = new JsonMap();
-    forEach(Opportunity.withReminderIn(interval).and(withAgent(agent)).orderBy("reminder", ASCENDING), opp -> {
+    forEach(Lead.withReminderIn(interval).and(withAgent(agent)).orderBy("reminder", ASCENDING), opp -> {
       if (monthMode) {
         final String day1 = Json.jsDateFormat.format(opp.getReminder().toLocalDate());
         JsonList list = map.getList(day1);

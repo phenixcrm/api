@@ -1,7 +1,7 @@
 package com.ameriglide.phenix.api;
 
 import com.ameriglide.phenix.common.Contact;
-import com.ameriglide.phenix.common.Opportunity;
+import com.ameriglide.phenix.common.Lead;
 import com.ameriglide.phenix.model.Key;
 import com.ameriglide.phenix.model.TypeModel;
 import jakarta.servlet.annotation.WebServlet;
@@ -17,19 +17,19 @@ import static net.inetalliance.potion.Locator.forEach;
 
 @WebServlet("/api/relatedLeads/*")
 public class RelatedLeadsModel
-    extends TypeModel<Opportunity> {
+    extends TypeModel<Lead> {
 
   public RelatedLeadsModel() {
-    super(Opportunity.class, compile("/api/relatedLeads/(.*)"));
+    super(Lead.class, compile("/api/relatedLeads/(.*)"));
   }
 
   @Override
-  protected Json toJson(final Key<Opportunity> key, final Opportunity opportunity,
+  protected Json toJson(final Key<Lead> key, final Lead lead,
                         final HttpServletRequest request) {
     final JsonList list = new JsonList();
-    final Contact contact = opportunity.getContact();
-    forEach(Contact.withPhoneNumberIn(contact).join(Opportunity.class, "contact"), arg -> {
-      if (!arg.id.equals(opportunity.id)) {
+    final Contact contact = lead.getContact();
+    forEach(Contact.withPhoneNumberIn(contact).join(Lead.class, "contact"), arg -> {
+      if (!arg.id.equals(lead.id)) {
         final JsonMap map = new JsonMap().$("id").$("stage").$("amount").$("created")
             .$("estimatedClose");
         if (arg.getHeat() == SOLD) {

@@ -2,7 +2,7 @@ package com.ameriglide.phenix.api;
 
 import com.ameriglide.phenix.Auth;
 import com.ameriglide.phenix.common.Note;
-import com.ameriglide.phenix.common.Opportunity;
+import com.ameriglide.phenix.common.Lead;
 import com.ameriglide.phenix.model.Key;
 import com.ameriglide.phenix.model.ListableModel;
 import com.ameriglide.phenix.servlet.exception.NotFoundException;
@@ -34,14 +34,14 @@ public class NoteModel extends ListableModel<Note> {
   protected void setDefaults(Note note, HttpServletRequest request, JsonMap data) {
     super.setDefaults(note, request, data);
     note.setAuthor(Auth.getAgent(request));
-    note.setOpportunity(getOpportunity(request));
+    note.setLead(getOpportunity(request));
     note.setCreated(LocalDateTime.now());
   }
 
-  protected Opportunity getOpportunity(final HttpServletRequest request) {
+  protected Lead getOpportunity(final HttpServletRequest request) {
     var m = pattern.matcher(request.getRequestURI());
     if (m.matches()) {
-      var o = Locator.$(new Opportunity(Integer.valueOf(m.group(1))));
+      var o = Locator.$(new Lead(Integer.valueOf(m.group(1))));
       if (o==null) {
         throw new NotFoundException();
       }
@@ -53,7 +53,7 @@ public class NoteModel extends ListableModel<Note> {
 
   @Override
   public Query<Note> all(Class<Note> type, HttpServletRequest request) {
-    return Note.withOpportunity(getOpportunity(request));
+    return Note.withLead(getOpportunity(request));
   }
 
   @Override

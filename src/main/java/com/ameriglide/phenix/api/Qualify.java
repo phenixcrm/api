@@ -3,7 +3,7 @@ package com.ameriglide.phenix.api;
 import com.ameriglide.phenix.common.Agent;
 import com.ameriglide.phenix.common.Heat;
 import com.ameriglide.phenix.common.Note;
-import com.ameriglide.phenix.common.Opportunity;
+import com.ameriglide.phenix.common.Lead;
 import com.ameriglide.phenix.core.Log;
 import com.ameriglide.phenix.core.Strings;
 import com.ameriglide.phenix.servlet.PhenixServlet;
@@ -34,13 +34,13 @@ public class Qualify extends PhenixServlet {
         }
         try {
             var id = Integer.parseInt(rawId);
-            var opp = Locator.$(new Opportunity(id));
-            if (opp==null) {
+          var lead = Locator.$(new Lead(id));
+            if (lead==null) {
                 response.sendError(HttpServletResponse.SC_NOT_FOUND);
                 return;
             }
             var heat = Heat.valueOf(rawHeat.toUpperCase());
-            Locator.update(opp, "Qualify", copy -> {
+            Locator.update(lead, "Qualify", copy -> {
                 copy.setHeat(heat);
                 copy.setScreened(LocalDateTime.now());
                 switch (heat) {
@@ -59,14 +59,14 @@ public class Qualify extends PhenixServlet {
                 if (Strings.isNotEmpty(note)) {
                     var n = new Note();
                     n.setAuthor(Agent.system());
-                    n.setOpportunity(copy);
+                    n.setLead(copy);
                     n.setNote("Screening Note: " + note);
                     Locator.create("Publishing", n);
                 }
                 Publishing.update(copy);
             });
             if(heat == Heat.CONTACTED) {
-                var call = CreateLead.dispatch(opp);
+                var call = CreateLead.dispatch(lead);
                 log.info(() -> "Callcenter qualified %d [%s]".formatted(id, call.sid));
             }
         } catch (NumberFormatException e) {

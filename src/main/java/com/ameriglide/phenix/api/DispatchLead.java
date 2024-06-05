@@ -57,21 +57,21 @@ public class DispatchLead extends PhenixServlet {
             product = Locator.$1(ProductLine.withName(json.get("product")));
           }
           var reminder = json.getDateTime("reminder");
-          var opp = byProduct(result, contact, product).orElseGet(
+          var lead = byProduct(result, contact, product).orElseGet(
             () -> create(result, contact, product, source, reminder));
           var note = json.get("note");
           if (Strings.isNotEmpty(note)) {
             var n = new Note();
-            n.setOpportunity(opp);
+            n.setLead(lead);
             n.setCreated(LocalDateTime.now());
             n.setNote(note);
             n.setAuthor(Agent.system());
-            log.debug(() -> "Added note for %d: %s".formatted(opp.id, note));
+            log.debug(() -> "Added note for %d: %s".formatted(lead.id, note));
             Locator.create("DispatchLead", n);
           }
           respond(response, new JsonMap().$("result", result.get()));
           switch(result.get()) {
-            case NEW_CONTACT,NEW_PRODUCT -> CreateLead.dispatch(opp);
+            case NEW_CONTACT,NEW_PRODUCT -> CreateLead.dispatch(lead);
           }
         }
       } else {
@@ -141,38 +141,38 @@ public class DispatchLead extends PhenixServlet {
     return contact;
   }
 
-  private Optional<Opportunity> byProduct(AtomicReference<Result> result, Contact contact, ProductLine product) {
-    var opp = Locator.$1(Opportunity.withContact(contact).and(Opportunity.withProductLine(product)));
-    if (opp!=null) {
-      log.info(() -> "Found existing opportunity for %s [%s]".formatted(contact.getFullName(), product.getName()));
+  private Optional<Lead> byProduct(AtomicReference<Result> result, Contact contact, ProductLine product) {
+    var lead = Locator.$1(Lead.withContact(contact).and(Lead.withProductLine(product)));
+    if (lead!=null) {
+      log.info(() -> "Found existing lead for %s [%s]".formatted(contact.getFullName(), product.getName()));
       result.set(Result.ADD_NOTE);
-      return Optional.of(opp);
+      return Optional.of(lead);
     }
     return Optional.empty();
   }
 
-  private Opportunity create(AtomicReference<Result> result, Contact contact, ProductLine product, Source source,
-                             LocalDateTime reminder) {
+  private Lead create(AtomicReference<Result> result, Contact contact, ProductLine product, Source source,
+                      LocalDateTime reminder) {
     if (result.get()!=Result.NEW_CONTACT) {
       result.set(Result.NEW_PRODUCT);
     }
-    var opp = new Opportunity();
-    opp.setContact(contact);
-    opp.setScreened(LocalDateTime.now());
-    opp.setBusiness(Business.getDefault.get());
-    opp.setCreated(LocalDateTime.now());
-    opp.setAssignedTo(Agent.system());
-    opp.setSource(source);
+    var lead = new Lead();
+    lead.setContact(contact);
+    lead.setScreened(LocalDateTime.now());
+    lead.setBusiness(Business.getDefault.get());
+    lead.setCreated(LocalDateTime.now());
+    lead.setAssignedTo(Agent.system());
+    lead.setSource(source);
     var now = LocalDateTime.now();
-    var last30 = Locator.$$(Opportunity.soldInInterval(new DateTimeInterval(now.minusDays(30), now)), Aggregate.AVG,
+    var last30 = Locator.$$(Lead.soldInInterval(new DateTimeInterval(now.minusDays(30), now)), Aggregate.AVG,
       Currency.class, "amount");
-    opp.setAmount(last30==null ? Currency.ZERO:last30);
-    opp.setHeat(Heat.CONTACTED);
-    opp.setReminder(reminder);
-    opp.setProductLine(product);
-    log.info(() -> "Created new opportunity for %s [%s]".formatted(contact.getFullName(), product.getName()));
-    Locator.create("DispatchLead", opp);
-    return opp;
+    lead.setAmount(last30==null ? Currency.ZERO:last30);
+    lead.setHeat(Heat.CONTACTED);
+    lead.setReminder(reminder);
+    lead.setProductLine(product);
+    log.info(() -> "Created new lead for %s [%s]".formatted(contact.getFullName(), product.getName()));
+    Locator.create("DispatchLead", lead);
+    return lead;
   }
 
 

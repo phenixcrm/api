@@ -3,7 +3,7 @@ package com.ameriglide.phenix.api;
 import com.ameriglide.phenix.Auth;
 import com.ameriglide.phenix.common.Call;
 import com.ameriglide.phenix.common.Contact;
-import com.ameriglide.phenix.common.Opportunity;
+import com.ameriglide.phenix.common.Lead;
 import com.ameriglide.phenix.core.Log;
 import com.ameriglide.phenix.model.Key;
 import com.ameriglide.phenix.model.ListableModel;
@@ -112,7 +112,7 @@ public class ContactModel extends ListableModel<Contact> {
   }
 
   private static JsonMap lead(final Contact contact) {
-    var lead = $1(Opportunity.withContact(contact).orderBy("created", DESCENDING));
+    var lead = $1(Lead.withContact(contact).orderBy("created", DESCENDING));
     if (lead==null) {
       log.error(() -> "trying to lookup most recent lead for %d, but no leads found".formatted(contact.id));
       throw new NotFoundException();

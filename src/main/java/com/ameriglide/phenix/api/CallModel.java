@@ -290,9 +290,9 @@ public class CallModel extends ListableModel<Call> {
             .$("lastName", contact.getLastName())
             .$("id", contact.id)
             .$("leads", leads));
-          forEach(Opportunity
+          forEach(Lead
             .withBusiness($$(Business.withAgent(agent)))
-            .and(Opportunity.withContact(contact))
+            .and(Lead.withContact(contact))
             .orderBy("created", ASCENDING), o -> {
             final Agent assignedTo = o.getAssignedTo();
             leads.add(new JsonMap()

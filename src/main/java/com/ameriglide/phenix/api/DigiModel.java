@@ -64,15 +64,15 @@ public class DigiModel extends ListableModel<Call> {
   }
 
   public static JsonMap toJson(final Call call) {
-    var opp = call.getOpportunity();
-    var contact = opp.getContact();
-    return new FullName(opp)
+    var lead = call.getOpportunity();
+    var contact = lead.getContact();
+    return new FullName(lead)
       .toJson()
       .$("sid", call.sid)
-      .$("opportunity", opp.id)
+      .$("lead", lead.id)
       .$("contact", contact.id)
-      .$("source", opp.getSource())
-      .$("product", opp.getProductLine().getName())
+      .$("source", lead.getSource())
+      .$("product", lead.getProductLine().getName())
       .$("created", call.getCreated())
       .$("phone", contact.getPhone())
       .$("state", contact.getState());

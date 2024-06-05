@@ -41,7 +41,7 @@ public class Pop extends TypeModel<Call> {
     var json = new JsonMap().$("id", contact.id).$("name", getContactLabel(contact)).$("leads", list);
     var matchQuality = matchQuality(agent);
     var contactBest = new Path(contact);
-    forEach(Opportunity.withContact(contact), opp -> {
+    forEach(Lead.withContact(contact), opp -> {
       if (matchQuality.compare(opp, overallBest.lead) > 0) {
         overallBest.lead = opp;
       }
@@ -49,7 +49,7 @@ public class Pop extends TypeModel<Call> {
         contactBest.lead = opp;
       }
       var notes = new JsonList();
-      forEach(Note.withOpportunity(opp), n -> {
+      forEach(Note.withLead(opp), n -> {
         var a = n.getAuthor();
         notes.add(new JsonMap()
           .$("id", n.id)
@@ -87,7 +87,7 @@ public class Pop extends TypeModel<Call> {
     return "%s %s".formatted(f, l);
   }
 
-  private static Comparator<Opportunity> matchQuality(Agent loggedIn) {
+  private static Comparator<Lead> matchQuality(Agent loggedIn) {
     return (a, b) -> {
       if (a==null) {
         if (b==null) {
@@ -118,7 +118,7 @@ public class Pop extends TypeModel<Call> {
     final Query<Contact> query;
     final var q = request.getParameter("q");
     final var phone = TaskRouter.toE164(call.getRemoteCaller().getPhone());
-    var callContact = Optionals.of(call.getOpportunity()).map(Opportunity::getContact).orElseGet(call::getContact);
+    var callContact = Optionals.of(call.getOpportunity()).map(Lead::getContact).orElseGet(call::getContact);
     if (isNotEmpty(q)) {
       query = new Search<>(Contact.class, getParameter(request, "n", 10), q.split(" "));
     } else if (callContact!=null) {
@@ -137,7 +137,7 @@ public class Pop extends TypeModel<Call> {
     }
     var leadId = request.getParameter("lead");
     if (isNotEmpty(leadId) && !"new".equals(leadId)) {
-      path.lead = Locator.$(new Opportunity(Integer.parseInt(leadId)));
+      path.lead = Locator.$(new Lead(Integer.parseInt(leadId)));
     } else {
       path.lead = call.getOpportunity();
     }
@@ -203,7 +203,7 @@ public class Pop extends TypeModel<Call> {
   }
 
   protected static class Path {
-    Opportunity lead;
+    Lead lead;
     Contact contact;
     String reservation;
 
@@ -214,7 +214,7 @@ public class Pop extends TypeModel<Call> {
       this(contact, null);
     }
 
-    public Path(final Contact contact, final Opportunity lead) {
+    public Path(final Contact contact, final Lead lead) {
       this.contact = contact;
       this.lead = lead;
     }

@@ -3,7 +3,7 @@ package com.ameriglide.phenix.util;
 import com.ameriglide.phenix.Startup;
 import com.ameriglide.phenix.common.Call;
 import com.ameriglide.phenix.common.Contact;
-import com.ameriglide.phenix.common.Opportunity;
+import com.ameriglide.phenix.common.Lead;
 import com.ameriglide.phenix.common.VerifiedCallerId;
 import com.ameriglide.phenix.core.DateTimeFormats;
 import com.ameriglide.phenix.core.Log;
@@ -57,7 +57,7 @@ public class RepairMediaBids implements Runnable {
                 missing.incrementAndGet();
               } else {
                 var time = dateParser.parse(r.get("Call Start Time"),LocalDateTime::from);
-                Locator.forEach(Opportunity.withContact(contact), o -> {
+                Locator.forEach(Lead.withContact(contact), o -> {
                   if (o.getCreated().isAfter(time)) {
                     var firstCall = Locator.$1(Call.withPhone(contact.getPhone()).orderBy("created"));
                     if (firstCall!=null) {

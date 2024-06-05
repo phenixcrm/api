@@ -4,7 +4,7 @@ import com.ameriglide.phenix.Startup;
 import com.ameriglide.phenix.common.Agent;
 import com.ameriglide.phenix.common.Heat;
 import com.ameriglide.phenix.common.Note;
-import com.ameriglide.phenix.common.Opportunity;
+import com.ameriglide.phenix.common.Lead;
 import net.inetalliance.cli.Cli;
 import net.inetalliance.potion.Locator;
 
@@ -24,12 +24,12 @@ public class AssignQuoted implements Runnable {
 
   @Override
   public void run() {
-    var q = Opportunity.withAgent(Agent.system()).and(Opportunity.withHeat(Heat.QUOTED));
+    var q = Lead.withAgent(Agent.system()).and(Lead.withHeat(Heat.QUOTED));
     var c = Locator.count(q);
     out.printf("There are %d quoted and unassigned%n".formatted(c));
     Locator.forEach(q, o -> {
       var humans = new HashSet<Agent>();
-      Locator.forEach(Note.withOpportunity(o), n -> {
+      Locator.forEach(Note.withLead(o), n -> {
         if (n.getAuthor().id!=0) {
           humans.add(n.getAuthor());
         }

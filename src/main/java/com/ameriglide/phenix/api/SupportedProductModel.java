@@ -39,7 +39,7 @@ public class SupportedProductModel extends ListableModel<SupportedProduct> {
   @Override
   public Json toJson(final HttpServletRequest request, final SupportedProduct product) {
     return ((JsonMap) super.toJson(request, product))
-      .$("customer", product.getOpportunity().getContact().getFullName())
+      .$("customer", product.getLead().getContact().getFullName())
       .$("lastNote",
         Optionals.of(Locator.$1(ServiceNote.withSupportedProduct(product))).map(ServiceNote::getNote).orElse(""));
   }

@@ -14,8 +14,8 @@ import java.util.*;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 
-import static com.ameriglide.phenix.common.Opportunity.needsReminding;
-import static com.ameriglide.phenix.common.Opportunity.withAgent;
+import static com.ameriglide.phenix.common.Lead.needsReminding;
+import static com.ameriglide.phenix.common.Lead.withAgent;
 import static com.ameriglide.phenix.core.Strings.isNotEmpty;
 import static java.util.concurrent.TimeUnit.MINUTES;
 
@@ -39,7 +39,7 @@ public class ReminderHandler implements JsonMessageHandler, Runnable {
     final Map<TimeZone, Set<Ticket>> active = Events.getActiveAgents();
     try {
       active.forEach((timeZone, tickets) -> {
-        var needsReminding = Opportunity.needsReminding(15, MINUTES, timeZone);
+        var needsReminding = Lead.needsReminding(15, MINUTES, timeZone);
         tickets.forEach(ticket -> notify(ticket.agent(), needsReminding));
       });
 
@@ -48,13 +48,13 @@ public class ReminderHandler implements JsonMessageHandler, Runnable {
     }
   }
 
-  private static void notify(Agent agent, Query<Opportunity> needsReminding) {
+  private static void notify(Agent agent, Query<Lead> needsReminding) {
     Events.broadcast("reminder", agent.id,
       JsonList.collect(Locator.$$(needsReminding.and(withAgent(agent))), ReminderHandler::toJson));
 
   }
 
-  private static JsonMap toJson(Opportunity o) {
+  private static JsonMap toJson(Lead o) {
     final Contact c = o.getContact();
     final JsonList dial = new JsonList();
     final Address shipping = c.getShipping();

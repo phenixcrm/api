@@ -2,7 +2,7 @@ package com.ameriglide.phenix.util;
 
 import com.ameriglide.phenix.Startup;
 import com.ameriglide.phenix.common.Call;
-import com.ameriglide.phenix.common.Opportunity;
+import com.ameriglide.phenix.common.Lead;
 import com.ameriglide.phenix.common.Source;
 import com.ameriglide.phenix.common.VerifiedCallerId;
 import com.ameriglide.phenix.core.Log;
@@ -51,7 +51,7 @@ public class RepairSource implements Runnable {
       });
       log.info(() -> "Changing source by first touch");
 
-      Locator.forEachWithProgress(Opportunity.isSold.and(Opportunity.createdInInterval(new DateTimeInterval(LocalDate.of(2023,11,1).atStartOfDay(),
+      Locator.forEachWithProgress(Lead.isSold.and(Lead.createdInInterval(new DateTimeInterval(LocalDate.of(2023,11,1).atStartOfDay(),
         LocalDateTime.now()))), (o, meter) -> {
         var firstCall = Locator.$1(Call.withPhone(o.getContact().getPhone()).orderBy("created"));
         if (firstCall!=null) {

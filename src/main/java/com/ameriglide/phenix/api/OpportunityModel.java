@@ -22,22 +22,22 @@ import static com.ameriglide.phenix.core.Strings.isNotEmpty;
 
 
 @WebServlet("/api/opportunity/*")
-public class OpportunityModel extends ListableModel<Opportunity> {
+public class OpportunityModel extends ListableModel<Lead> {
 
   public OpportunityModel() {
-    super(Opportunity.class);
+    super(Lead.class);
   }
 
   @Override
-  public Query<Opportunity> all(final Class<Opportunity> type, final HttpServletRequest request) {
-    Query<Opportunity> q = super.all(type, request);
+  public Query<Lead> all(final Class<Lead> type, final HttpServletRequest request) {
+    Query<Lead> q = super.all(type, request);
     final var callId = request.getParameter("call");
     if (isNotEmpty(callId)) {
       final var call = Locator.$(new Call(callId));
       if (call==null) {
         throw new NotFoundException("Could not find call with key %s", callId);
       }
-      q = q.and(Opportunity.withBusinessIdIn(List.of(call.getBusiness().id)));
+      q = q.and(Lead.withBusinessIdIn(List.of(call.getBusiness().id)));
     }
     final var contactId = request.getParameter("contact");
     if (isNotEmpty(contactId)) {
@@ -45,18 +45,18 @@ public class OpportunityModel extends ListableModel<Opportunity> {
       if (contact==null) {
         throw new NotFoundException("Could not find contact with id %s", contactId);
       }
-      q = q.and(Opportunity.withContact(contact));
+      q = q.and(Lead.withContact(contact));
     }
 
     return q;
   }
 
   @Override
-  protected Opportunity lookup(final Key<Opportunity> key, final HttpServletRequest request) {
+  protected Lead lookup(final Key<Lead> key, final HttpServletRequest request) {
     if ("0".equals(key.id)) {
-      final var opp = new Opportunity();
-      opp.setHeat(Heat.QUOTED);
-      opp.setAssignedTo(Auth.getAgent(request));
+      final var lead = new Lead();
+      lead.setHeat(Heat.QUOTED);
+      lead.setAssignedTo(Auth.getAgent(request));
       final var callKey = request.getParameter("call");
       if (isEmpty(callKey)) {
         throw new BadRequestException("must specify a call key");
@@ -65,30 +65,30 @@ public class OpportunityModel extends ListableModel<Opportunity> {
       if (call==null) {
         throw new NotFoundException("could not find call with key %s", callKey);
       }
-      opp.setProductLine(call.getDialedNumber().getProductLine());
-      opp.setSource(call.getSource());
-      opp.setCreated(LocalDateTime.now());
-      opp.setBusiness(call.getBusiness());
-      return opp;
+      lead.setProductLine(call.getDialedNumber().getProductLine());
+      lead.setSource(call.getSource());
+      lead.setCreated(LocalDateTime.now());
+      lead.setBusiness(call.getBusiness());
+      return lead;
     }
     return super.lookup(key, request);
   }
 
   @Override
-  public JsonMap create(final Key<Opportunity> key, final HttpServletRequest request,
+  public JsonMap create(final Key<Lead> key, final HttpServletRequest request,
                         final HttpServletResponse response, final JsonMap data) {
     data.put("created", LocalDateTime.now());
     return super.create(key, request, response, data);
   }
 
   @Override
-  protected Json toJson(final Key<Opportunity> key, final Opportunity opportunity, final HttpServletRequest request) {
-    final var map = (JsonMap) super.toJson(key, opportunity, request);
-    map.put("extra", json(opportunity));
+  protected Json toJson(final Key<Lead> key, final Lead lead, final HttpServletRequest request) {
+    final var map = (JsonMap) super.toJson(key, lead, request);
+    map.put("extra", json(lead));
     return map;
   }
 
-  public static Json json(Opportunity arg) {
+  public static Json json(Lead arg) {
     final Agent assignedTo = arg.getAssignedTo();
     final ProductLine productLine = arg.getProductLine();
     final Business biz = arg.getBusiness();
@@ -110,7 +110,7 @@ public class OpportunityModel extends ListableModel<Opportunity> {
   }
 
   @Override
-  public Json toJson(final HttpServletRequest request, final Opportunity o) {
+  public Json toJson(final HttpServletRequest request, final Lead o) {
 
     final var superJson = (JsonMap) super.toJson(request, o);
     if (request.getParameter("summary")==null) {

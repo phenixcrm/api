@@ -81,14 +81,14 @@ public class AgentClosing extends CachedGroupingRangeReport<Agent, Business> {
       throw new NotFoundException("Could not find agent with key %s", agentKey);
     }
 
-    final Query<Opportunity> oppSources;
+    final Query<Lead> oppSources;
     final Query<Call> callSources;
 
     if (sources.isEmpty()) {
-      oppSources = Opportunity.online.negate();
+      oppSources = Lead.online.negate();
       callSources = Call.withSourceIn(EnumSet.of(WEB)).negate();
     } else {
-      oppSources = Opportunity.withSources(sources);
+      oppSources = Lead.withSources(sources);
       callSources = Call.withSourceIn(sources);
     }
 
@@ -99,12 +99,12 @@ public class AgentClosing extends CachedGroupingRangeReport<Agent, Business> {
     ProductLineClosing.retainVisible(loggedIn, businesses, vCids);
 
     final Query<Call> callQuery = Call.inInterval(interval);
-    final Query<Opportunity> oppQuery = Opportunity
+    final Query<Lead> oppQuery = Lead
       .soldInInterval(interval)
-      .and(Opportunity.withAgent(agent))
+      .and(Lead.withAgent(agent))
       .and(oppSources)
       .and(
-        businesses==null || businesses.isEmpty() ? Query.all(Opportunity.class):Opportunity.withBusiness(businesses));
+        businesses==null || businesses.isEmpty() ? Query.all(Lead.class):Lead.withBusiness(businesses));
     final JsonList rows = new JsonList();
     Locator.forEach(Query.all(ProductLine.class), productLine -> {
       final AtomicInteger n = new AtomicInteger(0);
@@ -130,7 +130,7 @@ public class AgentClosing extends CachedGroupingRangeReport<Agent, Business> {
       }
       productLineTotal.put("dumps",count(
         productLineCallQuery.and(isQueue).and(withAgent(agent).negate()).and(Call.isDumped).and(withAgent(agent))));
-      final Query<Opportunity> agentOppQuery = oppQuery.and(Opportunity.withProductLine(productLine));
+      final Query<Lead> agentOppQuery = oppQuery.and(Lead.withProductLine(productLine));
       var closes = count(agentOppQuery);
       productLineTotal.put("closes",closes);
       productLineTotal.put("sales",$$(agentOppQuery, SUM, Currency.class, "amount"));

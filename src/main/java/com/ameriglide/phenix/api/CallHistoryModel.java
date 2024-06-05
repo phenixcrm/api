@@ -2,7 +2,7 @@ package com.ameriglide.phenix.api;
 
 import com.ameriglide.phenix.common.Call;
 import com.ameriglide.phenix.common.Leg;
-import com.ameriglide.phenix.common.Opportunity;
+import com.ameriglide.phenix.common.Lead;
 import com.ameriglide.phenix.core.Optionals;
 import com.ameriglide.phenix.core.Strings;
 import com.ameriglide.phenix.model.Listable;
@@ -37,18 +37,18 @@ public class CallHistoryModel extends PhenixServlet {
 
   @Override
   protected void get(HttpServletRequest request, HttpServletResponse response) throws Exception {
-    var opp = Strings
+    var lead = Strings
       .matcher(id)
       .apply(request.getRequestURI())
       .map(m -> m.group(1))
       .map(Integer::parseInt)
-      .map(Opportunity::new)
+      .map(Lead::new)
       .map(Locator::$)
       .orElseThrow(() -> new BadRequestException("request must match /api/callHistory/(.*)"));
-    if (opp==null) {
+    if (lead==null) {
       throw new NotFoundException();
     }
-    var contact = opp.getContact();
+    var contact = lead.getContact();
     var numbers = Call.getPhoneNumbers(contact);
 
     var params = numbers.stream().map(n -> "?").collect(Collectors.joining(","));

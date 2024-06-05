@@ -117,13 +117,13 @@ public class ReviewModel extends PhenixServlet {
         var contactQuery = Contact.withPhoneNumber(callerId.getPhone()).limit(3);
         int contactsCount = count(contactQuery);
         var contacts = new JsonList(contactsCount);
-        var opps = new HashMap<Agent, Collection<Opportunity>>();
+        var opps = new HashMap<Agent, Collection<Lead>>();
         forEach(contactQuery, contact -> {
           contacts.add(new JsonMap()
             .$("id", contact.id)
             .$("name", contact.getFullName())
             .$("selected", contact.equals(call.getContact())));
-          forEach(Opportunity.withContact(contact).and(Opportunity.createdBefore(call.getCreated().plusHours(1))),
+          forEach(Lead.withContact(contact).and(Lead.createdBefore(call.getCreated().plusHours(1))),
             o -> opps.computeIfAbsent(o.getAssignedTo(), a -> new ArrayList<>()).add(o));
         });
         callJson.$("contacts", contacts);

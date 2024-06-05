@@ -97,11 +97,11 @@ public class ProductLineClosing extends CachedGroupingRangeReport<Agent, Busines
       .collect(toSet());
 
     final Query<Call> callQuery = Call.inInterval(interval).and(Call.withVerifiedCidIn(vCids));
-    Query<Opportunity> oppQuery = Opportunity
+    Query<Lead> oppQuery = Lead
       .soldInInterval(interval)
-      .and(sources.isEmpty() ? Opportunity.online.negate():Opportunity.withSources(sources))
+      .and(sources.isEmpty() ? Lead.online.negate():Lead.withSources(sources))
       .and(
-        businesses==null || businesses.isEmpty() ? Query.all(Opportunity.class):Opportunity.withBusiness(businesses));
+        businesses==null || businesses.isEmpty() ? Query.all(Lead.class):Lead.withBusiness(businesses));
     if (!teams.isEmpty()) {
       var agents = teams
         .stream()
@@ -109,14 +109,14 @@ public class ProductLineClosing extends CachedGroupingRangeReport<Agent, Busines
         .flatMap(Iterables::stream)
         .map(a -> a.id)
         .collect(toSet());
-      oppQuery = oppQuery.and(Opportunity.withAgentIdIn(agents));
+      oppQuery = oppQuery.and(Lead.withAgentIdIn(agents));
     }
     final JsonList rows = new JsonList();
     final AtomicInteger totalCalls = new AtomicInteger(0);
     final AtomicInteger totalAgents = new AtomicInteger(0);
     final Map<Integer, AtomicInteger> teamCount = new HashMap<>();
     final Map<Integer, JsonMap> teamTotals = new HashMap<>();
-    final Query<Opportunity> finalOppQuery = oppQuery;
+    final Query<Lead> finalOppQuery = oppQuery;
     Locator.forEach(allRows(businesses, loggedIn, interval.start()), agent -> {
       meter.increment(agent.getLastNameFirstInitial());
       final Query<Call> agentCallQuery = callQuery.and(Call.withAgent(agent));
@@ -143,9 +143,9 @@ public class ProductLineClosing extends CachedGroupingRangeReport<Agent, Busines
       Currency sales = Currency.ZERO;
       for (ProductLine productLine : productLines) {
 
-        final Query<Opportunity> agentOppQuery = finalOppQuery
-          .and(Opportunity.withProductLine(productLine))
-          .and(Opportunity.withAgent(agent));
+        final Query<Lead> agentOppQuery = finalOppQuery
+          .and(Lead.withProductLine(productLine))
+          .and(Lead.withAgent(agent));
         closes += count(agentOppQuery);
         sales = sales.add(Locator.$$(agentOppQuery, SUM, Currency.class, "amount"));
       }

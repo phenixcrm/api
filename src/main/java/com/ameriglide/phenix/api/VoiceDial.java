@@ -36,12 +36,12 @@ public class VoiceDial extends PhenixServlet {
 
     var param = DialMode.fromRequest(request);
     var transfer = request.getParameter("transfer");
-    var lead = request.getParameter("lead");
+    var leadId = request.getParameter("lead");
 
     CNAM.CallerIdSource cid;
     log.debug(
       () -> "%s: /api/dial mode=%s, target=%s, transfer=%s, lead=%s".formatted(dialingAgent.getFullName(), param.mode(),
-        param.value(), transfer, lead));
+        param.value(), transfer, leadId));
     var called = switch (param.mode()) {
       case NUMBER -> new Party(new PhoneNumber(param.value()));
       case AGENT -> new Party($(new Agent(Integer.parseInt(param.value()))));
@@ -54,24 +54,24 @@ public class VoiceDial extends PhenixServlet {
 
       var call = new Call();
       call.setAgent(dialingAgent);
-      call.setDirection(called.isAgent() ? INTERNAL:OUTBOUND);
+      call.setDirection(called != null && called.isAgent() ? INTERNAL:OUTBOUND);
       call.setCreated(LocalDateTime.now());
       call.setResolution(Resolution.ACTIVE);
-      if (isNotEmpty(lead) && !"new".equals(lead)) {
-        var opp = $(new Opportunity(Integer.valueOf(lead)));
-        if (opp==null) {
+      if (isNotEmpty(leadId) && !"new".equals(leadId)) {
+        var lead = $(new Lead(Integer.valueOf(leadId)));
+        if (lead==null) {
           throw new NotFoundException();
         }
-        call.setContact(opp.getContact());
-        call.setOpportunity(opp);
-        call.setBusiness(opp.getBusiness());
+        call.setContact(lead.getContact());
+        call.setOpportunity(lead);
+        call.setBusiness(lead.getBusiness());
         cid = Optionals
-          .of($1(VerifiedCallerId.withProductLine(opp.getProductLine()).and(VerifiedCallerId.isDefault)))
+          .of($1(VerifiedCallerId.withProductLine(lead.getProductLine()).and(VerifiedCallerId.isDefault)))
           .stream()
           .peek(vCid -> call.setQueue(vCid.getQueue()))
           .findFirst()
           .orElseGet(() -> $1(VerifiedCallerId.withProductLine(null).and(VerifiedCallerId.isDefault)));
-      } else if (called.isAgent()) {
+      } else if (called != null && called.isAgent()) {
         cid = dialingAgent;
       } else {
         cid = $1(VerifiedCallerId.isDefault);
@@ -81,7 +81,7 @@ public class VoiceDial extends PhenixServlet {
       Locator.create("VoiceDial", call);
       router.call(new PhoneNumber(cid.getPhoneNumber()), from, "/voice/dial",
         request.getQueryString() + "&call=" + call.sid);
-      log.info(() -> "New API dial %s %s -> %s".formatted(call.sid, dialingAgent.getSipUser(), called.endpoint()));
+      log.info(() -> "New API dial %s %s -> %s".formatted(call.sid, dialingAgent.getSipUser(), called == null ? "queue" : called.endpoint()));
       response.sendError(HttpServletResponse.SC_NO_CONTENT);
     } else {
       var voicemail = "true".equals(request.getParameter("voicemail"));

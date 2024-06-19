@@ -54,7 +54,7 @@ public class VoiceDial extends PhenixServlet {
 
       var call = new Call();
       call.setAgent(dialingAgent);
-      call.setDirection(called != null && called.isAgent() ? INTERNAL:OUTBOUND);
+      call.setDirection(called!=null && called.isAgent() ? INTERNAL:OUTBOUND);
       call.setCreated(LocalDateTime.now());
       call.setResolution(Resolution.ACTIVE);
       if (isNotEmpty(leadId) && !"new".equals(leadId)) {
@@ -70,8 +70,10 @@ public class VoiceDial extends PhenixServlet {
           .stream()
           .peek(vCid -> call.setQueue(vCid.getQueue()))
           .findFirst()
-          .orElseGet(() -> $1(VerifiedCallerId.withProductLine(null).and(VerifiedCallerId.isDefault)));
-      } else if (called != null && called.isAgent()) {
+          .orElseGet(() -> Optionals
+            .of($1(VerifiedCallerId.withProductLine(null).and(VerifiedCallerId.isDefault)))
+            .orElseGet(() -> Locator.$1(VerifiedCallerId.isDefault)));
+      } else if (called!=null && called.isAgent()) {
         cid = dialingAgent;
       } else {
         cid = $1(VerifiedCallerId.isDefault);
@@ -81,7 +83,8 @@ public class VoiceDial extends PhenixServlet {
       Locator.create("VoiceDial", call);
       router.call(new PhoneNumber(cid.getPhoneNumber()), from, "/voice/dial",
         request.getQueryString() + "&call=" + call.sid);
-      log.info(() -> "New API dial %s %s -> %s".formatted(call.sid, dialingAgent.getSipUser(), called == null ? "queue" : called.endpoint()));
+      log.info(() -> "New API dial %s %s -> %s".formatted(call.sid, dialingAgent.getSipUser(),
+        called==null ? "queue":called.endpoint()));
       response.sendError(HttpServletResponse.SC_NO_CONTENT);
     } else {
       var voicemail = "true".equals(request.getParameter("voicemail"));

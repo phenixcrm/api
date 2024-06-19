@@ -39,7 +39,7 @@ public class ReminderHandler implements JsonMessageHandler, Runnable {
     final Map<TimeZone, Set<Ticket>> active = Events.getActiveAgents();
     try {
       active.forEach((timeZone, tickets) -> {
-        var needsReminding = Lead.needsReminding(15, MINUTES, timeZone);
+        var needsReminding = Lead.needsReminding(15, MINUTES);
         tickets.forEach(ticket -> notify(ticket.agent(), needsReminding));
       });
 

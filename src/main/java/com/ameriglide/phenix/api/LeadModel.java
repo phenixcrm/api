@@ -3,6 +3,7 @@ package com.ameriglide.phenix.api;
 import com.ameriglide.phenix.Auth;
 import com.ameriglide.phenix.common.*;
 import com.ameriglide.phenix.core.Consumers;
+import com.ameriglide.phenix.core.Optionals;
 import com.ameriglide.phenix.core.Strings;
 import com.ameriglide.phenix.model.Key;
 import com.ameriglide.phenix.model.Listable;
@@ -25,7 +26,9 @@ import net.inetalliance.types.json.JsonMap;
 import org.postgresql.util.PSQLException;
 
 import java.io.IOException;
-import java.time.*;
+import java.time.DayOfWeek;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.Set;
@@ -103,12 +106,8 @@ public class LeadModel extends ListableModel<Lead> {
     final Contact contact = o.getContact();
     final String phone = contact.getPhone();
     if (isNotEmpty(phone)) {
-      final AreaCodeTime time = AreaCodeTime.getAreaCodeTime(toUS10(phone));
-      if (time==null) {
-        json.put("localTime", (Integer) null);
-      } else {
-        json.put("localTime", ZonedDateTime.ofInstant(Instant.now(), time.getZoneId()).getOffset().getTotalSeconds());
-      }
+      json.put("localTime",
+        Optionals.of(AreaCodeTime.getAreaCodeTime(toUS10(phone))).map(AreaCodeTime::getTimeZone).orElse(null));
     }
     return json;
 
@@ -137,8 +136,7 @@ public class LeadModel extends ListableModel<Lead> {
     } else if (review) {
       query = Query.all(Lead.class);
     } else if (digis) {
-      query =
-        Lead.withSources(Set.of(Source.FORM, Source.SOCIAL, Source.REFERRAL)).and(Lead.withAgent(Agent.system()));
+      query = Lead.withSources(Set.of(Source.FORM, Source.SOCIAL, Source.REFERRAL)).and(Lead.withAgent(Agent.system()));
     } else {
       query = Lead.withAgent(loggedIn);
     }
@@ -293,7 +291,7 @@ public class LeadModel extends ListableModel<Lead> {
                 response.sendError(SC_BAD_REQUEST, "must specify note to add");
               } else {
                 Locator.create(n.getAuthor().getFullName(), n);
-                respond(response, Info.$(ServiceNote.class).toJson(n).$("author",n.getAuthor().getFullName()));
+                respond(response, Info.$(ServiceNote.class).toJson(n).$("author", n.getAuthor().getFullName()));
               }
             }
 
@@ -347,9 +345,8 @@ public class LeadModel extends ListableModel<Lead> {
   }
 
   @Override
-  protected Json update(final Key<Lead> key, final HttpServletRequest request,
-                        final HttpServletResponse response, final Lead lead, final JsonMap data) throws
-    IOException {
+  protected Json update(final Key<Lead> key, final HttpServletRequest request, final HttpServletResponse response,
+                        final Lead lead, final JsonMap data) throws IOException {
     try {
       return super.update(key, request, response, lead, data);
     } finally {
@@ -415,16 +412,10 @@ public class LeadModel extends ListableModel<Lead> {
         .and(base)
         .orderBy("contact.lastName", f.direction, false)
         .orderBy("contact.firstName", ASCENDING, false);
-      case "state" -> Query
-        .all(Contact.class)
-        .join(Lead.class, "contact")
-        .and(base)
-        .orderBy("shipping_state", f.direction, false);
-      case "business" -> Query
-        .all(Business.class)
-        .join(Lead.class, "business")
-        .and(base)
-        .orderBy("business.name", f.direction, false);
+      case "state" ->
+        Query.all(Contact.class).join(Lead.class, "contact").and(base).orderBy("shipping_state", f.direction, false);
+      case "business" ->
+        Query.all(Business.class).join(Lead.class, "business").and(base).orderBy("business.name", f.direction, false);
       case "assignedTo" -> Query
         .all(Agent.class)
         .join(Lead.class, "assignedTo")

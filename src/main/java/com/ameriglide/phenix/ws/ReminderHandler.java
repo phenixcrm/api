@@ -113,7 +113,7 @@ public class ReminderHandler implements JsonMessageHandler, Runnable {
 
   private void broadcast(Ticket ticket) {
     if (ticket!=null) {
-      notify(ticket.agent(), needsReminding(15, MINUTES, ticket.getTimeZone()));
+      notify(ticket.agent(), needsReminding(15, MINUTES));
     }
   }
 

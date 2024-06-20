@@ -16,6 +16,7 @@ import net.inetalliance.types.json.JsonMap;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.regex.Pattern;
 
 import static com.ameriglide.phenix.core.Strings.isEmpty;
 import static com.ameriglide.phenix.core.Strings.isNotEmpty;
@@ -24,8 +25,9 @@ import static com.ameriglide.phenix.core.Strings.isNotEmpty;
 @WebServlet("/api/opportunity/*")
 public class OpportunityModel extends ListableModel<Lead> {
 
+  private static final Pattern pattern = Pattern.compile("/(?:api|reporting)/opportunity(?:/(\\d+))?");
   public OpportunityModel() {
-    super(Lead.class);
+    super(Lead.class, pattern);
   }
 
   @Override

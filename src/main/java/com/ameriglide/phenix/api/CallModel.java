@@ -40,6 +40,7 @@ import java.util.stream.Collectors;
 
 import static com.ameriglide.phenix.core.Optionals.of;
 import static com.ameriglide.phenix.core.Strings.isEmpty;
+import static com.ameriglide.phenix.twilio.TaskRouter.toUS10;
 import static com.ameriglide.phenix.types.CallDirection.INTERNAL;
 import static com.ameriglide.phenix.types.CallDirection.QUEUE;
 import static com.ameriglide.phenix.types.Resolution.ACTIVE;
@@ -214,7 +215,7 @@ public class CallModel extends ListableModel<Call> {
     if (remoteCallerId!=null) {
       final String number = remoteCallerId.getPhone();
       map.$("created", call.getCreated());
-      map.$("localTime", AreaCodeTime.getLocalTime(number, call.getCreated()).getOffset().getTotalSeconds());
+      map.$("localTime", Optionals.of(AreaCodeTime.getAreaCodeTime(toUS10(number))).map(AreaCodeTime::getTimeZone).orElse(null));
       map.$("callerId", new JsonMap().$("name", remoteCallerId.getName()).$("number", number));
       final JsonList contactMatches;
       if (isEmpty(number)) {

@@ -443,7 +443,7 @@ public class LeadModel extends ListableModel<Lead> {
       public Iterable<Object> build(final SqlBuilder sql, final Namer namer, final DbVendor vendor,
                                     final String table) {
         if (sql.aggregateFields.length==0) {
-          sql.addColumn(null, "ts_rank(Opportunity.document,Opportunity_query) + ts_rank(Contact.document,"
+          sql.addColumn(null, "ts_rank(Lead.document,Lead_query) + ts_rank(Contact.document,"
             + "Contact_query) AS combined_rank");
         }
         return super.build(sql, namer, vendor, table);

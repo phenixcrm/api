@@ -68,7 +68,10 @@ public class VoiceDial extends PhenixServlet {
         cid = Optionals
           .of($1(VerifiedCallerId.withProductLine(lead.getProductLine()).and(VerifiedCallerId.isDefault)))
           .stream()
-          .peek(vCid -> call.setQueue(vCid.getQueue()))
+          .peek(vCid -> {
+            call.setDialedNumber(vCid);
+            call.setQueue(vCid.getQueue());
+          })
           .findFirst()
           .orElseGet(() -> Optionals
             .of($1(VerifiedCallerId.withProductLine(null).and(VerifiedCallerId.isDefault)))

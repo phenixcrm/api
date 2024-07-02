@@ -46,7 +46,7 @@ public class RepairLeadSource implements Runnable {
       var r = numRepaired.get();
       var p = numProcessed.get();
       var rate = (100.0f * r) / p;
-      meter.increment("fixed %d of %d (%.2f%%), no src: %d, to go: %d", numRepaired.get(),
+      meter.increment("fix %d/%d (%.2f%%), no src: %d, to go: %d", numRepaired.get(),
         numProcessed.get(), rate,
         numMissingSource.get(), n-p);
 

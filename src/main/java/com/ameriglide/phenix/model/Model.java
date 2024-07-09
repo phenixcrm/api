@@ -319,7 +319,7 @@ public class Model<T> extends PhenixServlet {
   }
 
   protected boolean isNotAuthenticated(final HttpServletRequest request) {
-    return true;
+    return Auth.getTicket(request) == null;
   }
 
   protected Key<T> getKey(final HttpServletRequest request) {

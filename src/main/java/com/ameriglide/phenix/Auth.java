@@ -124,16 +124,22 @@ public class Auth extends HttpServlet {
               response.sendError(SC_FORBIDDEN, "Go Away");
             }
           }
-        }
-        final HttpSession session = request.getSession();
-        synchronized (session) {
-          var ticket = login(principal, domain, password, timeZone);
-          if (ticket==null) {
-            log.info(() -> "password login failed for %s".formatted(principal));
-            response.sendError(SC_FORBIDDEN, "Access Denied");
-          } else {
-            setTicket(request, ticket);
-            respond(response, toJson(ticket.agent()));
+        } else {
+          final HttpSession session = request.getSession();
+          synchronized (session) {
+            var ticket = login(principal, domain, password, timeZone);
+            if (ticket==null) {
+              log.info(() -> "password login failed for %s".formatted(principal));
+              response.sendError(SC_FORBIDDEN, "Access Denied");
+            } else {
+              if(ticket.agent().isActive()) {
+                setTicket(request, ticket);
+                respond(response, toJson(ticket.agent()));
+              } else {
+                log.warn(()->"Inactive user %s tried to log in".formatted(principal));
+                response.sendError(SC_FORBIDDEN, "Access Denied");
+              }
+            }
           }
         }
       } else {
@@ -144,11 +150,11 @@ public class Auth extends HttpServlet {
 
   private Ticket login(final String principal, final String domain, final String password, TimeZone timeZone) {
     if (Startup.isDevelopment()) {
-      var agent = Ticket.forEmail(principal,domain);
-      if(agent == null) {
+      var agent = Ticket.forEmail(principal, domain);
+      if (agent==null) {
         return null;
       }
-      return new Ticket(agent,timeZone);
+      return new Ticket(agent, timeZone);
     }
     if (isEmpty(password)) {
       return null;

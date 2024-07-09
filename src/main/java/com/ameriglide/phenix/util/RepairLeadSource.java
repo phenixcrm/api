@@ -1,5 +1,6 @@
 package com.ameriglide.phenix.util;
 
+import com.ameriglide.phenix.common.Agent;
 import com.ameriglide.phenix.common.Call;
 import com.ameriglide.phenix.common.Lead;
 import com.ameriglide.phenix.servlet.Startup;

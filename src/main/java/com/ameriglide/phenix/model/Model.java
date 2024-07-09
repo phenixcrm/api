@@ -305,7 +305,6 @@ public class Model<T> extends PhenixServlet {
 
       @Override
       public ValidationErrors apply(final T copy) {
-        final JsonMap externalMap = new JsonMap();
         setProperties(request, data, copy, errors);
         final Locale locale = request.getLocale();
         errors.add(Validator.instance.get().update(locale, copy));

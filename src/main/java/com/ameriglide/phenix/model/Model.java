@@ -249,7 +249,7 @@ public class Model<T> extends PhenixServlet {
   }
 
   protected boolean isAuthorized(final HttpServletRequest request, final T t) {
-    return true;
+    return Auth.getTicket(request) != null;
   }
 
   @Override
@@ -315,7 +315,7 @@ public class Model<T> extends PhenixServlet {
   }
 
   protected boolean requireAuthentication() {
-    return false;
+    return true;
   }
 
   protected boolean isNotAuthenticated(final HttpServletRequest request) {

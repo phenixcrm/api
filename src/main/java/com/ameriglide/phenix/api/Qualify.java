@@ -63,7 +63,7 @@ public class Qualify extends PhenixServlet {
                     n.setNote("Screening Note: " + note);
                     Locator.create("Publishing", n);
                 }
-                Publishing.update(copy);
+                Publishing.newLead(copy);
             });
             if(heat == Heat.CONTACTED) {
                 var call = CreateLead.dispatch(lead);

@@ -64,7 +64,7 @@ public class VoiceDial extends PhenixServlet {
         }
         call.setContact(lead.getContact());
         call.setOpportunity(lead);
-        call.setBusiness(lead.getBusiness());
+        call.setChannel(lead.getBusiness());
         cid = Optionals
           .of($1(VerifiedCallerId.withProductLine(lead.getProductLine()).and(VerifiedCallerId.isDefault)))
           .stream()

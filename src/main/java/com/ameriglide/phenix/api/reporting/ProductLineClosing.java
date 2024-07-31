@@ -32,18 +32,18 @@ import static net.inetalliance.potion.Locator.countDistinct;
 import static net.inetalliance.sql.Aggregate.SUM;
 
 @WebServlet({"/reporting/reports/productLineClosing"})
-public class ProductLineClosing extends CachedGroupingRangeReport<Agent, Business> {
+public class ProductLineClosing extends CachedGroupingRangeReport<Agent, Channel> {
 
   private static final Log log = new Log();
-  private final Info<Business> info;
+  private final Info<Channel> info;
 
   public ProductLineClosing() {
     super("business", "productLine", "uniqueCid", "noTransfers");
-    info = Info.$(Business.class);
+    info = Info.$(Channel.class);
   }
 
   @Override
-  protected String getGroupLabel(final Business group) {
+  protected String getGroupLabel(final Channel group) {
     return group.getName();
   }
 
@@ -53,23 +53,23 @@ public class ProductLineClosing extends CachedGroupingRangeReport<Agent, Busines
   }
 
   @Override
-  protected Query<Agent> allRows(final Set<Business> groups, final Agent loggedIn, final LocalDateTime intervalStart) {
+  protected Query<Agent> allRows(final Set<Channel> groups, final Agent loggedIn, final LocalDateTime intervalStart) {
     return Agent.viewableBy(loggedIn).and(Agent.isActive).and(Agent.sales);
   }
 
   @Override
-  protected Business getGroup(final String[] params, final String key) {
+  protected Channel getGroup(final String[] params, final String key) {
     return info.lookup(key);
   }
 
   @Override
-  protected int getJobSize(final Agent loggedIn, final Set<Business> groups, final DateTimeInterval interval) {
+  protected int getJobSize(final Agent loggedIn, final Set<Channel> groups, final DateTimeInterval interval) {
     return count(allRows(groups, loggedIn, interval.start()));
   }
 
   @Override
   protected JsonMap generate(final Set<Source> sources, final Agent loggedIn, final ProgressMeter meter,
-                             final DateTimeInterval interval, final Set<Business> businesses, Collection<Team> teams,
+                             final DateTimeInterval interval, final Set<Channel> channels, Collection<Team> teams,
                              final Map<String, String[]> extras) {
     if (loggedIn==null || !(loggedIn.isSuperUser())) {
       log.warn(
@@ -92,7 +92,7 @@ public class ProductLineClosing extends CachedGroupingRangeReport<Agent, Busines
 
     final Set<String> vCids = productLines
       .stream()
-      .map(pl -> getVerifiedCids(loggedIn, pl, businesses))
+      .map(pl -> getVerifiedCids(loggedIn, pl, channels))
       .flatMap(Iterables::stream)
       .collect(toSet());
 
@@ -101,7 +101,7 @@ public class ProductLineClosing extends CachedGroupingRangeReport<Agent, Busines
       .soldInInterval(interval)
       .and(sources.isEmpty() ? Lead.online.negate():Lead.withSources(sources))
       .and(
-        businesses==null || businesses.isEmpty() ? Query.all(Lead.class):Lead.withBusiness(businesses));
+        channels==null || channels.isEmpty() ? Query.all(Lead.class):Lead.withChannel(channels));
     if (!teams.isEmpty()) {
       var agents = teams
         .stream()
@@ -117,7 +117,7 @@ public class ProductLineClosing extends CachedGroupingRangeReport<Agent, Busines
     final Map<Integer, AtomicInteger> teamCount = new HashMap<>();
     final Map<Integer, JsonMap> teamTotals = new HashMap<>();
     final Query<Lead> finalOppQuery = oppQuery;
-    Locator.forEach(allRows(businesses, loggedIn, interval.start()), agent -> {
+    Locator.forEach(allRows(channels, loggedIn, interval.start()), agent -> {
       meter.increment(agent.getLastNameFirstInitial());
       final Query<Call> agentCallQuery = callQuery.and(Call.withAgent(agent));
       final JsonMap agentTotal = new JsonMap();
@@ -180,10 +180,10 @@ public class ProductLineClosing extends CachedGroupingRangeReport<Agent, Busines
   }
 
   static Set<String> getVerifiedCids(final Agent loggedIn, final ProductLine productLine,
-                                final Collection<Business> businesses) {
+                                final Collection<Channel> channels) {
     final Set<String> allForProductLine = getVerifiedCids(productLine);
     final Set<String> queues = new HashSet<>(allForProductLine);
-    retainVisible(loggedIn, businesses, queues);
+    retainVisible(loggedIn, channels, queues);
     return queues;
 
   }
@@ -210,7 +210,7 @@ public class ProductLineClosing extends CachedGroupingRangeReport<Agent, Busines
     return Locator.$$(VerifiedCallerId.withProductLine(productLine)).stream().map(v -> v.sid).collect(toSet());
   }
 
-  static void retainVisible(Agent loggedIn, Collection<Business> sites, Set<String> queues) {
+  static void retainVisible(Agent loggedIn, Collection<Channel> sites, Set<String> queues) {
     // todo: implement this logic
 
   }

@@ -28,18 +28,18 @@ import static net.inetalliance.potion.Locator.*;
 import static net.inetalliance.sql.Aggregate.SUM;
 
 @WebServlet({"/reporting/reports/agentClosing"})
-public class AgentClosing extends CachedGroupingRangeReport<Agent, Business> {
+public class AgentClosing extends CachedGroupingRangeReport<Agent, Channel> {
 
   private static final Log log = new Log();
-  private final Info<Business> info;
+  private final Info<Channel> info;
 
   public AgentClosing() {
     super("business", "agent", "uniqueCid", "noTransfers");
-    info = Info.$(Business.class);
+    info = Info.$(Channel.class);
   }
 
   @Override
-  protected String getGroupLabel(final Business group) {
+  protected String getGroupLabel(final Channel group) {
     return group.getName();
   }
 
@@ -49,23 +49,23 @@ public class AgentClosing extends CachedGroupingRangeReport<Agent, Business> {
   }
 
   @Override
-  protected Business getGroup(final String[] params, final String key) {
+  protected Channel getGroup(final String[] params, final String key) {
     return info.lookup(key);
   }
 
   @Override
-  protected int getJobSize(final Agent loggedIn, final Set<Business> groups, final DateTimeInterval intervalStart) {
+  protected int getJobSize(final Agent loggedIn, final Set<Channel> groups, final DateTimeInterval intervalStart) {
     return count(allRows(groups, loggedIn, intervalStart.start()));
   }
 
   @Override
-  protected Query<Agent> allRows(Set<Business> groups, final Agent loggedIn, final LocalDateTime start) {
+  protected Query<Agent> allRows(Set<Channel> groups, final Agent loggedIn, final LocalDateTime start) {
     return Agent.viewableBy(loggedIn).and(Agent.isActive).and(Agent.sales);
   }
 
   @Override
   protected JsonMap generate(final Set<Source> sources, final Agent loggedIn, final ProgressMeter meter,
-                             final DateTimeInterval interval, final Set<Business> businesses, Collection<Team> teams,
+                             final DateTimeInterval interval, final Set<Channel> channels, Collection<Team> teams,
                              final Map<String, String[]> extras) {
     if (loggedIn==null || !(loggedIn.isSuperUser())) {
       log.warn(
@@ -96,7 +96,7 @@ public class AgentClosing extends CachedGroupingRangeReport<Agent, Business> {
     boolean noTransfers = Boolean.parseBoolean(getSingleExtra(extras, "noTransfers", "false"));
 
     final Set<String> vCids = Locator.$A(VerifiedCallerId.class).stream().map(q -> q.sid).collect(toSet());
-    ProductLineClosing.retainVisible(loggedIn, businesses, vCids);
+    ProductLineClosing.retainVisible(loggedIn, channels, vCids);
 
     final Query<Call> callQuery = Call.inInterval(interval);
     final Query<Lead> oppQuery = Lead
@@ -104,12 +104,12 @@ public class AgentClosing extends CachedGroupingRangeReport<Agent, Business> {
       .and(Lead.withAgent(agent))
       .and(oppSources)
       .and(
-        businesses==null || businesses.isEmpty() ? Query.all(Lead.class):Lead.withBusiness(businesses));
+        channels==null || channels.isEmpty() ? Query.all(Lead.class):Lead.withChannel(channels));
     final JsonList rows = new JsonList();
     Locator.forEach(Query.all(ProductLine.class), productLine -> {
       final AtomicInteger n = new AtomicInteger(0);
       var productLineVCids = new HashSet<>(vCids);
-      productLineVCids.retainAll(ProductLineClosing.getVerifiedCids(loggedIn,productLine,businesses));
+      productLineVCids.retainAll(ProductLineClosing.getVerifiedCids(loggedIn,productLine, channels));
       final Query<Call> productLineCallQuery = productLineVCids.isEmpty() ? Query.none(Call.class):callQuery.and(
         Call.withVerifiedCidIn(productLineVCids));
       var productLineTotal = new JsonMap();

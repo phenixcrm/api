@@ -1,6 +1,6 @@
 package com.ameriglide.phenix.api;
 
-import com.ameriglide.phenix.common.Business;
+import com.ameriglide.phenix.common.Channel;
 import com.ameriglide.phenix.servlet.PhenixServlet;
 import com.ameriglide.phenix.servlet.exception.NotFoundException;
 import jakarta.servlet.annotation.WebServlet;
@@ -30,7 +30,7 @@ public class BusinessEmailTemplatePreview
         var matcher = pattern.matcher(request.getRequestURI());
         if (matcher.matches()) {
             var id = matcher.group(1);
-            var biz = Locator.$(new Business(Integer.parseInt(id)));
+            var biz = Locator.$(new Channel(Integer.parseInt(id)));
             if (biz == null) {
                 throw new NotFoundException("Can't find that business");
             }

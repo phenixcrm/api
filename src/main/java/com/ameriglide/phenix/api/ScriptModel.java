@@ -173,7 +173,7 @@ public class ScriptModel extends TypeModel<ScriptNode> {
         if (productLineKey!=null) {
             final ProductLine productLine = Info.$(ProductLine.class).lookup(productLineKey);
             Locator.update(productLine, getRemoteUser(request), copy -> {
-                //todo figure out hte business/product line pairing
+                //todo figure out hte channel/product line pairing
                 //copy.setRoot(scriptNode);
             });
         } else {

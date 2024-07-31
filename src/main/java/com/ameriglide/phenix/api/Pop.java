@@ -165,7 +165,7 @@ public class Pop extends TypeModel<Call> {
     }
 
     var productLine = call.findProductLine();
-    final Business biz = Optionals.of(call.getBusiness()).orElseGet(Business.getDefault);
+    final Channel biz = Optionals.of(call.getChannel()).orElseGet(Channel.getDefault);
     var contact = new JsonMap();
     var shipping = new JsonMap();
     contact.$("shipping", shipping);

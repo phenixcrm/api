@@ -81,7 +81,7 @@ public class CreateLead extends PhenixServlet {
         updateContact(data, copy, phone, email);
       });
     }
-    Business business = null;
+    Channel channel = null;
     var campaign = data.get("campaign");
     final Integer productId;
     if (isNotEmpty(campaign)) {
@@ -98,7 +98,7 @@ public class CreateLead extends PhenixServlet {
         productId = null;
       }
       if (campaign.endsWith("Ontario")) {
-        business = $(new Business(2));
+        channel = $(new Channel(2));
       }
     } else if (leadgen!=null) {
       productId = leadgen.getProductLine().id;
@@ -158,14 +158,15 @@ public class CreateLead extends PhenixServlet {
       lead.setSource(source);
       lead.setContact(contact);
       lead.setAssignedTo(Agent.system());
-      lead.setBusiness(business);
+      lead.setBusiness(channel);
       if (leadgen!=null) {
         lead.setCampaign(leadgen);
         lead.setReferrerId(data.get("referrerId"));
         lead.setAssignedTo(Agent.system());
       }
-      if(business == null) {
-        lead.setBusiness(Optionals.of(vCid).map(VerifiedCallerId::getQueue).map(SkillQueue::getBusiness).orElseGet(Business.getDefault));
+      if(channel== null) {
+        lead.setBusiness(Optionals.of(vCid).map(VerifiedCallerId::getQueue).map(SkillQueue::getChannel).orElseGet(
+          Channel.getDefault));
       }
       lead.setHeat(Heat.NEW);
       lead.setProductLine(product);
@@ -255,7 +256,7 @@ public class CreateLead extends PhenixServlet {
     var call = new Call(task.getSid());
     call.setCreated(LocalDateTime.now());
     call.setDirection(CallDirection.VIRTUAL);
-    call.setBusiness(lead.getBusiness());
+    call.setChannel(lead.getBusiness());
     call.setSource(lead.getSource());
     call.setAgent(Agent.system());
     call.setResolution(Resolution.ACTIVE);

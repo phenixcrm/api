@@ -102,7 +102,7 @@ public class ReviewModel extends PhenixServlet {
           .$("silent");
         Info.$(Call.class).fill(call, callJson);
         var callerId = call.getRemoteCaller();
-        var business = call.getBusiness();
+        var business = call.getChannel();
         var agent = call.getAgent();
         callJson
           .$("callerId", new JsonMap().$("name", callerId.getName()).$("number", callerId.getPhone()))

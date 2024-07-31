@@ -101,14 +101,14 @@ public class CallModel extends ListableModel<Call> {
     } else {
 
       final String[] ss = request.getParameterValues("s");
-      Query<Call> withSite = ss==null || ss.length==0 ? Query.all(Call.class):Call.withBusinessIdIn(
+      Query<Call> withSite = ss==null || ss.length==0 ? Query.all(Call.class):Call.withChannelIdIn(
         Arrays.stream(ss).map(Integer::valueOf).collect(toSet()));
 
       final Range c = getParameter(request, Range.class, "c");
       if (c!=null) {
         withSite = withSite.and(Call.inInterval(c.toDateTimeInterval()));
       }
-      return Call.isQueue.and(Call.withBusiness($$(Business.withAgent(agent))))
+      return Call.isQueue.and(Call.withChannel($$(Channel.withAgent(agent))))
         // todo: add PL/queue back in .and(Startup.callsWithProductLineParameter(request))
         .and(withSite)
         .and(request.getParameter("silent")==null ? Call.isShort:Query.all(Call.class))
@@ -154,8 +154,8 @@ public class CallModel extends ListableModel<Call> {
         throw new ForbiddenException("%s tried to create a simulated call for a different manager's agent (%d)",
           manager.getLastNameFirstInitial(), agent.id);
       }
-      final Business business = Locator.$(new Business(data.getInteger("business")));
-      if (business==null) {
+      final Channel channel = Locator.$(new Channel(data.getInteger("business")));
+      if (channel==null) {
         throw new NotFoundException("Could not find business %d", data.getInteger("business"));
       }
       final ProductLine product = Locator.$(new ProductLine(data.getInteger("productLine")));
@@ -163,14 +163,14 @@ public class CallModel extends ListableModel<Call> {
         throw new NotFoundException("Could not find product line %d", data.getInteger("productLine"));
       }
       final Call call = new Call(format("SIM%d", currentTimeMillis()));
-      call.setBusiness(business);
+      call.setChannel(channel);
       call.setQueue(Startup.router.getQueue("sales"));
 
       if (call.getQueue()==null) {
         return new JsonMap()
           .$("success", false)
           .$("reason",
-            format("could not find call queue for '%s' on %s", product.getName(), business.getAbbreviation()));
+            format("could not find call queue for '%s' on %s", product.getName(), channel.getAbbreviation()));
       }
       Collections.shuffle(simContacts);
       var c = (JsonMap) simContacts.get(0);
@@ -202,8 +202,8 @@ public class CallModel extends ListableModel<Call> {
     map.$("todo", call.isTodo());
     switch (call.getDirection()) {
       case OUTBOUND, QUEUE, VIRTUAL -> {
-        final Business business = of(call.getBusiness()).orElseGet(Business.getDefault);
-        map.$("business", new JsonMap().$("name", business.getName()).$("id", business.id));
+        final Channel channel = of(call.getChannel()).orElseGet(Channel.getDefault);
+        map.$("business", new JsonMap().$("name", channel.getName()).$("id", channel.id));
         if (call.getQueue()!=null) {
           final JsonMap queue = new JsonMap();
           queue.$("name", call.getQueue().getName());
@@ -292,7 +292,7 @@ public class CallModel extends ListableModel<Call> {
             .$("id", contact.id)
             .$("leads", leads));
           forEach(Lead
-            .withBusiness($$(Business.withAgent(agent)))
+            .withChannel($$(Channel.withAgent(agent)))
             .and(Lead.withContact(contact))
             .orderBy("created", ASCENDING), o -> {
             final Agent assignedTo = o.getAssignedTo();
@@ -316,7 +316,7 @@ public class CallModel extends ListableModel<Call> {
     }
     return map
       .$("agent", call.getAgent()==null ? "None":call.getAgent().getLastNameFirstInitial())
-      .$("business", call.getBusiness()==null ? "None":call.getBusiness().getAbbreviation())
+      .$("business", call.getChannel()==null ? "None":call.getChannel().getAbbreviation())
       .$("productLine", productLine==null ? "None":productLine.getAbbreviation());
 
   }

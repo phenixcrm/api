@@ -148,7 +148,7 @@ public class LeadModel extends ListableModel<Lead> {
     }
     final String[] bs = request.getParameterValues("b");
     if (bs!=null && bs.length > 0) {
-      query = query.and(Lead.withBusinessIdIn(Arrays.stream(bs).map(Integer::valueOf).collect(toList())));
+      query = query.and(Lead.withChannelIdIn(Arrays.stream(bs).map(Integer::valueOf).collect(toList())));
     }
 
     final String[] sources = request.getParameterValues("src");
@@ -415,7 +415,7 @@ public class LeadModel extends ListableModel<Lead> {
       case "state" ->
         Query.all(Contact.class).join(Lead.class, "contact").and(base).orderBy("shipping_state", f.direction, false);
       case "business" ->
-        Query.all(Business.class).join(Lead.class, "business").and(base).orderBy("business.name", f.direction, false);
+        Query.all(Channel.class).join(Lead.class, "business").and(base).orderBy("business.name", f.direction, false);
       case "assignedTo" -> Query
         .all(Agent.class)
         .join(Lead.class, "assignedTo")

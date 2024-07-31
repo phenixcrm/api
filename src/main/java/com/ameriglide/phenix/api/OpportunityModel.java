@@ -39,7 +39,7 @@ public class OpportunityModel extends ListableModel<Lead> {
       if (call==null) {
         throw new NotFoundException("Could not find call with key %s", callId);
       }
-      q = q.and(Lead.withBusinessIdIn(List.of(call.getBusiness().id)));
+      q = q.and(Lead.withChannelIdIn(List.of(call.getChannel().id)));
     }
     final var contactId = request.getParameter("contact");
     if (isNotEmpty(contactId)) {
@@ -70,7 +70,7 @@ public class OpportunityModel extends ListableModel<Lead> {
       lead.setProductLine(call.getDialedNumber().getProductLine());
       lead.setSource(call.getSource());
       lead.setCreated(LocalDateTime.now());
-      lead.setBusiness(call.getBusiness());
+      lead.setBusiness(call.getChannel());
       return lead;
     }
     return super.lookup(key, request);
@@ -93,7 +93,7 @@ public class OpportunityModel extends ListableModel<Lead> {
   public static Json json(Lead arg) {
     final Agent assignedTo = arg.getAssignedTo();
     final ProductLine productLine = arg.getProductLine();
-    final Business biz = arg.getBusiness();
+    final Channel biz = arg.getBusiness();
     final Heat heat = arg.getHeat();
     return new JsonMap()
       .$("id", arg.id)

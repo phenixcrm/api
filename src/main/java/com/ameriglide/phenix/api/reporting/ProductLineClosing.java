@@ -38,7 +38,7 @@ public class ProductLineClosing extends CachedGroupingRangeReport<Agent, Channel
   private final Info<Channel> info;
 
   public ProductLineClosing() {
-    super("business", "productLine", "uniqueCid", "noTransfers");
+    super("channel", "productLine", "uniqueCid", "noTransfers");
     info = Info.$(Channel.class);
   }
 

@@ -102,11 +102,11 @@ public class ReviewModel extends PhenixServlet {
           .$("silent");
         Info.$(Call.class).fill(call, callJson);
         var callerId = call.getRemoteCaller();
-        var business = call.getChannel();
+        var channel = call.getChannel();
         var agent = call.getAgent();
         callJson
           .$("callerId", new JsonMap().$("name", callerId.getName()).$("number", callerId.getPhone()))
-          .$("site", business==null ? null:new JsonMap().$("abbreviation", business.getAbbreviation()))
+          .$("site", channel==null ? null:new JsonMap().$("abbreviation", channel.getAbbreviation()))
           .$("agent", agent==null ? null:new JsonMap().$("name", agent.getFirstNameLastInitial()).$("id", agent.id))
           .$("queue", call.getQueue().getName())
           .$("productLine", Optionals.of(call.getProductLine()).map(p -> p.id).orElse(null))

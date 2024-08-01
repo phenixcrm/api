@@ -158,14 +158,14 @@ public class CreateLead extends PhenixServlet {
       lead.setSource(source);
       lead.setContact(contact);
       lead.setAssignedTo(Agent.system());
-      lead.setBusiness(channel);
+      lead.setChannel(channel);
       if (leadgen!=null) {
         lead.setCampaign(leadgen);
         lead.setReferrerId(data.get("referrerId"));
         lead.setAssignedTo(Agent.system());
       }
       if(channel== null) {
-        lead.setBusiness(Optionals.of(vCid).map(VerifiedCallerId::getQueue).map(SkillQueue::getChannel).orElseGet(
+        lead.setChannel(Optionals.of(vCid).map(VerifiedCallerId::getQueue).map(SkillQueue::getChannel).orElseGet(
           Channel.getDefault));
       }
       lead.setHeat(Heat.NEW);
@@ -256,7 +256,7 @@ public class CreateLead extends PhenixServlet {
     var call = new Call(task.getSid());
     call.setCreated(LocalDateTime.now());
     call.setDirection(CallDirection.VIRTUAL);
-    call.setChannel(lead.getBusiness());
+    call.setChannel(lead.getChannel());
     call.setSource(lead.getSource());
     call.setAgent(Agent.system());
     call.setResolution(Resolution.ACTIVE);

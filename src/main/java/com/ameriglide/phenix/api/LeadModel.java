@@ -85,10 +85,10 @@ public class LeadModel extends ListableModel<Lead> {
           new JsonMap().$("name", o.getProductLine().getName()).$("abbreviation", o.getProductLine().getAbbreviation()))
         .$("assignedTo",
           new JsonMap().$("name", o.getAssignedTo().getLastNameFirstInitial()).$("id", o.getAssignedTo().id))
-        .$("business", new JsonMap()
-          .$("name", o.getBusiness().getName())
-          .$("abbreviation", o.getBusiness().getAbbreviation())
-          .$("uri", o.getBusiness().getUri()));
+        .$("channel", new JsonMap()
+          .$("name", o.getChannel().getName())
+          .$("abbreviation", o.getChannel().getAbbreviation())
+          .$("uri", o.getChannel().getUri()));
 
       var notes = new JsonList();
       extra.$("notes", notes);
@@ -414,8 +414,8 @@ public class LeadModel extends ListableModel<Lead> {
         .orderBy("contact.firstName", ASCENDING, false);
       case "state" ->
         Query.all(Contact.class).join(Lead.class, "contact").and(base).orderBy("shipping_state", f.direction, false);
-      case "business" ->
-        Query.all(Channel.class).join(Lead.class, "business").and(base).orderBy("business.name", f.direction, false);
+      case "channel" ->
+        Query.all(Channel.class).join(Lead.class, "channel").and(base).orderBy("channel.name", f.direction, false);
       case "assignedTo" -> Query
         .all(Agent.class)
         .join(Lead.class, "assignedTo")

@@ -82,7 +82,7 @@ public class CallHistoryModel extends PhenixServlet {
     Info.$(call).fill(call, json);
     Optionals
       .of(call.getChannel())
-      .ifPresent(b -> json.$("business", JsonMap.$().$("name", b.getName()).$("abbreviation", b.getAbbreviation())));
+      .ifPresent(b -> json.$("channel", JsonMap.$().$("name", b.getName()).$("abbreviation", b.getAbbreviation())));
     json.$(call.getDirection()==OUTBOUND ? "to":"from", call.getRemoteCaller().toDisplayName());
     Optionals.of(call.getAgent()).ifPresent(a -> json.$(call.getDirection()==OUTBOUND ? "from":"to", a.getFullName()));
     final JsonList talkList = new JsonList();

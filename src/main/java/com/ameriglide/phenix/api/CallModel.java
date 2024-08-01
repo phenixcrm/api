@@ -149,16 +149,16 @@ public class CallModel extends ListableModel<Call> {
       if (!Auth.isTeamLeader(request)) {
         throw new ForbiddenException("%s tried to create a simulated call", manager.getLastNameFirstInitial());
       }
-      final Agent agent = Locator.$(new Agent(data.getInteger("agent")));
+      var agent = Locator.$(new Agent(data.getInteger("agent")));
       if (!manager.canSee(agent)) {
         throw new ForbiddenException("%s tried to create a simulated call for a different manager's agent (%d)",
           manager.getLastNameFirstInitial(), agent.id);
       }
-      final Channel channel = Locator.$(new Channel(data.getInteger("business")));
+      var channel = Locator.$(new Channel(data.getInteger("channel")));
       if (channel==null) {
-        throw new NotFoundException("Could not find business %d", data.getInteger("business"));
+        throw new NotFoundException("Could not find channel %d", data.getInteger("channel"));
       }
-      final ProductLine product = Locator.$(new ProductLine(data.getInteger("productLine")));
+      var product = Locator.$(new ProductLine(data.getInteger("productLine")));
       if (product==null) {
         throw new NotFoundException("Could not find product line %d", data.getInteger("productLine"));
       }
@@ -203,7 +203,7 @@ public class CallModel extends ListableModel<Call> {
     switch (call.getDirection()) {
       case OUTBOUND, QUEUE, VIRTUAL -> {
         final Channel channel = of(call.getChannel()).orElseGet(Channel.getDefault);
-        map.$("business", new JsonMap().$("name", channel.getName()).$("id", channel.id));
+        map.$("channel", new JsonMap().$("name", channel.getName()).$("id", channel.id));
         if (call.getQueue()!=null) {
           final JsonMap queue = new JsonMap();
           queue.$("name", call.getQueue().getName());
@@ -316,7 +316,7 @@ public class CallModel extends ListableModel<Call> {
     }
     return map
       .$("agent", call.getAgent()==null ? "None":call.getAgent().getLastNameFirstInitial())
-      .$("business", call.getChannel()==null ? "None":call.getChannel().getAbbreviation())
+      .$("channel", call.getChannel()==null ? "None":call.getChannel().getAbbreviation())
       .$("productLine", productLine==null ? "None":productLine.getAbbreviation());
 
   }

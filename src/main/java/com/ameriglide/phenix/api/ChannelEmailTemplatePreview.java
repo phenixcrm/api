@@ -11,13 +11,13 @@ import net.inetalliance.types.www.ContentType;
 
 import java.util.regex.Pattern;
 
-@WebServlet("/api/businessEmailTemplatePreview/*")
-public class BusinessEmailTemplatePreview
+@WebServlet("/api/channelEmailTemplatePreview/*")
+public class ChannelEmailTemplatePreview
         extends PhenixServlet {
 
-    private static final Pattern pattern = Pattern.compile("/api/businessEmailTemplatePreview/(\\d+)");
+    private static final Pattern pattern = Pattern.compile("/api/channelEmailTemplatePreview/(\\d+)");
 
-    public BusinessEmailTemplatePreview() {
+    public ChannelEmailTemplatePreview() {
     }
 
     public Pattern getPattern() {
@@ -32,7 +32,7 @@ public class BusinessEmailTemplatePreview
             var id = matcher.group(1);
             var biz = Locator.$(new Channel(Integer.parseInt(id)));
             if (biz == null) {
-                throw new NotFoundException("Can't find that business");
+                throw new NotFoundException("Can't find that channel");
             }
             var content = biz.getEmailTemplate() == null
                     ? ""

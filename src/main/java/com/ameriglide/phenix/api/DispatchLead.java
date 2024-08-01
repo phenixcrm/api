@@ -159,7 +159,7 @@ public class DispatchLead extends PhenixServlet {
     var lead = new Lead();
     lead.setContact(contact);
     lead.setScreened(LocalDateTime.now());
-    lead.setBusiness(Channel.getDefault.get());
+    lead.setChannel(Channel.getDefault.get());
     lead.setCreated(LocalDateTime.now());
     lead.setAssignedTo(Agent.system());
     lead.setSource(source);

@@ -29,7 +29,7 @@ public class FreeBusy extends PhenixServlet {
       .$("productLine", lead.getProductLine().getName())
       .$("reminder", lead.getReminder())
       .$("contact", lead.getContact().getLastNameFirstInitial())
-      .$("business", lead.getBusiness().getName())
+      .$("channel", lead.getChannel().getName())
       .$("heat", lead.getHeat())
       .$("amount", lead.getAmount());
   }

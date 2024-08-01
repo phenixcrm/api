@@ -36,7 +36,7 @@ public class RelatedLeadsModel
           map.$("saleDate");
         }
         Info.$(arg).fill(arg, map);
-        map.$("business", arg.getBusiness().getAbbreviation())
+        map.$("channel", arg.getChannel().getAbbreviation())
             .$("assignedTo", arg.getAssignedTo().getLastNameFirstInitial())
             .$("productLine", arg.getProductLine().getName());
         list.add(map);

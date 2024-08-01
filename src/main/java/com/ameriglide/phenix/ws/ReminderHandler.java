@@ -73,7 +73,7 @@ public class ReminderHandler implements JsonMessageHandler, Runnable {
       .$("heat", o.getHeat())
       .$("dial", dial)
       .$("contact", Optionals.of(o.getContact()).map(Surnamed::getFullName).orElse(""))
-      .$("business", o.getBusiness().getAbbreviation())
+      .$("channel", o.getChannel().getAbbreviation())
       .$("productLine",
         JsonMap.$().$("name", o.getProductLine().getName()).$("abbreviation", o.getProductLine().getAbbreviation()))
       .$("amount", o.getAmount());

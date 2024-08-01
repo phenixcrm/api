@@ -70,7 +70,7 @@ public class OpportunityModel extends ListableModel<Lead> {
       lead.setProductLine(call.getDialedNumber().getProductLine());
       lead.setSource(call.getSource());
       lead.setCreated(LocalDateTime.now());
-      lead.setBusiness(call.getChannel());
+      lead.setChannel(call.getChannel());
       return lead;
     }
     return super.lookup(key, request);
@@ -93,12 +93,12 @@ public class OpportunityModel extends ListableModel<Lead> {
   public static Json json(Lead arg) {
     final Agent assignedTo = arg.getAssignedTo();
     final ProductLine productLine = arg.getProductLine();
-    final Channel biz = arg.getBusiness();
+    final Channel biz = arg.getChannel();
     final Heat heat = arg.getHeat();
     return new JsonMap()
       .$("id", arg.id)
       .$("heat", new JsonMap().$("name", heat.name()).$("ordinal", heat.ordinal()))
-      .$("business", new JsonMap()
+      .$("channel", new JsonMap()
         .$("id", biz.id)
         .$("abbreviation", biz.getAbbreviation())
         .$("uri", biz.getUri())

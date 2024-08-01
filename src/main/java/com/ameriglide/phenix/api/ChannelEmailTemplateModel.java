@@ -12,11 +12,11 @@ import java.util.regex.Pattern;
 
 import static net.inetalliance.sql.OrderBy.Direction.ASCENDING;
 
-@WebServlet("/api/businessEmailTemplate/*")
-public class BusinessEmailTemplateModel extends ListableModel<Channel> {
+@WebServlet("/api/channelEmailTemplate/*")
+public class ChannelEmailTemplateModel extends ListableModel<Channel> {
 
-    public BusinessEmailTemplateModel() {
-        super(Channel.class, Pattern.compile("/api/businessEmailTemplate(?:/(\\d+))?"));
+    public ChannelEmailTemplateModel() {
+        super(Channel.class, Pattern.compile("/api/channelEmailTemplate(?:/(\\d+))?"));
     }
 
     @Override
@@ -27,10 +27,10 @@ public class BusinessEmailTemplateModel extends ListableModel<Channel> {
     }
 
     @Override
-    public Json toJson(final HttpServletRequest request, Channel biz) {
-        return new JsonMap().$("id", biz.id)
-                .$("name", biz.getName())
-                .$("emailTemplate", biz.getEmailTemplate())
-                .$("emailTemplateStyles", biz.getEmailTemplateStyles());
+    public Json toJson(final HttpServletRequest request, Channel c) {
+        return new JsonMap().$("id", c.id)
+                .$("name", c.getName())
+                .$("emailTemplate", c.getEmailTemplate())
+                .$("emailTemplateStyles", c.getEmailTemplateStyles());
     }
 }

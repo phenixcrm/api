@@ -34,7 +34,7 @@ public class AgentClosing extends CachedGroupingRangeReport<Agent, Channel> {
   private final Info<Channel> info;
 
   public AgentClosing() {
-    super("business", "agent", "uniqueCid", "noTransfers");
+    super("channel", "agent", "uniqueCid", "noTransfers");
     info = Info.$(Channel.class);
   }
 

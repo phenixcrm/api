@@ -61,8 +61,8 @@ public class Pop extends TypeModel<Call> {
       extra.$("productLine", new JsonMap().$("id", opp.getProductLine().id).$("name", opp.getProductLine().getName()));
       extra.$("assignedTo",
         new JsonMap().$("id", opp.getAssignedTo().id).$("name", opp.getAssignedTo().getFirstNameLastInitial()));
-      extra.$("business", new JsonMap().$("id", opp.getBusiness().id).$("name", opp.getBusiness().getName()).$("uri",
-        opp.getBusiness().getUri()));
+      extra.$("channel", new JsonMap().$("id", opp.getChannel().id).$("name", opp.getChannel().getName()).$("uri",
+        opp.getChannel().getUri()));
       list.add(new JsonMap()
         .$("id", opp.id)
         .$("created", opp.getCreated())
@@ -72,7 +72,7 @@ public class Pop extends TypeModel<Call> {
         .$("heat", opp.getHeat())
         .$("productLine", opp.getProductLine().id)
         .$("assignedTo", opp.getAssignedTo().id)
-        .$("business", opp.getBusiness().id)
+        .$("channel", opp.getChannel().id)
         .$("extra", extra));
     });
     return json.$("path", contactBest.toJson());
@@ -165,7 +165,7 @@ public class Pop extends TypeModel<Call> {
     }
 
     var productLine = call.findProductLine();
-    final Channel biz = Optionals.of(call.getChannel()).orElseGet(Channel.getDefault);
+    var channel = Optionals.of(call.getChannel()).orElseGet(Channel.getDefault);
     var contact = new JsonMap();
     var shipping = new JsonMap();
     contact.$("shipping", shipping);
@@ -176,14 +176,14 @@ public class Pop extends TypeModel<Call> {
       .$("defaults", new JsonMap().$("contact", contact).$("lead", lead))
       .$("direction", call.getDirection())
       .$("source", call.getSource())
-      .$("business", new JsonMap().$("id", biz.id).$("name", biz.getName()))
+      .$("channel", new JsonMap().$("id", channel.id).$("name", channel.getName()))
       .$("contacts", contacts)
       .$("productLine", new JsonMap()
         .$("id", productLine.id)
         .$("abbreviation", productLine.getAbbreviation())
         .$("name", productLine.getName()));
     lead.$("heat", Heat.NEW);
-    lead.$("business", biz.id);
+    lead.$("channel", channel.id);
     lead.$("productLine", productLine.id).$("source", call.getSource());
 
     if (phone!=null) {

@@ -6,9 +6,9 @@ import jakarta.servlet.annotation.WebServlet;
 import net.inetalliance.potion.query.Autocomplete;
 import net.inetalliance.potion.query.Query;
 
-@WebServlet("/api/business/*")
-public class BusinessModel extends ListableModel.Named<Channel>{
-  public BusinessModel() {
+@WebServlet("/api/channtel/*")
+public class ChannelModel extends ListableModel.Named<Channel>{
+  public ChannelModel() {
     super(Channel.class);
   }
 

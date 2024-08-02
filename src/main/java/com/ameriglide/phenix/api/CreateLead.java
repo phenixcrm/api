@@ -129,7 +129,6 @@ public class CreateLead extends PhenixServlet {
         default -> 17; // when all else fails, set to undetermined
       }));
     Lead lead;
-    var vCid = $1(VerifiedCallerId.withProductLine(product));
     if (contact.id==null) {
       create("CreateLead", contact);
       lead = null;
@@ -165,8 +164,7 @@ public class CreateLead extends PhenixServlet {
         lead.setAssignedTo(Agent.system());
       }
       if(channel== null) {
-        lead.setChannel(Optionals.of(vCid).map(VerifiedCallerId::getQueue).map(SkillQueue::getChannel).orElseGet(
-          Channel.getDefault));
+        lead.setChannel(Channel.getDefault.get());
       }
       lead.setHeat(Heat.NEW);
       lead.setProductLine(product);

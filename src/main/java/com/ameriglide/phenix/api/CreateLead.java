@@ -250,6 +250,7 @@ public class CreateLead extends PhenixServlet {
     if (lead.getSource()==PHONE && lead.getAssignedTo()!=null) {
       taskData.$("preferred", lead.getAssignedTo().getSid());
     }
+    taskData.$("channel",lead.getChannel().getAbbreviation());
     var task = router.createDigitalLeadsTask(Json.ugly(taskData), (int) TimeUnit.DAYS.toSeconds(1));
     var call = new Call(task.getSid());
     call.setCreated(LocalDateTime.now());

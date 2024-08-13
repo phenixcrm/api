@@ -1,9 +1,6 @@
 package com.ameriglide.phenix;
 
-import com.ameriglide.phenix.common.Agent;
-import com.ameriglide.phenix.common.JumpcloudOrg;
-import com.ameriglide.phenix.common.Team;
-import com.ameriglide.phenix.common.Ticket;
+import com.ameriglide.phenix.common.*;
 import com.ameriglide.phenix.core.Log;
 import com.ameriglide.phenix.core.Optionals;
 import com.ameriglide.phenix.servlet.Startup;
@@ -16,6 +13,7 @@ import net.inetalliance.potion.Locator;
 import net.inetalliance.potion.info.Info;
 import net.inetalliance.types.json.Json;
 import net.inetalliance.types.json.JsonList;
+import net.inetalliance.types.json.JsonString;
 import net.inetalliance.types.www.ContentType;
 
 import javax.naming.AuthenticationException;
@@ -212,6 +210,10 @@ public class Auth extends HttpServlet {
     }
     var manager = isManager(a);
     var json = Info.$(Agent.class).toJson($(a)).$("sipSecret", Startup.router.getSipSecret(a));
+
+
+    json.$("phoneNumbers", JsonList.collect(Locator.$$(VerifiedCallerId.withDirect(a)),
+    vCid-> new JsonString(vCid.getPhoneNumber())));
     var roles = new JsonList();
     json.$("roles", roles);
     var superUser = a.isSuperUser();

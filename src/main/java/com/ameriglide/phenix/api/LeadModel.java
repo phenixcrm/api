@@ -146,9 +146,9 @@ public class LeadModel extends ListableModel<Lead> {
     if (pls!=null && pls.length > 0) {
       query = query.and(Lead.withProductLineIdIn(Arrays.stream(pls).map(Integer::valueOf).collect(toList())));
     }
-    final String[] bs = request.getParameterValues("b");
-    if (bs!=null && bs.length > 0) {
-      query = query.and(Lead.withChannelIdIn(Arrays.stream(bs).map(Integer::valueOf).collect(toList())));
+    final String[] cs = request.getParameterValues("c");
+    if (cs!=null && cs.length > 0) {
+      query = query.and(Lead.withChannelIdIn(Arrays.stream(cs).map(Integer::valueOf).collect(toList())));
     }
 
     final String[] sources = request.getParameterValues("src");
@@ -212,9 +212,9 @@ public class LeadModel extends ListableModel<Lead> {
       }
     }
 
-    final Range c = getParameter(request, Range.class, "c");
-    if (c!=null) {
-      query = query.and(Lead.createdInInterval(c.toInterval()));
+    final Range cd = getParameter(request, Range.class, "cd");
+    if (cd!=null) {
+      query = query.and(Lead.createdInInterval(cd.toInterval()));
     } else {
       var createdIn = getInterval(request, "created");
       if (createdIn!=null) {

@@ -31,10 +31,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
+import java.util.*;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -59,6 +56,7 @@ public class CallModel extends ListableModel<Call> {
 
   private static final Pattern space = compile(" ");
   private static final Log log = new Log();
+  public static final Set<String> validInfoUpdateFields = Set.of("lead", "contact");
   private List<JsonMap> simContacts;
 
   public CallModel() {
@@ -137,7 +135,15 @@ public class CallModel extends ListableModel<Call> {
       // only allow flipping of reviewed flag.
       return super.update(key, request, response, call, new JsonMap().$("reviewed", data.getBoolean("reviewed")));
     } else {
-      throw new UnsupportedOperationException();
+      final boolean hasContact = data.containsKey("contact");
+      if(validInfoUpdateFields.containsAll(data.keySet())) {
+        var json = new JsonMap();
+        json.putAll(data);
+        return super.update(key, request, response, call, json);
+      }
+      else {
+        throw new UnsupportedOperationException();
+      }
     }
   }
 

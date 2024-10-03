@@ -18,6 +18,7 @@ dependencies {
     shared.postgresql,
     shared.servlet,
     shared.websocket,
+    shared.sendgrid,
     shared.twilio,
     shared.redis,
     shared.dotenv,

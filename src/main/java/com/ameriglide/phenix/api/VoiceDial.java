@@ -4,7 +4,6 @@ import com.ameriglide.phenix.Auth;
 import com.ameriglide.phenix.DialMode;
 import com.ameriglide.phenix.common.*;
 import com.ameriglide.phenix.core.Log;
-import com.ameriglide.phenix.core.Optionals;
 import com.ameriglide.phenix.servlet.PhenixServlet;
 import com.ameriglide.phenix.servlet.exception.NotFoundException;
 import com.ameriglide.phenix.types.Resolution;
@@ -65,17 +64,10 @@ public class VoiceDial extends PhenixServlet {
         call.setContact(lead.getContact());
         call.setOpportunity(lead);
         call.setChannel(lead.getChannel());
-        cid = Optionals
-          .of($1(VerifiedCallerId.withProductLine(lead.getProductLine()).and(VerifiedCallerId.isDefault)))
-          .stream()
-          .peek(vCid -> {
-            call.setDialedNumber(vCid);
-            call.setQueue(vCid.getQueue());
-          })
-          .findFirst()
-          .orElseGet(() -> Optionals
-            .of($1(VerifiedCallerId.withProductLine(null).and(VerifiedCallerId.isDefault)))
-            .orElseGet(() -> Locator.$1(VerifiedCallerId.isDefault)));
+        var vCid = lead.getOutboundCid();
+        call.setDialedNumber(vCid);
+        call.setQueue(vCid.getQueue());
+        cid = vCid;
       } else if (called!=null && called.isAgent()) {
         cid = dialingAgent;
       } else {
@@ -139,4 +131,6 @@ public class VoiceDial extends PhenixServlet {
       }
     }
   }
+
+
 }

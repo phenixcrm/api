@@ -97,7 +97,7 @@ public class CreateLead extends PhenixServlet {
         log.warn(() -> "weird FB campaign name %s".formatted(campaign));
         productId = null;
       }
-      if (campaign.endsWith("Ontario")) {
+      if (campaign.endsWith("Ontario") || campaign.endsWith("GTA")) {
         channel = $(new Channel(2));
       }
     } else if (leadgen!=null) {

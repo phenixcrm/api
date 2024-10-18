@@ -268,7 +268,11 @@ public class CreateLead extends PhenixServlet {
     call.setZip(contact.getShipping().getPostalCode());
     create("CreateLead", call);
     if (SessionHandler.digiHandler!=null) {
-      SessionHandler.digiHandler.newDigi(DigiModel.toJson(call));
+      try {
+        SessionHandler.digiHandler.newDigi(DigiModel.toJson(call));
+      } catch (Throwable t) {
+        log.error(t);
+      }
     }
     return call;
   }

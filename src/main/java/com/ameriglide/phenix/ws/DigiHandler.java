@@ -4,12 +4,11 @@ import jakarta.websocket.Session;
 import net.inetalliance.types.json.Json;
 import net.inetalliance.types.json.JsonMap;
 
-import java.util.Collections;
-import java.util.HashSet;
 import java.util.Set;
+import java.util.concurrent.CopyOnWriteArraySet;
 
 public class DigiHandler implements JsonMessageHandler{
-  private final Set<Session> subscribers = Collections.synchronizedSet(new HashSet<>(8));
+  private final Set<Session> subscribers = new CopyOnWriteArraySet<>();
   @Override
   public JsonMap onMessage(final Session session, final JsonMap msg) {
     return null;

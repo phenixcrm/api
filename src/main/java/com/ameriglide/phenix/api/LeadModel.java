@@ -34,6 +34,7 @@ import java.util.EnumSet;
 import java.util.Set;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.regex.Pattern;
 
@@ -423,12 +424,20 @@ public class LeadModel extends ListableModel<Lead> {
       default -> base.orderBy(f.field, f.direction);
     };
   }
+  private static Predicate<String> numeric = compile("[0-9]*").asMatchPredicate();
+
 
   public static Query<Lead> buildSearchQuery(final Query<Lead> query, String searchQuery) {
     searchQuery = searchQuery.replaceAll("[-()]", "");
     searchQuery = spaces.matcher(searchQuery).replaceAll(" ");
     searchQuery = or.matcher(searchQuery).replaceAll("|");
     final String[] terms = space.split(searchQuery);
+    for (int i = 0; i < terms.length; i++) {
+      String term = terms[i];
+      if(term.length()==10 && numeric.test(term)) {
+        terms[i] = "+1" + term;
+      }
+    }
     final SortedQuery<Lead> delegate = query
       .and(new Query<>(Lead.class, (p) -> {
         throw new UnsupportedOperationException();

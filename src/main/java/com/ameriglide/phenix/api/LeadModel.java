@@ -229,9 +229,7 @@ public class LeadModel extends ListableModel<Lead> {
     if (isEmpty(q)) {
       return query;
     }
-    return
-
-      buildSearchQuery(query, q);
+    return buildSearchQuery(query, q);
   }
 
   @Override

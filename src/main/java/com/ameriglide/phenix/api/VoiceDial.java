@@ -77,7 +77,7 @@ public class VoiceDial extends PhenixServlet {
       call.sid = "ph" + UUID.randomUUID().toString().replaceAll("-", "");
       Locator.create("VoiceDial", call);
       router.call(new PhoneNumber(cid.getPhoneNumber()), from, "/voice/dial",
-        request.getQueryString() + "&call=" + call.sid);
+        request.getQueryString() + "&call=" + call.sid, dialingAgent.getFullName());
       log.info(() -> "New API dial %s %s -> %s".formatted(call.sid, dialingAgent.getSipUser(),
         called==null ? "queue":called.endpoint()));
       response.sendError(HttpServletResponse.SC_NO_CONTENT);

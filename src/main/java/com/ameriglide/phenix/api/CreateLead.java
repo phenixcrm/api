@@ -8,6 +8,7 @@ import com.ameriglide.phenix.servlet.PhenixServlet;
 import com.ameriglide.phenix.servlet.Startup;
 import com.ameriglide.phenix.servlet.exception.BadRequestException;
 import com.ameriglide.phenix.servlet.exception.NotFoundException;
+import com.ameriglide.phenix.servlet.exception.UnauthorizedException;
 import com.ameriglide.phenix.twilio.TaskRouter;
 import com.ameriglide.phenix.types.CallDirection;
 import com.ameriglide.phenix.types.Resolution;
@@ -48,7 +49,7 @@ public class CreateLead extends PhenixServlet {
       var lead = $1(Lead.withAgent($(Agent.system())).and(Lead.withSources(Set.of(FORM, SOCIAL))));
       lead.setProductLine(Locator.$(new ProductLine(13)));
       dispatch(lead);
-      log.info(()->"Dispatched Opp %d".formatted(lead.id));
+      log.info(() -> "Dispatched Opp %d".formatted(lead.id));
     } finally {
       Startup.teardown();
     }
@@ -56,8 +57,10 @@ public class CreateLead extends PhenixServlet {
 
   @Override
   protected void post(final HttpServletRequest request, final HttpServletResponse response) throws Exception {
+    if (!"b181cd58-2b94-4a25-8c5f-2008cfb5bd4a".equals(request.getHeader("x-api-key"))) {
+      throw new UnauthorizedException();
+    }
     var leadgen = getLeadGenSource(request);
-
     var data = JsonMap.parse(request.getInputStream());
     log.info("CreateLead: %s", Json.ugly(data));
     var phone = Stream
@@ -163,15 +166,13 @@ public class CreateLead extends PhenixServlet {
         lead.setReferrerId(data.get("referrerId"));
         lead.setAssignedTo(Agent.system());
       }
-      if(channel== null) {
+      if (channel==null) {
         lead.setChannel(Channel.getDefault.get());
       }
       lead.setHeat(Heat.NEW);
       lead.setProductLine(product);
       lead.setAmount(Optionals
-        .of(
-          Locator.$$(Lead.withProductLine(product).and(Lead.isSold), Aggregate.AVG, Currency.class,
-            "amount"))
+        .of(Locator.$$(Lead.withProductLine(product).and(Lead.isSold), Aggregate.AVG, Currency.class, "amount"))
         .orElse(Currency.ZERO));
       create("CreateLead", lead);
     } else {
@@ -250,7 +251,7 @@ public class CreateLead extends PhenixServlet {
     if (lead.getSource()==PHONE && lead.getAssignedTo()!=null) {
       taskData.$("preferred", lead.getAssignedTo().getSid());
     }
-    taskData.$("channel",lead.getChannel().getAbbreviation());
+    taskData.$("channel", lead.getChannel().getAbbreviation());
     var task = router.createDigitalLeadsTask(Json.ugly(taskData), (int) TimeUnit.DAYS.toSeconds(1));
     var call = new Call(task.getSid());
     call.setCreated(LocalDateTime.now());

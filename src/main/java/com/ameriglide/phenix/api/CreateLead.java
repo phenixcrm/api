@@ -57,10 +57,10 @@ public class CreateLead extends PhenixServlet {
 
   @Override
   protected void post(final HttpServletRequest request, final HttpServletResponse response) throws Exception {
-    if (!"b181cd58-2b94-4a25-8c5f-2008cfb5bd4a".equals(request.getHeader("x-api-key"))) {
+    var leadgen = getLeadGenSource(request);
+    if (leadgen == null && !"b181cd58-2b94-4a25-8c5f-2008cfb5bd4a".equals(request.getHeader("x-api-key"))) {
       throw new UnauthorizedException();
     }
-    var leadgen = getLeadGenSource(request);
     var data = JsonMap.parse(request.getInputStream());
     log.info("CreateLead: %s", Json.ugly(data));
     var phone = Stream

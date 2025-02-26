@@ -42,6 +42,7 @@ import static net.inetalliance.potion.Locator.*;
 public class CreateLead extends PhenixServlet {
   static final Pattern productFromCampaign = Pattern.compile(".* (.*) - .*");
   private static final Log log = new Log();
+  public static final String WEBSITE_FORM_KEY = "b181cd58-2b94-4a25-8c5f-2008cfb5bd4a";
 
   public static void main(String[] args) {
     Startup.bootstrap();
@@ -58,7 +59,7 @@ public class CreateLead extends PhenixServlet {
   @Override
   protected void post(final HttpServletRequest request, final HttpServletResponse response) throws Exception {
     var leadgen = getLeadGenSource(request);
-    if (leadgen == null && !"b181cd58-2b94-4a25-8c5f-2008cfb5bd4a".equals(request.getHeader("x-api-key"))) {
+    if (leadgen==null && !WEBSITE_FORM_KEY.equals(request.getHeader("x-api-key"))) {
       throw new UnauthorizedException();
     }
     var data = JsonMap.parse(request.getInputStream());
@@ -196,6 +197,9 @@ public class CreateLead extends PhenixServlet {
   private Campaign getLeadGenSource(HttpServletRequest req) {
     var apiKey = req.getHeader("x-api-key");
     if (isNotEmpty(apiKey)) {
+      if (WEBSITE_FORM_KEY.equals(apiKey)) {
+        return null;
+      }
       var leadGen = Locator.$1(LeadGen.withApiKey(apiKey));
       if (leadGen==null) {
         throw new NotFoundException("no partner with the specified key");

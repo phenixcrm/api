@@ -61,8 +61,10 @@ public class Pop extends TypeModel<Call> {
       extra.$("productLine", new JsonMap().$("id", opp.getProductLine().id).$("name", opp.getProductLine().getName()));
       extra.$("assignedTo",
         new JsonMap().$("id", opp.getAssignedTo().id).$("name", opp.getAssignedTo().getFirstNameLastInitial()));
-      extra.$("channel", new JsonMap().$("id", opp.getChannel().id).$("name", opp.getChannel().getName()).$("uri",
-        opp.getChannel().getUri()));
+      extra.$("channel", new JsonMap()
+        .$("id", opp.getChannel().id)
+        .$("name", opp.getChannel().getName())
+        .$("uri", opp.getChannel().getUri()));
       list.add(new JsonMap()
         .$("id", opp.id)
         .$("created", opp.getCreated())
@@ -147,8 +149,8 @@ public class Pop extends TypeModel<Call> {
       contacts.add(toJson(path.contact, loggedIn, path));
     }
     var latest = call.getLastLeg();
-    if(latest != null) {
-      path.reservation = latest.sid.startsWith("WR") ? latest.sid : null;
+    if (latest!=null) {
+      path.reservation = latest.sid.startsWith("WR") ? latest.sid:null;
     }
     var onlyPath = getParameter(request, "pathOnly", false);
     if (onlyPath && path.isComplete()) {
@@ -169,11 +171,15 @@ public class Pop extends TypeModel<Call> {
     var contact = new JsonMap();
     var shipping = new JsonMap();
     contact.$("shipping", shipping);
-    var lead = new JsonMap();
     var json = new JsonMap();
 
-    json
-      .$("defaults", new JsonMap().$("contact", contact).$("lead", lead))
+    json.$("defaults", new JsonMap()
+      .$("contact", contact)
+      .$("lead", new JsonMap()
+        .$("heat", Heat.NEW)
+        .$("channel", channel.id)
+        .$("productLine", productLine.id)
+        .$("source", call.getSource()))
       .$("direction", call.getDirection())
       .$("source", call.getSource())
       .$("channel", new JsonMap().$("id", channel.id).$("name", channel.getName()))
@@ -181,10 +187,7 @@ public class Pop extends TypeModel<Call> {
       .$("productLine", new JsonMap()
         .$("id", productLine.id)
         .$("abbreviation", productLine.getAbbreviation())
-        .$("name", productLine.getName()));
-    lead.$("heat", Heat.NEW);
-    lead.$("channel", channel.id);
-    lead.$("productLine", productLine.id).$("source", call.getSource());
+        .$("name", productLine.getName())));
 
     if (phone!=null) {
       contact.$("phone", phone);
@@ -229,7 +232,7 @@ public class Pop extends TypeModel<Call> {
         .$("lead", lead==null ? "new":lead.id.toString())
         .$("contact", contact==null ? "new":contact.id.toString())
         .$("script", 1)
-        .$("reservation",reservation);
+        .$("reservation", reservation);
     }
 
     public void complete() {

@@ -13,6 +13,8 @@ import com.ameriglide.phenix.twilio.TaskRouter;
 import com.ameriglide.phenix.types.CallDirection;
 import com.ameriglide.phenix.types.Resolution;
 import com.ameriglide.phenix.ws.SessionHandler;
+import com.tupilabs.human_name_parser.HumanNameParserBuilder;
+import com.tupilabs.human_name_parser.Name;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -225,8 +227,16 @@ public class CreateLead extends PhenixServlet {
   void updateContact(final JsonMap data, Contact contact, final String phone, final String email) {
     contact.setPhone(phone);
     contact.setEmail(email);
-    contact.setFirstName(Strings.titlecase(data.get("first")));
-    contact.setLastName(Strings.titlecase(data.get("last")));
+    if(data.containsKey("fullName")) {
+      var name = new Name(data.get("fullName"));
+      var builder = new HumanNameParserBuilder(name);
+      var parser = builder.build();
+      contact.setFirstName(parser.getFirst());
+      contact.setLastName(parser.getLast());
+    } else {
+      contact.setFirstName(Strings.titlecase(data.get("first")));
+      contact.setLastName(Strings.titlecase(data.get("last")));
+    }
     var shipping = Optionals.of(contact.getShipping()).orElseGet(() -> {
       contact.setShipping(new Address());
       return contact.getShipping();

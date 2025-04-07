@@ -22,6 +22,7 @@ dependencies {
     shared.twilio,
     shared.redis,
     shared.dotenv,
-    shared.bundles.mail
+    shared.bundles.mail,
+    implementation('com.tupilabs:human-name-parser:0.2')
   )
 }

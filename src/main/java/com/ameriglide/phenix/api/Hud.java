@@ -9,6 +9,7 @@ import com.ameriglide.phenix.core.Optionals;
 import com.ameriglide.phenix.servlet.PhenixServlet;
 import com.ameriglide.phenix.servlet.topics.HudTopic;
 import com.ameriglide.phenix.ws.SessionHandler;
+import com.ameriglide.phenix.core.Log;
 import io.jsonwebtoken.lang.Objects;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServletRequest;
@@ -29,17 +30,23 @@ public class Hud extends PhenixServlet implements MessageListener<HudTopic> {
   private final JsonList teams;
   public JsonMap json;
   private String raw;
+  private static final Log log = new Log();
 
   public Hud() {
     SessionHandler.hud = this;
     Startup.topics.hud().listen(this);
     this.teams = new JsonList();
     makeTeams();
+    log.info(()->"HUD initialized, running first produce");
     new Thread(() -> {
       Startup.router.getWorkers().forEach(w -> {
-        var agent = Locator.$1(Agent.withSid(w.getSid()));
-        if (agent!=null) {
-          shared.availability().put(agent.id, new AgentStatus(w, agent));
+        try {
+          var agent = Locator.$1(Agent.withSid(w.getSid()));
+          if (agent!=null) {
+            shared.availability().put(agent.id, new AgentStatus(w, agent));
+          }
+        } catch(Throwable t) {
+          log.error(t);
         }
       });
       produce();
@@ -78,7 +85,10 @@ public class Hud extends PhenixServlet implements MessageListener<HudTopic> {
       raw = newRaw;
       json = newJson;
       SessionHandler.hudHandler.changed(newJson);
+      log.info(()->"hud updated");
 
+    } else {
+      log.info(() -> "hud same");
     }
 
   }

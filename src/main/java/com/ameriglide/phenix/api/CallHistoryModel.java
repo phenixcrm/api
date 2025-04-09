@@ -53,8 +53,11 @@ public class CallHistoryModel extends PhenixServlet {
 
     var params = numbers.stream().map(n -> "?").collect(Collectors.joining(","));
     var q = "SELECT Call.* FROM Call INNER JOIN Leg ON Leg.call=Call.sid "
-      + "WHERE Call.contact=? OR (Call.direction = 'OUTBOUND' AND leg.phone in ("+ params
-      + ")) OR (Call.direction IN ('QUEUE','VIRTUAL','INBOUND') and call.phone in (" + params + "))";
+      + "WHERE Call.contact=? OR (Call.direction = 'OUTBOUND' AND leg.phone in ("
+      + params
+      + ")) OR (Call.direction IN ('QUEUE','VIRTUAL','INBOUND') and call.phone in ("
+      + params
+      + "))";
     var calls = new JsonList();
     Locator.jdbc.executeQuery(q, stmt -> {
       try {
@@ -69,14 +72,12 @@ public class CallHistoryModel extends PhenixServlet {
       } catch (SQLException e) {
         throw new RuntimeException(e);
       }
-    }, resultSet -> {
-      Locator.read(Call.class, call -> calls.add(toJson(request, call))).apply(resultSet);
-    });
+    }, resultSet -> Locator.read(Call.class, call -> calls.add(toJson(call))).apply(resultSet));
     respond(response, Listable.formatResult(calls));
   }
 
 
-  public Json toJson(HttpServletRequest request, Call call) {
+  public Json toJson(Call call) {
     new JsonMap();
     var json = JsonMap.$().$("sid").$("recordingSid").$("resolution").$("created").$("direction").$("transcription");
     Info.$(call).fill(call, json);
@@ -84,6 +85,16 @@ public class CallHistoryModel extends PhenixServlet {
       .of(call.getChannel())
       .ifPresent(b -> json.$("channel", JsonMap.$().$("name", b.getName()).$("abbreviation", b.getAbbreviation())));
     json.$(call.getDirection()==OUTBOUND ? "to":"from", call.getRemoteCaller().toDisplayName());
+    var recordings = new JsonList();
+    json.$("recordings", recordings);
+    if (Strings.isNotEmpty(call.getRecordingSid())) {
+      recordings.add(call.getRecordingSid());
+    }
+    Locator.forEach(Leg.withCall(call).orderBy("created", ASCENDING), leg -> {
+      if (Strings.isNotEmpty(leg.getRecordingSid())) {
+        recordings.add(leg.getRecordingSid());
+      }
+    });
     Optionals.of(call.getAgent()).ifPresent(a -> json.$(call.getDirection()==OUTBOUND ? "from":"to", a.getFullName()));
     final JsonList talkList = new JsonList();
     json.put("talkTime", talkList);
@@ -120,7 +131,7 @@ public class CallHistoryModel extends PhenixServlet {
     if (s > 0) {
       string.append(s).append("s ");
     }
-    return string.length() > 0 ? string.substring(0, string.length() - 1):"";
+    return !string.isEmpty() ? string.substring(0, string.length() - 1):"";
 
   }
 }

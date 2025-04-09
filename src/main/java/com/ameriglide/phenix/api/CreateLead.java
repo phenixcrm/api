@@ -15,6 +15,7 @@ import com.ameriglide.phenix.types.Resolution;
 import com.ameriglide.phenix.ws.SessionHandler;
 import com.tupilabs.human_name_parser.HumanNameParserBuilder;
 import com.tupilabs.human_name_parser.Name;
+import com.tupilabs.human_name_parser.ParseException;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -216,7 +217,7 @@ public class CreateLead extends PhenixServlet {
       }
       if (!leadGen.equals(campaign.getSource())) {
         log.error(() -> "somehow a lead with campaign %s was submitted by the wrong lead gen %d, expected %d".formatted(
-          campaign.id, campaign.getSource().id, leadGen.id));
+          campaign.id, leadGen.id, campaign.getSource().id));
         throw new BadRequestException("please contact your representative");
       }
       return campaign;
@@ -227,12 +228,22 @@ public class CreateLead extends PhenixServlet {
   void updateContact(final JsonMap data, Contact contact, final String phone, final String email) {
     contact.setPhone(phone);
     contact.setEmail(email);
-    if(data.containsKey("fullName")) {
-      var name = new Name(data.get("fullName"));
+    if (data.containsKey("fullName")) {
+      var rawName = data.get("fullName");
+      var name = new Name(rawName);
       var builder = new HumanNameParserBuilder(name);
-      var parser = builder.build();
-      contact.setFirstName(parser.getFirst());
-      contact.setLastName(parser.getLast());
+      try {
+        var parser = builder.build();
+        contact.setFirstName(parser.getFirst());
+        contact.setLastName(parser.getLast());
+      } catch(ParseException e) {
+       log.warn(()->"Could not parse %s as a human name".formatted(rawName));
+       var split = rawName.split(" ",2);
+       contact.setFirstName(split[0]);
+       if(split.length>1) {
+         contact.setLastName(split[1]);
+       }
+      }
     } else {
       contact.setFirstName(Strings.titlecase(data.get("first")));
       contact.setLastName(Strings.titlecase(data.get("last")));

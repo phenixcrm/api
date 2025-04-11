@@ -62,7 +62,8 @@ public class CreateLead extends PhenixServlet {
   @Override
   protected void post(final HttpServletRequest request, final HttpServletResponse response) throws Exception {
     var leadgen = getLeadGenSource(request);
-    if (leadgen==null && !WEBSITE_FORM_KEY.equals(request.getHeader("x-api-key"))) {
+    var source = leadgen==null ? SourceKey.getSource(request.getHeader("x-source-key")):REFERRAL;
+    if (source==null) {
       throw new UnauthorizedException();
     }
     var data = JsonMap.parse(request.getInputStream());
@@ -158,7 +159,6 @@ public class CreateLead extends PhenixServlet {
         .map(e -> "%s=%s".formatted(e.getKey(), e.getValue().toString()))
         .collect(Collectors.joining("\n")));
     }
-    var source = leadgen!=null ? REFERRAL:(isNotEmpty(campaign) ? SOCIAL:FORM);
     if (lead==null) {
       lead = new Lead();
       lead.setSource(source);
@@ -236,13 +236,13 @@ public class CreateLead extends PhenixServlet {
         var parser = builder.build();
         contact.setFirstName(parser.getFirst());
         contact.setLastName(parser.getLast());
-      } catch(ParseException e) {
-       log.warn(()->"Could not parse %s as a human name".formatted(rawName));
-       var split = rawName.split(" ",2);
-       contact.setFirstName(split[0]);
-       if(split.length>1) {
-         contact.setLastName(split[1]);
-       }
+      } catch (ParseException e) {
+        log.warn(() -> "Could not parse %s as a human name".formatted(rawName));
+        var split = rawName.split(" ", 2);
+        contact.setFirstName(split[0]);
+        if (split.length > 1) {
+          contact.setLastName(split[1]);
+        }
       }
     } else {
       contact.setFirstName(Strings.titlecase(data.get("first")));

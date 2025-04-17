@@ -25,7 +25,7 @@ public class RepairRecordings implements Runnable {
 
   @Override
   public void run() {
-    forEach(Query.all(Call.class).orderBy("created", OrderBy.Direction.DESCENDING).limit(1000), call -> {
+    forEach(Query.all(Call.class).orderBy("created", OrderBy.Direction.DESCENDING).limit(0,1000), call -> {
       var callRecording = Startup.router.getRecordingForCall(call.sid);
       var mismatch = callRecording!=null && !Objects.equals(callRecording.getSid(), call.getRecordingSid());
       if(mismatch) {

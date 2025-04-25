@@ -270,7 +270,7 @@ public class CreateLead extends PhenixServlet {
   }
 
   public static Call dispatch(Lead lead) {
-    var product = lead.getProductLine();
+    var product = lead.getSource()==SOCIAL ? ProductLine.undetermined.get():lead.getProductLine();
     var contact = lead.getContact();
     var taskData = new JsonMap().$("type", "leadScreening").$("product", product.getAbbreviation()).$("Lead", lead.id);
     if (lead.getSource()==PHONE && lead.getAssignedTo()!=null) {

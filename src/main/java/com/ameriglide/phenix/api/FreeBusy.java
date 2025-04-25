@@ -13,8 +13,7 @@ import net.inetalliance.types.json.Json;
 import net.inetalliance.types.json.JsonList;
 import net.inetalliance.types.json.JsonMap;
 
-import java.time.LocalDate;
-import java.time.LocalDateTime;
+import java.util.Objects;
 
 import static com.ameriglide.phenix.common.Lead.withAgent;
 import static com.ameriglide.phenix.core.Strings.isEmpty;
@@ -25,7 +24,8 @@ import static net.inetalliance.sql.OrderBy.Direction.ASCENDING;
 public class FreeBusy extends PhenixServlet {
 
   private static JsonMap toJson(final Lead lead) {
-    return new JsonMap().$("id", lead.id)
+    return new JsonMap()
+      .$("id", lead.id)
       .$("productLine", lead.getProductLine().getName())
       .$("reminder", lead.getReminder())
       .$("contact", lead.getContact().getLastNameFirstInitial())
@@ -35,8 +35,7 @@ public class FreeBusy extends PhenixServlet {
   }
 
   @Override
-  protected void get(final HttpServletRequest request, final HttpServletResponse response)
-    throws Exception {
+  protected void get(final HttpServletRequest request, final HttpServletResponse response) throws Exception {
     final boolean monthMode;
     final DateTimeInterval interval;
     final String day = request.getParameter("day");
@@ -46,29 +45,29 @@ public class FreeBusy extends PhenixServlet {
         throw new BadRequestException("Missing parameter \"month\"");
       } else {
         monthMode = true;
-        final LocalDate startOfMonth = Json.jsDateTimeFormat.parse(month,LocalDate::from).withDayOfMonth(1);
-        final LocalDateTime start = startOfMonth.minusDays(startOfMonth.getDayOfWeek().getValue()%7).atStartOfDay();
+        var startOfMonth = Objects.requireNonNull(Json.parseDate(month)).withDayOfMonth(1).toLocalDate();
+        var start = startOfMonth.minusDays(startOfMonth.getDayOfWeek().getValue() % 7).atStartOfDay();
         interval = new DateTimeInterval(start, start.plusDays(35));
       }
     } else {
       monthMode = false;
-      var start = Json.jsDateTimeFormat.parse(day,LocalDate::from).atStartOfDay();
-      interval = new DateTimeInterval(start,start.plusDays(1));
+      var start = Objects.requireNonNull(Json.parseDate(day)).toLocalDate().atStartOfDay();
+      interval = new DateTimeInterval(start, start.plusDays(1));
     }
     final Agent agent = Auth.getAgent(request);
 
     final JsonMap map = new JsonMap();
     forEach(Lead.withReminderIn(interval).and(withAgent(agent)).orderBy("reminder", ASCENDING), opp -> {
       if (monthMode) {
-        final String day1 = Json.jsDateFormat.format(opp.getReminder().toLocalDate());
+        final String day1 = Json.format(opp.getReminder().toLocalDate());
         JsonList list = map.getList(day1);
-        if (list == null) {
+        if (list==null) {
           list = new JsonList();
           map.put(day1, list);
         }
         list.add(toJson(opp));
       } else {
-        map.put(Json.jsDateTimeFormat.format(opp.getReminder()), toJson(opp));
+        map.put(Json.format(opp.getReminder()), toJson(opp));
       }
 
     });

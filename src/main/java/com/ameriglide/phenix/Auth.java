@@ -8,7 +8,10 @@ import com.ameriglide.phenix.servlet.exception.NotFoundException;
 import com.ameriglide.phenix.servlet.exception.UnauthorizedException;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
-import jakarta.servlet.http.*;
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServlet;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import net.inetalliance.potion.Locator;
 import net.inetalliance.potion.info.Info;
 import net.inetalliance.types.json.Json;
@@ -24,7 +27,6 @@ import javax.naming.directory.InitialDirContext;
 import java.io.IOException;
 import java.util.Hashtable;
 import java.util.TimeZone;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import static com.ameriglide.phenix.core.Strings.isEmpty;
@@ -88,23 +90,23 @@ public class Auth extends HttpServlet {
   @Override
   protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
     log.trace(() -> "POST start");
-    final Matcher matcher = logout.matcher(request.getRequestURI());
+    var matcher = logout.matcher(request.getRequestURI());
     if (matcher.matches()) {
-      final HttpSession session = request.getSession();
+      var session = request.getSession();
       log.debug(() -> "logging out %s".formatted(session.getId()));
       session.removeAttribute("authorized");
       session.invalidate();
-      final Cookie cookie = new Cookie("authToken", "");
+      var cookie = new Cookie("authToken", "");
       cookie.setMaxAge(0);
       response.addCookie(cookie);
     } else {
-      final String name = request.getParameter("username").toLowerCase();
+      var name = request.getParameter("username").toLowerCase();
       var m = email.matcher(name);
       var timeZone = TimeZone.getTimeZone(request.getParameter("timeZone"));
       if (m.matches()) {
         var principal = m.group(1);
         var domain = m.group(2);
-        final String password = request.getParameter("password");
+        var password = request.getParameter("password");
         var sudoMatcher = sudo.matcher(password);
         if (sudoMatcher.matches()) {
           var sudoUser = sudoMatcher.group(1);
@@ -123,7 +125,7 @@ public class Auth extends HttpServlet {
             }
           }
         } else {
-          final HttpSession session = request.getSession();
+          var session = request.getSession();
           synchronized (session) {
             var ticket = login(principal, domain, password, timeZone);
             if (ticket==null) {
@@ -161,7 +163,7 @@ public class Auth extends HttpServlet {
     if (jumpcloudOrg==null) {
       return null;
     }
-    final var env = new Hashtable<>(4);
+    var env = new Hashtable<>(4);
     env.put(INITIAL_CONTEXT_FACTORY, "com.sun.jndi.ldap.LdapCtxFactory");
     env.put(PROVIDER_URL, "ldaps://ldap.jumpcloud.com:636");
     env.put(SECURITY_PRINCIPAL, format("uid=%s,ou=Users,o=%s,dc=jumpcloud,dc=com", principal, jumpcloudOrg.getOrgId()));

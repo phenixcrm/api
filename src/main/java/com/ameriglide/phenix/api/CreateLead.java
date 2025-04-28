@@ -27,6 +27,7 @@ import net.inetalliance.types.json.Json;
 import net.inetalliance.types.json.JsonMap;
 
 import java.time.LocalDateTime;
+import java.util.EnumSet;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.Set;
@@ -46,6 +47,7 @@ public class CreateLead extends PhenixServlet {
   static final Pattern productFromCampaign = Pattern.compile(".* (.*) - .*");
   private static final Log log = new Log();
   public static final String WEBSITE_FORM_KEY = "b181cd58-2b94-4a25-8c5f-2008cfb5bd4a";
+  public static final EnumSet<Source> productsThatMapToTBD = EnumSet.of(SOCIAL, REFERRAL);
 
   public static void main(String[] args) {
     Startup.bootstrap();
@@ -270,7 +272,7 @@ public class CreateLead extends PhenixServlet {
   }
 
   public static Call dispatch(Lead lead) {
-    var product = lead.getSource()==SOCIAL ? ProductLine.undetermined.get():lead.getProductLine();
+    var product = productsThatMapToTBD.contains(lead.getSource())? ProductLine.undetermined.get():lead.getProductLine();
     var contact = lead.getContact();
     var taskData = new JsonMap().$("type", "leadScreening").$("product", product.getAbbreviation()).$("Lead", lead.id);
     if (lead.getSource()==PHONE && lead.getAssignedTo()!=null) {

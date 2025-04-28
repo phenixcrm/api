@@ -1,0 +1,8 @@
+<cluster-config>
+    <development>
+        <node/>
+    </development>
+    <production>
+        <node/>
+    </production>
+</cluster-config>

@@ -27,11 +27,11 @@ public abstract class Column<C> {
   public final String jsonName;
   public final boolean required;
   public final boolean unique;
-  public Class<? extends Enum>[] enums;
+  public Class<? extends Enum<?>>[] enums;
 
   @SafeVarargs
   public Column(final String name, final boolean required, final boolean unique,
-      final Class<? extends Enum>... enums) {
+      final Class<? extends Enum<?>>... enums) {
     this.name = name;
     if (this.name == null) {
       this.jsonName = null;
@@ -44,7 +44,7 @@ public abstract class Column<C> {
     this.enums = enums;
   }
 
-  public static Column<?> rename(final Column column, final String prefix, final boolean required,
+  public static Column<?> rename(final Column<?> column, final String prefix, final boolean required,
       final boolean unique) {
     return column.rename(String.format("%s_%s", prefix, column.name), required, unique);
   }
@@ -175,11 +175,7 @@ public abstract class Column<C> {
   }
 
   public String toDefinition(final DbVendor vendor) {
-    final StringBuilder def = new StringBuilder(32);
-    def.append(vendor.escapeEntity(name));
-    def.append(' ');
-    def.append(getType(vendor).name);
-    return def.toString();
+      return "%s %s".formatted(vendor.escapeEntity(name), getType(vendor).name);
   }
 
   public String toDefinition(final DbVendor vendor, final Collection<String> checks) {

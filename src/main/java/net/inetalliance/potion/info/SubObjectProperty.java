@@ -210,13 +210,13 @@ public class SubObjectProperty<O, P>
   }
 
   @Override
-  public Iterable<Class<? extends Enum>> getReferencedEnums() {
+  public Iterable<Class<? extends Enum<?>>> getReferencedEnums() {
     return () -> getProperties().map(Property::getReferencedEnums).flatMap(Iterables::stream)
         .iterator();
   }
 
   @Override
-  public Iterable<Column> getColumns() {
+  public Iterable<Column<?>> getColumns() {
     return () -> getProperties().map(Property::getColumns).flatMap(Iterables::stream).iterator();
   }
 

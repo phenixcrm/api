@@ -1,6 +1,7 @@
 package net.inetalliance.potion.jdbc;
 
 import com.ameriglide.phenix.core.Log;
+import lombok.Getter;
 import net.inetalliance.potion.Hash;
 import net.inetalliance.potion.Locator;
 import net.inetalliance.potion.Version;
@@ -35,7 +36,8 @@ public class JdbcCursor {
     public final DbVendor vendor;
     public final Namer namer;
     public String database;
-    private DataSource dataSource;
+    @Getter
+    private final DataSource dataSource;
 
     public JdbcCursor(final DataSource dataSource, final DbVendor vendor, final Namer namer) {
         this.dataSource = dataSource;
@@ -43,7 +45,7 @@ public class JdbcCursor {
         this.namer = namer;
     }
 
-    @SuppressWarnings("UnusedDeclaration")
+    @SuppressWarnings({"UnusedDeclaration", "SqlSourceToSinkFlow"})
     public void execute(final String sql, final Consumer<PreparedStatement> preExecute) throws SQLException {
         try (Connection cxn = getConnection()) {
             try (PreparedStatement statement = cxn.prepareStatement(sql)) {

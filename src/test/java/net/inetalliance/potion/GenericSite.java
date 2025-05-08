@@ -1,5 +1,7 @@
 package net.inetalliance.potion;
 
+import lombok.Getter;
+import lombok.Setter;
 import net.inetalliance.potion.annotations.*;
 import net.inetalliance.potion.query.Query;
 import net.inetalliance.types.Currency;
@@ -20,8 +22,10 @@ public class GenericSite
     System.err.printf("static init of Generic Site%n");
   }
 
+  @Getter
   @SubObject
   GenericRating rating;
+  @Getter
   @SubObject
   DescribedRating described;
   @Required
@@ -35,6 +39,7 @@ public class GenericSite
   @Matches("[A-Za-z -]*")
   @Searchable(A)
   private String name;
+  @Getter
   @Required
   @MaxLength(1024)
   @Searchable(C)
@@ -46,6 +51,8 @@ public class GenericSite
   private LocalizedString description;
   @Searchable(B)
   private String shortDescription;
+  @Setter
+  @Getter
   @Searchable(C)
   private String longDescription;
 
@@ -87,11 +94,7 @@ public class GenericSite
     this.name = name;
   }
 
-  public URI getUri() {
-    return uri;
-  }
-
-  void setUri(final URI uri) {
+    void setUri(final URI uri) {
     this.uri = uri;
   }
 
@@ -129,27 +132,11 @@ public class GenericSite
     this.description = description;
   }
 
-  public GenericRating getRating() {
-    return rating;
-  }
-
-  void setRating(final GenericRating rating) {
+    void setRating(final GenericRating rating) {
     this.rating = rating;
   }
 
-  public String getLongDescription() {
-    return longDescription;
-  }
-
-  public void setLongDescription(final String longDescription) {
-    this.longDescription = longDescription;
-  }
-
-  public DescribedRating getDescribed() {
-    return described;
-  }
-
-  void setDescribed(final DescribedRating described) {
+    void setDescribed(final DescribedRating described) {
     this.described = described;
   }
 

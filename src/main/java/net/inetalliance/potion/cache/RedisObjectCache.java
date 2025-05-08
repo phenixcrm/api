@@ -73,7 +73,7 @@ public class RedisObjectCache<V> extends ObjectCache<V> {
                  InvocationTargetException e) {
           throw new RuntimeException(e);
         }
-        info.fromJson(v, JsonMap.parse((String)json));
+        info.fromJson(v, JsonMap.parse(json));
         return v;
       }
 

@@ -9,6 +9,8 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.SortedSet;
+
+import lombok.Getter;
 import net.inetalliance.potion.query.SortedQuery;
 
 /**
@@ -19,6 +21,7 @@ public class RevolvingDispenser<T>
     implements Iterator<T> {
 
   private final int limit;
+  @Getter
   private final int total;
   private final Comparator<T> comparator;
   private final List<Bucket> buckets;
@@ -48,11 +51,7 @@ public class RevolvingDispenser<T>
     return new RevolvingDispenser<>(limit, comparator, Arrays.asList(queries));
   }
 
-  public int getTotal() {
-    return total;
-  }
-
-  // --------------------- Interface Iterator ---------------------
+    // --------------------- Interface Iterator ---------------------
   @Override
   public boolean hasNext() {
     return !buckets.isEmpty();

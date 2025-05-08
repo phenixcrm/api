@@ -1,5 +1,7 @@
 package net.inetalliance.potion;
 
+import lombok.Getter;
+import lombok.Setter;
 import net.inetalliance.potion.annotations.ForeignKey;
 import net.inetalliance.potion.annotations.Generated;
 import net.inetalliance.potion.annotations.Indexed;
@@ -7,6 +9,8 @@ import net.inetalliance.potion.annotations.Persistent;
 import net.inetalliance.potion.annotations.PrimaryKey;
 import net.inetalliance.potion.annotations.Serial;
 
+@Setter
+@Getter
 @Persistent
 public class GenericOrder
     implements AutoCloseable {
@@ -42,39 +46,7 @@ public class GenericOrder
     Locator.delete("junit", this);
   }
 
-  public GenericSite getSite() {
-    return site;
-  }
-
-  public void setSite(final GenericSite site) {
-    this.site = site;
-  }
-
-  public Integer getKey() {
-    return key;
-  }
-
-  public void setKey(final Integer key) {
-    this.key = key;
-  }
-
-  public GenericProduct getProduct() {
-    return product;
-  }
-
-  public void setProduct(final GenericProduct product) {
-    this.product = product;
-  }
-
-  public String getOrder() {
-    return order;
-  }
-
-  public void setOrder(final String order) {
-    this.order = order;
-  }
-
-  @Override
+    @Override
   public int hashCode() {
     int result = site != null ? site.hashCode() : 0;
     result = 31 * result + (key != null ? key.hashCode() : 0);

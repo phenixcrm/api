@@ -27,7 +27,7 @@ public abstract class Column<C> {
   public final String jsonName;
   public final boolean required;
   public final boolean unique;
-  public Class<? extends Enum<?>>[] enums;
+  public final Class<? extends Enum<?>>[] enums;
 
   @SafeVarargs
   public Column(final String name, final boolean required, final boolean unique,

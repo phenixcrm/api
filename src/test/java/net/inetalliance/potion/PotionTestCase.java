@@ -15,7 +15,7 @@ public abstract class PotionTestCase {
   static final String user = "junit";
 
   @RegisterExtension
-  public static PreparedDbExtension pg = EmbeddedPostgresExtension
+  public static final PreparedDbExtension pg = EmbeddedPostgresExtension
       .preparedDatabase((DatabaseConnectionPreparer) conn -> {
         try (final Statement statement = conn.createStatement()) {
           statement.execute("CREATE DATABASE Test");

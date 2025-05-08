@@ -28,7 +28,7 @@ import java.util.Objects;
 public class Parameters
     implements PreparedStatement {
 
-  public List<Object> parameters;
+  public final List<Object> parameters;
 
   public Parameters() {
     this.parameters = new ArrayList<>(2);

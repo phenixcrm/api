@@ -1,10 +1,14 @@
 package net.inetalliance.potion;
 
+import lombok.Getter;
+import lombok.Setter;
 import net.inetalliance.potion.annotations.Persistent;
 import net.inetalliance.potion.obj.IdPo;
 import net.inetalliance.types.annotations.MaxLength;
 import net.inetalliance.types.annotations.Required;
 
+@Setter
+@Getter
 @Persistent
 public class GenericCategory
     extends IdPo
@@ -38,11 +42,4 @@ public class GenericCategory
     return String.format("GenericCategory(%s)", id);
   }
 
-  public String getName() {
-    return name;
-  }
-
-  public void setName(final String name) {
-    this.name = name;
-  }
 }

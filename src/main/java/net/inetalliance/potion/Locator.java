@@ -64,7 +64,7 @@ public class Locator {
     private static final boolean queryCachingDisabled = System.getProperty("Locator.queryCachingDisabled") != null;
     private static final Map<Class<?>, Collection<QueryCacheKey>> queryTypeDependencies;
     private static final ConcurrentHashMap<Class<?>, Field> readField = new ConcurrentHashMap<>(32);
-    public static Map<String, Class<?>> types;
+    public static final Map<String, Class<?>> types;
     public static JdbcCursor jdbc;
     private static Map<QueryCacheKey, Object> queryCache;
     private static final Set<Class<?>> cacheableTypes = Collections.synchronizedSet(new HashSet<>(32));

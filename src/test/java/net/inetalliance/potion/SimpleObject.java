@@ -1,8 +1,12 @@
 package net.inetalliance.potion;
 
+import lombok.Getter;
+import lombok.Setter;
 import net.inetalliance.potion.annotations.Persistent;
 import net.inetalliance.potion.annotations.PrimaryKey;
 
+@Setter
+@Getter
 @Persistent
 public class SimpleObject {
 
@@ -10,19 +14,4 @@ public class SimpleObject {
   public Integer key;
   private String name;
 
-  public Integer getKey() {
-    return key;
-  }
-
-  public void setKey(final Integer key) {
-    this.key = key;
-  }
-
-  public String getName() {
-    return name;
-  }
-
-  public void setName(final String name) {
-    this.name = name;
-  }
 }

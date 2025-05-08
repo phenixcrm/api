@@ -445,7 +445,7 @@ public class Query<T>
 
 	@SuppressWarnings("unchecked")
 	public Query<T> or(final Query<? super T> query) {
-		return (Query<T>) or(type, Set.of(this, query));
+		return or(type, Set.of(this, query));
 	}
 
 	public SortedQuery<T> orderBy(final String name) {

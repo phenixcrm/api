@@ -12,8 +12,8 @@ import java.util.List;
 public class ClusterConfig {
 
   private static transient final Log log = new Log();
-  private State development;
-  private State production;
+  private final State development;
+  private final State production;
   private transient State reading;
 
   public ClusterConfig() {

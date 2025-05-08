@@ -88,7 +88,7 @@ public abstract class UniqueTypeValidator<T>
 		return null;
 	}
 
-	protected static class State<T> {
+	public static class State<T> {
 
 		protected final Property<? extends T> property;
 		final boolean caseSensitive;

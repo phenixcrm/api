@@ -26,6 +26,7 @@ import java.net.URI;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
@@ -43,75 +44,76 @@ public class SingleColumnProperty<O, P>
     static {
         generators = new HashMap<>();
         generators.put(Integer.class,
-                (Generator<Integer>) (name, _, required, unique) -> new IntegerColumn(name, required,
-                        unique));
+                (Generator<Integer>) (name, _, required, unique) ->
+                        new IntegerColumn(name, required, unique));
         generators.put(Long.class,
-                (Generator<Long>) (name, _, required, unique) -> new LongColumn(name, required,
-                        unique));
+                (Generator<Long>) (name, _, required, unique) ->
+                        new LongColumn(name, required, unique));
         generators.put(boolean.class,
-                (Generator<Boolean>) (name, _, _, unique) -> new BooleanColumn(name, true,
-                        unique,
-                        false));
+                (Generator<Boolean>) (name, _, _, unique) ->
+                        new BooleanColumn(name, true, unique, false));
         generators.put(Boolean.class,
-                (Generator<Boolean>) (name, _, required, unique) -> new BooleanColumn(name, required,
-                        unique,
-                        null));
+                (Generator<Boolean>) (name, _, required, unique) ->
+                        new BooleanColumn(name, required, unique, null));
         generators.put(Currency.class,
-                (Generator<Currency>) (name, _, required, unique) -> new CurrencyColumn(name, required,
-                        unique));
+                (Generator<Currency>) (name, _, required, unique) ->
+                        new CurrencyColumn(name, required, unique));
         generators.put(Float.class,
-                (Generator<Float>) (name, _, required, unique) -> new FloatColumn(name, required,
-                        unique));
-        generators.put(Double.class, (Generator<Double>) (name, field, required, unique) -> {
-            val percent = field == null ? null : field.getAnnotation(Percentage.class);
-            val format = field == null ? null : field.getAnnotation(Format.class);
-            return new DoubleColumn(name, required, unique,
-                    percent == null ? format == null ? null : format.value() : "0.0%");
-        });
+                (Generator<Float>) (name, _, required, unique) ->
+                        new FloatColumn(name, required, unique));
+        generators.put(Double.class,
+                (Generator<Double>) (name, field, required, unique) -> {
+                    val percent = field == null ? null : field.getAnnotation(Percentage.class);
+                    val format = field == null ? null : field.getAnnotation(Format.class);
+                    return new DoubleColumn(name, required, unique,
+                            percent == null ? format == null ? null : format.value() : "0.0%");
+                });
         generators.put(Locale.class,
-                (Generator<Locale>) (name, field, required, unique) -> field == null || field.getAnnotation(
-                        Parsed.class) == null
-                        ? new LocaleColumn(name, required, unique)
-                        : new ParsingLocaleColumn(name, required, unique));
-        generators.put(String.class, (Generator<String>) (name, field, required, unique) -> {
-            val maxLength = field == null ? null : field.getAnnotation(MaxLength.class);
-            val xOut = field == null ? null : field.getAnnotation(XOut.class);
-            return new StringColumn(name, required, unique, xOut == null ? null : xOut.value(),
-                    maxLength == null ? null : maxLength.value(),
-                    field != null && field.getAnnotation(Xhtml.class) != null);
-        });
-        generators.put(byte[].class, (Generator<byte[]>) (name, field, required, unique) -> {
-            val maxLength = field == null ? null : field.getAnnotation(MaxLength.class);
-            val encrypted = field == null ? null : field.getAnnotation(Encrypted.class);
+                (Generator<Locale>) (name, field, required, unique) ->
+                        field == null || field.getAnnotation(Parsed.class) == null
+                                ? new LocaleColumn(name, required, unique)
+                                : new ParsingLocaleColumn(name, required, unique));
+        generators.put(String.class,
+                (Generator<String>) (name, field, required, unique) -> {
+                    val maxLength = field == null ? null : field.getAnnotation(MaxLength.class);
+                    val xOut = field == null ? null : field.getAnnotation(XOut.class);
+                    return new StringColumn(name, required, unique, xOut == null ? null : xOut.value(),
+                            maxLength == null ? null : maxLength.value(),
+                            field != null && field.getAnnotation(Xhtml.class) != null);
+                });
+        generators.put(byte[].class,
+                (Generator<byte[]>) (name, field, required, unique) -> {
+                    val maxLength = field == null ? null : field.getAnnotation(MaxLength.class);
+                    val encrypted = field == null ? null : field.getAnnotation(Encrypted.class);
 
-            return encrypted == null
-                    ? new ByteArrayColumn(name, required, unique,
-                    maxLength == null ? null : maxLength.value())
-                    : new EncryptedColumn(name, required, unique,
-                    maxLength == null ? null : maxLength.value());
-        });
+                    return encrypted == null
+                            ? new ByteArrayColumn(name, required, unique,
+                            maxLength == null ? null : maxLength.value())
+                            : new EncryptedColumn(name, required, unique,
+                            maxLength == null ? null : maxLength.value());
+                });
         generators.put(URI.class,
-                (Generator<URI>) (name, _, required, unique) -> new UriColumn(name, required, unique));
+                (Generator<URI>) (name, _, required, unique) ->
+                        new UriColumn(name, required, unique));
         generators.put(LocalizedString.class,
-                (Generator<LocalizedString>) (name, _, required, unique) -> new LocalizedStringColumn(
-                        name,
-                        required,
-                        unique));
+                (Generator<LocalizedString>) (name, _, required, unique) ->
+                        new LocalizedStringColumn(name, required, unique));
         generators.put(LocalDateTime.class,
-                (Generator<LocalDateTime>) (name, _, required, unique) -> new LocalDateTimeColumn(name, required,
-                        unique));
+                (Generator<LocalDateTime>) (name, _, required, unique) ->
+                        new LocalDateTimeColumn(name, required, unique));
         generators.put(LocalDate.class,
-                (Generator<LocalDate>) (name, _, required, unique) -> new LocalDateColumn(name,
-                        required,
-                        unique));
+                (Generator<LocalDate>) (name, _, required, unique) ->
+                        new LocalDateColumn(name, required, unique));
+        generators.put(Duration.class,
+                (Generator<Duration>) (name, _, required, unique) ->
+                        new DurationColumn(name, required, unique));
         generators.put(Inet4Address.class,
-                (Generator<Inet4Address>) (name, _, required, unique) -> new Inet4AddressColumn(name,
-                        required,
-                        unique));
+                (Generator<Inet4Address>) (name, _, required, unique) ->
+                        new Inet4AddressColumn(name, required, unique));
         //noinspection rawtypes
         generators.put(Class.class,
-                (Generator<Class>) (name, _, required, unique) -> new TypeColumn(name, required,
-                        unique));
+                (Generator<Class>) (name, _, required, unique) ->
+                        new TypeColumn(name, required, unique));
     }
 
     private final Column<P> column;

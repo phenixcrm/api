@@ -5,15 +5,15 @@ plugins {
 description = "Phénix objects shared between modules"
 
 dependencies {
-  implementation(project(":common"))
-  implementation(project(":core"))
+  implementation(project(":phenix:common"))
+  implementation(project(":libs:core"))
   implementation("net.inetalliance.potion:annotations")
-  implementation(project(":potion:api"))
-  implementation(project(":validation"))
-  implementation(project(":types"))
-  implementation(project(":util"))
-  implementation(project(":cli"))
-  implementation(project(":sql"))
+  implementation(project(":libs:potion:api"))
+  implementation(project(":libs:validation"))
+  implementation(project(":libs:types"))
+  implementation(project(":libs:util"))
+  implementation(project(":libs:cli"))
+  implementation(project(":libs:sql"))
   implementation(libs.csv)
   implementation(libs.postgresql)
   implementation(libs.servlet)
@@ -23,5 +23,5 @@ dependencies {
   implementation(libs.redis)
   implementation(libs.dotenv)
   implementation(libs.bundles.mail)
-  implementation("com.tupilabs:human-name-parser:0.2")
+  implementation(libs.humanNameParser)
 }

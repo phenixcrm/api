@@ -11,9 +11,10 @@ import jakarta.servlet.ServletConfig;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.Getter;
+import lombok.val;
 import net.inetalliance.potion.Locator;
 import net.inetalliance.potion.info.Info;
-import net.inetalliance.potion.info.Property;
 import net.inetalliance.potion.info.SubObjectProperty;
 import net.inetalliance.potion.info.UniqueKeyError;
 import net.inetalliance.potion.query.Query;
@@ -25,7 +26,6 @@ import net.inetalliance.validation.ValidationErrors;
 import net.inetalliance.validation.Validator;
 
 import java.io.IOException;
-import java.util.Locale;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.regex.Matcher;
@@ -41,6 +41,7 @@ import static net.inetalliance.potion.Locator.types;
 import static net.inetalliance.types.www.ContentType.MULTIPART_FORMDATA;
 import static net.inetalliance.types.www.ContentType.parse;
 
+@Getter
 public class Model<T> extends PhenixServlet {
 
   private static final JsonMap emptyMap = new JsonMap();
@@ -62,20 +63,20 @@ public class Model<T> extends PhenixServlet {
                                                  final HttpServletResponse response, final JsonMap data,
                                                  final Function<T, JsonMap> toJson, final Consumer<? super T> success) {
     try {
-      final T t = key.info.type.getDeclaredConstructor().newInstance();
-      final ValidationErrors errors = new ValidationErrors();
-      final JsonMap externalMap = new JsonMap();
+      val t = key.info.type.getDeclaredConstructor().newInstance();
+      val errors = new ValidationErrors();
+      val externalMap = new JsonMap();
       setDefaults(t, request, data);
       setProperties(request, data, t, errors);
       if (isNotEmpty(key.id)) {
-        final Property<T, ?> keyProperty = key.info.keys().findFirst().orElseThrow();
+        val keyProperty = key.info.keys().findFirst().orElseThrow();
         keyProperty.field.set(t, Classes.convert(keyProperty.type, key.id));
       }
-      final Locale locale = request.getLocale();
-      errors.add(Validator.instance.get().create(locale, t));
+      val locale = request.getLocale();
+      errors.add(Validator.create(locale, t));
       if (errors.isEmpty()) {
         try {
-          final String user = getRemoteUser(request);
+          val user = getRemoteUser(request);
           Locator.create(user, t);
           if (!externalMap.isEmpty()) {
             Locator.update(t, user, copy -> {
@@ -85,7 +86,7 @@ public class Model<T> extends PhenixServlet {
           success.accept(t);
           return toJson.apply(t);
         } catch (UniqueKeyError ue) {
-          final String name = key.info.keys().findFirst().orElseThrow().field.getName();
+          val name = key.info.keys().findFirst().orElseThrow().field.getName();
           errors.put(name, singleton(Validator.messages.get(locale, "validation.uniqueKey",
             Validator.messages.get(locale, key.info.type.getSimpleName()), name)));
           response.setStatus(SC_BAD_REQUEST);
@@ -106,13 +107,13 @@ public class Model<T> extends PhenixServlet {
 
   private static <T> void setProperties(final HttpServletRequest request, final JsonMap data, final T t,
                                         final ValidationErrors errors) {
-    final Info<T> info = Info.$(t);
+    val info = Info.$(t);
     info.properties().filter(p -> !p.isGenerated()).forEach(property -> {
       if (property instanceof SubObjectProperty && ((SubObjectProperty) property).external) {
         if (isMultipart(request)) {
-          final JsonMap propertyMap = data.getMap(property.field.getName());
-          final String filename = propertyMap==null ? null:propertyMap.get("file");
-          final ValidationErrors uploadErrors = new ValidationErrors();  //todo: this doesn't check anything!
+          val propertyMap = data.getMap(property.field.getName());
+          val filename = propertyMap==null ? null:propertyMap.get("file");
+          val uploadErrors = new ValidationErrors();  //todo: this doesn't check anything!
           if (uploadErrors.isEmpty()) {
             property.setIf(t, data);
           } else {
@@ -137,10 +138,6 @@ public class Model<T> extends PhenixServlet {
     return parse(request.getContentType())==MULTIPART_FORMDATA;
   }
 
-  public Pattern getPattern() {
-    return pattern;
-  }
-
   @Override
   public void init(final ServletConfig config) throws ServletException {
     super.init(config);
@@ -157,12 +154,12 @@ public class Model<T> extends PhenixServlet {
       throw new UnauthorizedException();
     }
     try {
-      final Key<T> key = getKey(request);
+      val key = getKey(request);
       log.trace(() -> "Model GET %s".formatted(key));
       if (isEmpty(key.id)) {
         respond(response, getAll(request));
       } else {
-        final T t = lookup(key, request);
+        val t = lookup(key, request);
         if (t==null) {
           throw new NotFoundException();
         } else if (isReadAuthorized(request, t)) {
@@ -185,7 +182,7 @@ public class Model<T> extends PhenixServlet {
       throw new UnauthorizedException();
     }
     try {
-      final Key<T> key = getKey(request);
+      val key = getKey(request);
       if (key!=null) {
         log.trace(() -> "Model POST %s".formatted(key));
         respond(response, create(key, request, response));
@@ -204,13 +201,13 @@ public class Model<T> extends PhenixServlet {
       throw new UnauthorizedException();
     }
     try {
-      final Key<T> key = getKey(request);
+      val key = getKey(request);
       if (key!=null) {
         if (isEmpty(key.id)) {
           throw new ForbiddenException(); // not allowing delete of all objects at this time
         } else {
           log.trace(() -> "Model DELETE %s".formatted(key));
-          final T t = lookup(key, request);
+          val t = lookup(key, request);
           if (!isDeleteAuthorized(request, t)) {
             throw new ForbiddenException();
           }
@@ -258,13 +255,13 @@ public class Model<T> extends PhenixServlet {
       throw new UnauthorizedException();
     }
     try {
-      final Key<T> key = getKey(request);
+      val key = getKey(request);
       if (key!=null) {
         if (isEmpty(key.id)) {
           response.sendError(SC_BAD_REQUEST, "PUT called without an id");
         } else {
           log.trace(() -> "Model PUT %s".formatted(key));
-          final T t = lookup(key, request);
+          val t = lookup(key, request);
           if (t==null) {
             throw new NotFoundException("Cannot find %s with key %s", key.type.getSimpleName(), key.id);
           }
@@ -272,7 +269,7 @@ public class Model<T> extends PhenixServlet {
           if (!isUpdateAuthorized(request, t)) {
             throw new ForbiddenException();
           }
-          final JsonMap data = parseData(request);
+          val data = parseData(request);
           respond(response, update(key, request, response, t, data));
         }
       }
@@ -290,7 +287,7 @@ public class Model<T> extends PhenixServlet {
 
   protected Json update(final Key<T> key, final HttpServletRequest request, final HttpServletResponse response,
                         final T t, final JsonMap data) throws IOException {
-    final ValidationErrors errors = update(request, t, data);
+    val errors = update(request, t, data);
     if (errors.isEmpty()) {
       return toJson(key, t, request);
     } else {
@@ -306,8 +303,8 @@ public class Model<T> extends PhenixServlet {
       @Override
       public ValidationErrors apply(final T copy) {
         setProperties(request, data, copy, errors);
-        final Locale locale = request.getLocale();
-        errors.add(Validator.instance.get().update(locale, copy));
+        val locale = request.getLocale();
+        errors.add(Validator.update(locale, copy));
         return ValidationErrors.EMPTY;//errors; todo: turn this back on
       }
     });
@@ -322,8 +319,8 @@ public class Model<T> extends PhenixServlet {
   }
 
   protected Key<T> getKey(final HttpServletRequest request) {
-    final String uri = request.getRequestURI();
-    final Matcher matcher = pattern.matcher(uri);
+    val uri = request.getRequestURI();
+    val matcher = pattern.matcher(uri);
     if (matcher.matches()) {
       return getKey(matcher);
     } else {
@@ -333,7 +330,7 @@ public class Model<T> extends PhenixServlet {
 
   private Json create(final Key<T> key, final HttpServletRequest request, final HttpServletResponse response) throws
     Throwable {
-    final JsonMap data = parseData(request);
+    val data = parseData(request);
     return create(key, request, response, data);
   }
 
@@ -362,8 +359,8 @@ public class Model<T> extends PhenixServlet {
 
   @SuppressWarnings("unchecked")
   private Class<T> getType(final Matcher matcher) {
-    final String typeName = matcher.group(1);
-    final Class<T> type = (Class<T>) types.get(typeName);
+    val typeName = matcher.group(1);
+    val type = (Class<T>) types.get(typeName);
     if (type==null) {
       log.warn(() -> "Could not find persistent object type %s".formatted(typeName));
     }
@@ -372,14 +369,14 @@ public class Model<T> extends PhenixServlet {
 
 
   private JsonMap parseUrlEncoded(final HttpServletRequest request) throws IOException {
-    String body = Strings.readToString(request.getInputStream());
+    var body = Strings.readToString(request.getInputStream());
     if (body.endsWith("\n")) {
       body = body.substring(0, body.length() - 1);
     }
-    final String[] pairs = body.split("&");
-    final JsonMap map = new JsonMap();
-    for (final String pair : pairs) {
-      final String[] keyValue = pair.split("=");
+    val pairs = body.split("&");
+    val map = new JsonMap();
+    for (val pair : pairs) {
+      val keyValue = pair.split("=");
       map.put(keyValue[0], keyValue[1]);
     }
     return map;
@@ -395,7 +392,7 @@ public class Model<T> extends PhenixServlet {
 
   @SuppressWarnings("unchecked")
   protected Json getAll(final HttpServletRequest request) {
-    final Key<T> key = getKey(request);
+    val key = getKey(request);
     if (this instanceof Listable) {
       return Listable.$(key.type, (Listable<T>) this, request);
     } else {

@@ -1,13 +1,14 @@
 package com.ameriglide.phenix.ws;
 
+import com.ameriglide.phenix.core.Log;
 import jakarta.websocket.Session;
 import net.inetalliance.types.json.JsonMap;
 
 import java.util.List;
 
-import static net.inetalliance.util.shell.Shell.log;
 
 public class PingHandler implements JsonMessageHandler {
+  private static final Log log = new Log();
 
   @Override
   public JsonMap onMessage(final Session session, final JsonMap msg) {

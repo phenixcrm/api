@@ -1,6 +1,7 @@
 package com.ameriglide.phenix.ws;
 
 import com.ameriglide.phenix.api.Hud;
+import com.ameriglide.phenix.core.Log;
 import jakarta.websocket.MessageHandler;
 import jakarta.websocket.Session;
 import net.inetalliance.types.json.Json;
@@ -10,9 +11,9 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 import static com.ameriglide.phenix.ws.Events.send;
-import static net.inetalliance.util.shell.Shell.log;
 
 public record SessionHandler(Session session) implements MessageHandler.Whole<String> {
+  private static final Log log = new Log();
 
   private static final Map<String, JsonMessageHandler> handlers = new ConcurrentHashMap<>();
   public static Hud hud;

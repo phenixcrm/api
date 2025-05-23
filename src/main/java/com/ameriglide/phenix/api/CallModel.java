@@ -107,7 +107,6 @@ public class CallModel extends ListableModel<Call> {
         withSite = withSite.and(Call.inInterval(c.toDateTimeInterval()));
       }
       return Call.isQueue.and(Call.withChannel($$(Channel.withAgent(agent))))
-        // todo: add PL/queue back in .and(Startup.callsWithProductLineParameter(request))
         .and(withSite)
         .and(request.getParameter("silent")==null ? Call.isShort:Query.all(Call.class))
         .and(super.all(type, request))
@@ -129,14 +128,13 @@ public class CallModel extends ListableModel<Call> {
       });
       return JsonMap.singletonMap("success", true);
     } else if (data.containsKey("todo")) {
-      // only allow flipping of t-o-d-o flag.
+      // only allow flipping of the t-o-d-o flag.
       return super.update(key, request, response, call, new JsonMap().$("todo", data.getBoolean("todo")));
     } else if (data.containsKey("reviewed")) {
-      // only allow flipping of reviewed flag.
+      // only allow flipping of the reviewed flag.
       return super.update(key, request, response, call, new JsonMap().$("reviewed", data.getBoolean("reviewed")));
     } else {
-      final boolean hasContact = data.containsKey("contact");
-      if(validInfoUpdateFields.containsAll(data.keySet())) {
+        if(validInfoUpdateFields.containsAll(data.keySet())) {
         var json = new JsonMap();
         json.putAll(data);
         return super.update(key, request, response, call, json);
@@ -179,7 +177,7 @@ public class CallModel extends ListableModel<Call> {
             format("could not find call queue for '%s' on %s", product.getName(), channel.getAbbreviation()));
       }
       Collections.shuffle(simContacts);
-      var c = (JsonMap) simContacts.get(0);
+      var c = simContacts.getFirst();
       call.setDirection(QUEUE);
       call.setResolution(ACTIVE);
       call.setName(c.get("name"));

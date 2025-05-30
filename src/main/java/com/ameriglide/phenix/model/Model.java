@@ -336,7 +336,7 @@ public class Model<T> extends PhenixServlet {
 
   private static Json toJson(final HttpServletResponse response, final Throwable e) {
     response.setStatus(SC_INTERNAL_SERVER_ERROR);
-    return Json.Factory.$(e);
+    return Json.from(e);
   }
 
   protected Key<T> getKey(final Matcher m) {

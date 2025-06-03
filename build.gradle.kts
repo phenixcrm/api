@@ -2,7 +2,7 @@ plugins {
     id("com.github.johnrengelman.shadow") version "8.1.1"
     war
 }
-description = "Phénix objects shared between modules"
+description = "Phénix private API"
 
 dependencies {
     implementation(project(":phenix:common"))
